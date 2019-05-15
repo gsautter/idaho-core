@@ -541,7 +541,7 @@ public class AttributeEditor extends JPanel {
 		
 		//	update value lists
 		if (value != null)
-			this.getValueSet(name).removeAll(value);
+			this.getValueSet(name).remove(value);
 		
 		//	refresh attribute table
 		this.attributeTable.updateAttributes();
@@ -653,7 +653,7 @@ public class AttributeEditor extends JPanel {
 						layoutLines();
 					}
 				});
-				this.displayLabel = new JLabel("<HTML>&nbsp;<B>" + name + "</B>: " + value.toString() + "</HTML>");
+				this.displayLabel = new JLabel("<HTML>&nbsp;<B>" + name + "</B>: " + ((value == null) ? "" : value.toString()) + "</HTML>");
 				this.displayLabel.setOpaque(true);
 				this.displayLabel.setBackground(Color.WHITE);
 				this.displayLabel.setBorder(BorderFactory.createLineBorder(Color.LIGHT_GRAY));

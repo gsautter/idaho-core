@@ -53,7 +53,7 @@ import de.uka.ipd.idaho.htmlXmlUtil.grammars.StandardGrammar;
  * @author Sautter
  */
 public class TableDefinition {
-//	TODO consider reactivationg all the data types, with mappings to the respective names in individual DBMS
+//	TODO consider reactivating all the data types, with mappings to the respective names in individual DBMS
 //	
 //	//	bit datatype
 //	public static final String BIT_DATATYPE = "BIT";

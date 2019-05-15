@@ -756,7 +756,7 @@ public class XsltUtils {
 	 */
 	public static synchronized TransformerPool getTransformer(String xsltAddress, boolean allowCache) throws IOException {
 		InputStream xsltIn;
-		if (xsltAddress.startsWith("http://"))
+		if (xsltAddress.startsWith("http://") || xsltAddress.startsWith("https://"))
 			xsltIn = new OnDemandInputStream(new URL(xsltAddress));
 		else xsltIn = new OnDemandInputStream(new File(xsltAddress));
 		try {

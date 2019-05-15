@@ -1510,30 +1510,84 @@ public class Gamta extends StringUtils {
 		 * Possible representations of punctuation marks in RegEx:
 		 * - . (matches any, if given omit check)
 		 * - \W (non-word character, matches any but _, if given omit check)
+		 * - \S (non-space character, matches any but _, if given omit check)
 		 * - \p{Punct}, \p{Graph}, \p{Print}, \p{ASCII} (matches any, if given omit check)
 		 * - \<mark> (matches punctuation mark <mark>)
 		 * - ^ (negation of something else)
+		 * - inclusions in character ranges
 		 */
-		Set excludePunct = new HashSet(); // hash set is enough, no case insensitivity required for punctuation marks
+		
+		//	test if we have wildcard matches
+//		System.out.println("Extracting matches of " + regEx);
 		boolean allDotsEscped = true;
 		String adeTestRegEx = regEx;
-		while (adeTestRegEx.indexOf("\\\\") != -1)
+		while (adeTestRegEx.indexOf("\\\\") != -1) // remove all double backslashes
 			adeTestRegEx = adeTestRegEx.replaceAll("\\\\\\\\", "");
-//		System.out.println("ADE test pattern: " + adeTestRegEx);
-//		System.out.println(" - dot split is " + adeTestRegEx.split("\\.").length);
-//		System.out.println(" - escaped dot split: " + adeTestRegEx.split("\\\\\\.").length);
+//		System.out.println(" - ADE test pattern: " + adeTestRegEx);
+//		System.out.println("   - dot split is " + adeTestRegEx.split("\\.").length);
+//		System.out.println("   - escaped dot split: " + adeTestRegEx.split("\\\\\\.").length);
 		allDotsEscped = (adeTestRegEx.split("\\.").length == adeTestRegEx.split("\\\\\\.").length);
-		if (allDotsEscped && (regEx.indexOf("\\W") == -1) && (regEx.indexOf("\\p{Punct}") == -1) && (regEx.indexOf("\\p{Graph}") == -1) && (regEx.indexOf("\\p{Print}") == -1) && (regEx.indexOf("\\p{ASCII}") == -1) && (regEx.indexOf('^') == -1)) {
-//		if ((regEx.indexOf(".") == -1) && (regEx.indexOf("\\W") == -1) && (regEx.indexOf("\\p{Punct}") == -1) && (regEx.indexOf("\\p{Graph}") == -1) && (regEx.indexOf("\\p{Print}") == -1) && (regEx.indexOf("\\p{ASCII}") == -1) && (regEx.indexOf('^') == -1)) {
-//			String excludedPunct = "";
+		
+		//	collect range-matched characters
+		HashSet encodedMatchedChars = new HashSet();
+		if (allDotsEscped && (regEx.indexOf("\\p{Print}") == -1) && (regEx.indexOf("\\p{ASCII}") == -1) && (regEx.indexOf('^') == -1)) {
+			for (Matcher m = xRangePattern.matcher(regEx); m.find();) {
+				int min = Integer.parseInt(m.group(1), 16);
+				int max = Integer.parseInt(m.group(2), 16);
+//				System.out.println(" - x-range-including " + min + "-" + max);
+				for (int c = Math.max(min, 0x09); c <= Math.min(max, 0x7E); c++)
+					encodedMatchedChars.add("" + ((char) c));
+				for (int c = Math.max(min, 0xA0); c <= Math.min(max, 0xFF); c++)
+					encodedMatchedChars.add("" + ((char) c));
+			}
+			for (Matcher m = xCharPattern.matcher(regEx); m.find();) {
+				int c = Integer.parseInt(m.group(1), 16);
+//				System.out.println(" - x-char-including " + c);
+				if ((0x09 <= c) && (c <= 0x7E))
+					encodedMatchedChars.add("" + ((char) c));
+				else if ((0xA0 <= c) && (c <= 0xFF))
+					encodedMatchedChars.add("" + ((char) c));
+			}
+			for (Matcher m = uRangePattern.matcher(regEx); m.find();) {
+				int min = Integer.parseInt(m.group(1), 16);
+				int max = Integer.parseInt(m.group(2), 16);
+//				System.out.println(" - u-range-including " + min + "-" + max);
+				for (int c = Math.max(min, 0x09); c <= Math.min(max, 0x7E); c++)
+					encodedMatchedChars.add("" + ((char) c));
+				for (int c = Math.max(min, 0xA0); c <= Math.min(max, 0xFF); c++)
+					encodedMatchedChars.add("" + ((char) c));
+			}
+			for (Matcher m = uCharPattern.matcher(regEx); m.find();) {
+				int c = Integer.parseInt(m.group(1), 16);
+//				System.out.println(" - u-char-including " + c);
+				if ((0x09 <= c) && (c <= 0x7E))
+					encodedMatchedChars.add("" + ((char) c));
+				else if ((0xA0 <= c) && (c <= 0xFF))
+					encodedMatchedChars.add("" + ((char) c));
+			}
+		}
+//		System.out.println(" - range matched characters are " + encodedMatchedChars);
+		
+		//	check if space matched
+		boolean excludeSpace = false;
+		if (allDotsEscped && (regEx.indexOf("\\W") == -1) && (regEx.indexOf("\\s") == -1) && (regEx.indexOf("\\p{Blank}") == -1) && (regEx.indexOf("\\p{Space}") == -1) && (regEx.indexOf("\\p{Print}") == -1) && (regEx.indexOf("\\p{ASCII}") == -1) && (regEx.indexOf('^') == -1)) {
+			excludeSpace = true;
+			excludeSpace &= !encodedMatchedChars.contains("" + ((char) 0x20)); // space
+			excludeSpace &= !encodedMatchedChars.contains("" + ((char) 0x09)); // tab
+			excludeSpace &= !encodedMatchedChars.contains("" + ((char) 0x0A)); // newline
+			excludeSpace &= !encodedMatchedChars.contains("" + ((char) 0x0C)); // form feed (also page break)
+			excludeSpace &= !encodedMatchedChars.contains("" + ((char) 0x0D)); // carriage return
+		}
+//		System.out.println(" - exclude space is " + excludeSpace);
+		
+		//	collect punctuation marks without explicit matcher or range matcher inclusion
+		Set excludePunct = new HashSet(); // hash set is enough, no case insensitivity required for punctuation marks
+		if (allDotsEscped && (regEx.indexOf("\\W") == -1) && (regEx.indexOf("\\S") == -1) && (regEx.indexOf("\\p{Punct}") == -1) && (regEx.indexOf("\\p{Graph}") == -1) && (regEx.indexOf("\\p{Print}") == -1) && (regEx.indexOf("\\p{ASCII}") == -1) && (regEx.indexOf('^') == -1)) {
 			for (int p = 0; p < PUNCTUATION.length(); p++) {
 				String punct = PUNCTUATION.substring(p, (p+1));
-				if (regEx.indexOf("\\" + punct) == -1) {
+				if ((regEx.indexOf("\\" + punct) == -1) && !encodedMatchedChars.contains(punct))
 					excludePunct.add(punct);
-//					excludedPunct += punct;
-				}
 			}
-//			System.out.println("Gamta.extractAllMatches(): excluding punctuation marks " + excludedPunct);
 		}
 //		System.out.println(" - excluding punctuation " + excludePunct);
 		
@@ -1565,17 +1619,30 @@ public class Gamta extends StringUtils {
 					normalizedTokenSequence = null;
 					last = null;
 				}
+				continue; // skip over current (excluded) token
+			}
+			
+			//	test if whitespace to add
+			boolean addSpace = ((last != null) && (normalize ? insertSpace(last, current) : (tokens.getWhitespaceAfter(t-1).length() != 0)));
+			
+			//	not matching spaces, do extraction and afterwards start over with current token
+			if (addSpace && excludeSpace && (normalizedTokenSequence != null)) {
+				addPreMatches(normalizedTokenSequence, preMatches, tokens, pattern, maxTokens, startExclude, allowOverlap);
+				normalizedTokenSequence.tokens.clear();
+				normalizedTokenSequence = null;
+				last = null;
+//				System.out.println(" - starting over at space before " + current);
 			}
 			
 			//	token can start a match, or we are in the middle of a sequence
-			else if ((normalizedTokenSequence != null) || (startExclude == null) || !startExclude.lookup(currentValue)) {
+			if ((normalizedTokenSequence != null) || (startExclude == null) || !startExclude.lookup(currentValue)) {
 				
 				//	start new sequence
 				if (normalizedTokenSequence == null)
 					normalizedTokenSequence = new MatchTokenSequence(t);
 				
-				//	add whitespace to current sequence
-				else if ((last != null) && (normalize ? insertSpace(last, current) : (tokens.getWhitespaceAfter(t-1).length() != 0)))
+				//	add whitespace to current sequence if required
+				else if (addSpace)
 					normalizedTokenSequence.appendWhitespace((!ignoreLinebreaks && last.hasAttribute(Token.PARAGRAPH_END_ATTRIBUTE)) ? "\r\n" : " ");
 				
 				//	append current token
@@ -1617,7 +1684,26 @@ public class Gamta extends StringUtils {
 		}
 	}
 	
+	private static Pattern xCharPattern = Pattern.compile("\\\\x([0-9A-Fa-f]{2})");
+	private static Pattern xRangePattern = Pattern.compile("\\\\x([0-9A-Fa-f]{2})\\-\\\\x([0-9A-Fa-f]{2})");
+	private static Pattern uCharPattern = Pattern.compile("\\\\u([0-9A-Fa-f]{4})");
+	private static Pattern uRangePattern = Pattern.compile("\\\\u([0-9A-Fa-f]{4})\\-\\\\u([0-9A-Fa-f]{4})");
 	private static Map patternCache = Collections.synchronizedMap(new HashMap());
+//	
+//	public static void main(String[] args) throws Exception {
+//		TokenSequence ts = newTokenSequence("This is a test, with punctuation, and with spaces!", null);
+//		Annotation[] as;
+//		as = extractAllMatches(ts, "[A-Za-z]+");
+//		System.out.println(" ==> " + Arrays.toString(as));
+//		as = extractAllMatches(ts, "[A-Za-z\\,]+");
+//		System.out.println(" ==> " + Arrays.toString(as));
+//		as = extractAllMatches(ts, "[A-Za-z\\s]+");
+//		System.out.println(" ==> " + Arrays.toString(as));
+//		as = extractAllMatches(ts, "[\\x20-\\x7E]+");
+//		System.out.println(" ==> " + Arrays.toString(as));
+//		as = extractAllMatches(ts, "[\\u0020-\\u007E]+");
+//		System.out.println(" ==> " + Arrays.toString(as));
+//	}
 	
 	private static void addPreMatches(MatchTokenSequence normalizedTokenSequence, ArrayList preMatches, TokenSequence tokens, Pattern pattern, int maxTokens, Dictionary startExclude, boolean allowOverlap) {
 		int matchingStartOffset;
@@ -1839,141 +1925,6 @@ public class Gamta extends StringUtils {
 			return super.toString();
 		}
 	}
-	
-//	public static Annotation[] extractAllMatches(TokenSequence tokens, String regEx, int maxTokens, Dictionary startExclude, Dictionary exclude, boolean allowOverlap, boolean ignoreLinebreaks) {
-//		ArrayList annotations = new ArrayList();
-//		
-//		int lastStartIndex = 0;
-//		int lastMatchedIndex = 0;
-//		int index = 0;
-//		Annotation currentPart;
-//		
-//		//System.out.println("Extracting all subsequences of length " + maxTokens + " or less ...");
-//		
-//		//	normalize RegEx if necessary
-//		if ((regEx.indexOf("\n") != -1) || (regEx.indexOf("\r") != -1) || (regEx.indexOf("\f") != -1))
-//			regEx = RegExUtils.normalizeRegEx(regEx);
-//		
-//		Pattern pattern = Pattern.compile(regEx);
-//		
-//		Token lastToken = null;
-//		while (index < tokens.size()) {
-//			
-//			//System.out.println("--> index is " + index);
-//			
-//			lastStartIndex = index;
-//			Annotation match = null;
-//			boolean validStart = ((maxTokens == 1) || (startExclude == null) || !startExclude.lookup(tokens.valueAt(index), true));
-//			boolean stop = false;
-//			
-//			while (validStart && !stop && (index < tokens.size()) && (((index - lastStartIndex) < maxTokens) || (maxTokens == 0)) && (ignoreLinebreaks || (lastToken == null) || (lastStartIndex == index) || !lastToken.hasAttribute(Token.PARAGRAPH_END_ATTRIBUTE))) {
-//				
-//				//	check if current part matches
-//				if (((exclude != null) && exclude.lookup(tokens.valueAt(index), true)))
-//					stop = true;
-//				
-//				else {
-//					currentPart = Gamta.newAnnotation(tokens, null, lastStartIndex, (index - lastStartIndex));
-//					String testPart = TokenSequenceUtils.concatTokens(currentPart, true, true);
-//					
-//					if (pattern.matcher(testPart).matches()) {
-//						lastMatchedIndex = index;
-//						
-//						//	if ovelap is allowed, immediately create annotation
-//						if (allowOverlap)
-//							annotations.add(currentPart);
-//						else match = currentPart; 
-//					}
-//					lastToken = tokens.tokenAt(index);
-//					index++;
-//				}
-//			}
-//			
-//			//	store longest match if overlap is not allowed
-//			if (match == null) index = lastStartIndex;
-//			
-//			else {
-//				annotations.add(match);
-//				index = lastMatchedIndex;
-//			}
-//			
-//			//	tidy up
-//			lastToken = tokens.tokenAt(index);
-//			index ++;
-//		}
-//		
-//		Collections.sort(annotations);
-//		return ((Annotation[]) annotations.toArray(new Annotation[annotations.size()]));
-//	}
-//	public static Annotation[] extractAllMatches(TokenSequence tokens, String regEx, int maxTokens, Dictionary startExclude, Dictionary exclude, boolean allowOverlap, boolean ignoreLinebreaks) {
-//		ArrayList annotations = new ArrayList();
-//		
-//		int lastStartIndex = 0;
-//		int lastMatchedIndex = 0;
-//		int index = 0;
-//		MutableTokenSequence currentPart = newTokenSequence(null, tokens.getTokenizer());
-//		boolean foundMatch = false;
-//		
-//		//System.out.println("Extracting all subsequences of length " + maxTokens + " or less ...");
-//		
-//		//	normalize RegEx if necessary
-//		if ((regEx.indexOf("\n") != -1) || (regEx.indexOf("\r") != -1) || (regEx.indexOf("\f") != -1))
-//			regEx = RegExUtils.normalizeRegEx(regEx);
-//		
-//		Pattern pattern = Pattern.compile(regEx);
-//		
-//		Token lastToken = null;
-//		while (index < tokens.size()) {
-//			
-//			//System.out.println("--> index is " + index);
-//			
-//			lastStartIndex = index;
-//			boolean stop = false;
-//			boolean validStart = ((maxTokens == 1) || (startExclude == null) || !startExclude.lookup(tokens.valueAt(index), true));
-//			
-//			while (validStart && !stop && (index < tokens.size()) && ((currentPart.size() < maxTokens) || (maxTokens == 0)) && (ignoreLinebreaks || (lastToken == null) || (currentPart.size() == 0) || !lastToken.hasAttribute(Token.PARAGRAPH_END_ATTRIBUTE))) {
-//				
-//				//	check if actual part matches
-//				if (((exclude != null) && exclude.lookup(tokens.valueAt(index), true))/* || ((startExclude != null) && startExclude.lookup(tokens.valueAt(index)) && (currentPart.size() == 0))*/) {
-//					stop = true;
-//				} else {
-//					currentPart.addTokens(tokens.tokenAt(index));
-//					String testPart = TokenSequenceUtils.concatTokens(currentPart, true, true);
-//					
-//					if (pattern.matcher(testPart).matches()) {
-//						foundMatch = true;
-//						lastMatchedIndex = index;
-//						
-//						//	if ovelap is allowed, immediately create annotation
-//						if (allowOverlap) {
-//							Annotation a = new TemporaryAnnotation(tokens, null, lastStartIndex, ((lastMatchedIndex - lastStartIndex) + 1));
-//							annotations.add(a);
-//						}
-//					}
-//					lastToken = tokens.tokenAt(index);
-//					index++;
-//				}
-//			}
-//			
-//			//	store longest match if overlap is not allowed
-//			if (!allowOverlap && foundMatch) {
-//				Annotation a = new TemporaryAnnotation(tokens, null, lastStartIndex, ((lastMatchedIndex - lastStartIndex) + 1));
-//				annotations.add(a);
-//				index = lastMatchedIndex;
-//			} else {
-//				index = lastStartIndex;
-//			}
-//			
-//			//	tidy up
-//			foundMatch = false;
-//			currentPart.clear();
-//			lastToken = tokens.tokenAt(index);
-//			index ++;
-//		}
-//		
-//		Collections.sort(annotations);
-//		return ((Annotation[]) annotations.toArray(new Annotation[annotations.size()]));
-//	}
 	
 	/**
 	 * Extract all parts from a String that are contained in a list of Strings

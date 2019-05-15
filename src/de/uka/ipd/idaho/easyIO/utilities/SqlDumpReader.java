@@ -40,7 +40,7 @@ import de.uka.ipd.idaho.easyIO.streams.PeekReader;
  * parsers, i.e., reading through the stream and issuing event based
  * notifications on content found.<br>
  * The main intention of this class is to facilitate exploring SQL dumps that
- * are too large for working with in a text editor, ad for extracting specific
+ * are too large for working with in a text editor, and for extracting specific
  * data from such dumps.
  * 
  * @author sautter

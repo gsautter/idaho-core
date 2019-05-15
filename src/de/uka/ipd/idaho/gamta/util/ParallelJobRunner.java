@@ -43,13 +43,14 @@ import java.util.List;
  */
 public class ParallelJobRunner {
 	
-	//	we don't want to be instatiated
+	//	we don't want to be instantiated
 	private ParallelJobRunner() {}
 	
 	private static boolean runLinear = false;
+	private static int maxCoresPerJob = -1;
 	
 	/**
-	 * Test if parallel job execution is switched on ot of.
+	 * Test if parallel job execution is switched on or off.
 	 * @return the linear property
 	 */
 	public static boolean isLinear() {
@@ -71,6 +72,40 @@ public class ParallelJobRunner {
 	}
 	
 	/**
+	 * Get the maximum number of CPU cores to use on any single job.
+	 * @return the maximum number of cores to use
+	 */
+	public static int getMaxCores() {
+		return maxCoresPerJob;
+	}
+	
+	/**
+	 * Set the maximum number of CPU cores to use on any single job. This means
+	 * of limitation is helpful in situations of running multiple potentially
+	 * CPU intensive JVMs on a single machine at the same time. Namely, it
+	 * prevents each single JVM from occupying all the available resources for
+	 * itself. However, this only applies to code parallelized by means of this
+	 * class. Setting the maximum to -1 switches off the limitation; setting it
+	 * to any value larger or equal to <code>Runtime.getRuntime().availableProcessors()</code>
+	 * effectively also lifts all limitations, as the return value of that
+	 * latter method represents the hardware imposed limit.
+	 * @param maxCores the maximum number of cores to set
+	 */
+	public static void setMaxCores(int maxCores) {
+		maxCoresPerJob = maxCores;
+	}
+	
+	private static int checkMaxCores(int maxCores) {
+		if (runLinear)
+			return 1; // nothing to compute here
+		if (maxCores < 1)
+			maxCores = Integer.MAX_VALUE; // handle incoming 'unlimited'
+		if (0 < maxCoresPerJob)
+			maxCores = Math.min(maxCores, maxCoresPerJob); // impose central limitation if present
+		return Math.min(maxCores, (Runtime.getRuntime().availableProcessors() - 1)); // impose hardware limitation, leaving one thread for JVM proper, UI, etc.
+	}
+	
+	/**
 	 * Execute a <code>Runnable</code> in multiple threads in parallel. If
 	 * the <code>maxCores</code> parameter is set to a value less than 1, the
 	 * job runs in as many parallel threads as possible, which is the number of
@@ -83,13 +118,11 @@ public class ParallelJobRunner {
 	 * @param maxCores the maximum number of CPU cores to use
 	 */
 	public static void runParallelJob(Runnable job, int maxCores) {
-		if (runLinear || (maxCores == 1)) {
-			job.run();
+		maxCores = checkMaxCores(maxCores);
+		if (maxCores <= 1) {
+			job.run(); // execute right away in single thread mode
 			return;
 		}
-		if (maxCores < 1)
-			maxCores = Integer.MAX_VALUE;
-		maxCores = Math.min(maxCores, Runtime.getRuntime().availableProcessors());
 		Thread[] threads = new Thread[maxCores];
 		for (int t = 0; t < threads.length; t++)
 			threads[t] = new Thread(job);

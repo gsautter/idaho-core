@@ -33,7 +33,7 @@ import java.util.Properties;
 import de.uka.ipd.idaho.gamta.MutableAnnotation;
 
 /**
- * Interface for generic components working on GAMTA documents or parts of them
+ * Interface for generic components working on GAMTA documents or parts of them.
  * 
  * @author sautter
  */
@@ -44,6 +44,9 @@ public interface Analyzer {
 	
 	/** Indicates if network and web access is allowed while processing a document */
 	public static final String ONLINE_PARAMETER = "ONLINE";
+	
+	/** Indicates how an Analyzer was called upon for processing a document */
+	public static final String CALL_PATH_PARAMETER = "CALL_PATH";
 	
 	/**
 	 * Process a MutableAnnotation

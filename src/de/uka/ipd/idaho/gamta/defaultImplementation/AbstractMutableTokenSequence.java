@@ -40,10 +40,10 @@ import de.uka.ipd.idaho.gamta.Tokenizer;
  * Abstract implementation of a mutable token sequence overlay for some mutable
  * char sequence, encapsulating the latter and implementing the handling and
  * notification of TokenSequenceListener objects. This implementation also
- * listens to changes to the underaying char sequence and casts them into
+ * listens to changes to the underlying char sequence and casts them into
  * notifications on changes to the token sequence if necessary. The setValueAt()
  * method implements smart insertion, i.e. inserts multiple tokens instead of
- * one if the value inserted tokenized to other than one token.
+ * one if the value inserted tokenizes to more or less than one token.
  * 
  * @author sautter
  */

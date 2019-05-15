@@ -44,6 +44,7 @@ public class TemporaryAnnotation extends AbstractAttributed implements Standalon
 	
 	private String annotationId = Gamta.getAnnotationID();
 	private TokenSequence tokens;
+	private String value = null;
 	
 	private String type;
 	private int startIndex;
@@ -184,7 +185,17 @@ public class TemporaryAnnotation extends AbstractAttributed implements Standalon
 	/** @see de.uka.ipd.idaho.gamta.Annotation#getValue()
 	 */
 	public String getValue() {
-		return this.tokens.subSequence(this.getStartOffset(), this.getEndOffset()).toString();
+//		return this.tokens.subSequence(this.getStartOffset(), this.getEndOffset()).toString();
+		if (this.value == null) {
+			StringBuffer value = new StringBuffer();
+			for (int t = this.startIndex; t < (this.startIndex + this.size); t++) {
+				if (t != this.startIndex)
+					value.append(this.tokens.getWhitespaceAfter(t-1));
+				value.append(this.tokens.valueAt(t));
+			}
+			this.value = value.toString();
+		}
+		return this.value;
 	}
 	
 	/** @see java.lang.Object#toString()

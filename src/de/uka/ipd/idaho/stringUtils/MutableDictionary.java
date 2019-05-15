@@ -10,7 +10,7 @@
  *     * Redistributions in binary form must reproduce the above copyright
  *       notice, this list of conditions and the following disclaimer in the
  *       documentation and/or other materials provided with the distribution.
- *     * Neither the name of the Universität Karlsruhe (TH) nor the
+ *     * Neither the name of the Universität Karlsruhe (TH) / KIT nor the
  *       names of its contributors may be used to endorse or promote products
  *       derived from this software without specific prior written permission.
  *
@@ -28,49 +28,38 @@
 package de.uka.ipd.idaho.stringUtils;
 
 /**
- * Interface for a lookup dictionary.
+ * Interface for a lookup dictionary that allows addition and/or removal of
+ * entries.
  * 
  * @author sautter
  */
-public interface Dictionary {
+public interface MutableDictionary extends Dictionary {
 	
 	/**
-	 * Check whether or not a string is contained in this Dictionary, using the
-	 * Dictionarie's default case sensitivity.
-	 * @param string the String to look up
-	 * @return true if the Dictionary contains the specified string 
+	 * Check whether or not the Dictionary supports adding entries. If this
+	 * method returns false, <code>addEntry()</code> may throw an
+	 * <code>UnsupportedOperationException</code> or simply ignore calls.
+	 * @return true if the Dictionary supports addition of entries
 	 */
-	public abstract boolean lookup(String string);
+	public abstract boolean supportsAddEntry();
 	
 	/**
-	 * Check if a string is contained in this Dictionary.
-	 * @param string the String to look up
-	 * @param caseSensitive do lookup case sensitive?
-	 * @return true if the Dictionary contains the specified string 
+	 * Add an entry to the Dictionary.
+	 * @param entry the entry to add
 	 */
-	public abstract boolean lookup(String string, boolean caseSensitive);
+	public abstract void addEntry(String entry);
 	
 	/**
-	 * Check the default case sensitivity of the dictionary.
-	 * @return true if lookups in this Dictionary are case sensitive by default
+	 * Check whether or not the Dictionary supports removing entries. If this
+	 * method returns false, <code>removeEntry()</code> may throw an
+	 * <code>UnsupportedOperationException</code> or simply ignore calls.
+	 * @return true if the Dictionary supports removal of entries
 	 */
-	public abstract boolean isDefaultCaseSensitive();
+	public abstract boolean supportsRemoveEntry();
 	
 	/**
-	 * Check whether or not the Dictionary is empty.	
-	 * @return true if this Dictionary contains no entries
+	 * Remove an entry from the Dictionary.
+	 * @param entry the entry to remove
 	 */
-	public abstract boolean isEmpty();
-	
-	/**
-	 * Retrieve the number of entries in the Dictionary.	
-	 * @return the number of entries in this Dictionary
-	 */
-	public abstract int size();
-	
-	/**
-	 * Retrieve an Iterator over the entries in the Dictionary.
-	 * @return an Iterator for iterating over the entries of this Dictionary
-	 */
-	public abstract StringIterator getEntryIterator(); 
+	public abstract void removeEntry(String entry);
 }

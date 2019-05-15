@@ -60,59 +60,84 @@ public class StringUtils {
 	/** 'null' as a character, namely '\u0000' */
 	public static final char NULLCHAR = '\u0000';
 	
-	/** string constant containing all latin letters in upper and lower case, plus derived characters with accents and the like, ligatures, etc. */
-	public static final String LETTERS 					= "abcdefghijklmnopqrstuvwxyzßàáâãäåæçèéêëìíîïñòóôõöœøùúûüıÿABCDEFGHIJKLMNOPQRSTUVWXYZÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏĞÑÒÓÔÕÖØŒÙÚÛÜİ";
+	/** string constant containing all Latin letters in upper and lower case */
+	public static final String LATIN_LETTERS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
 	
-	/** string constant containing all latin vowels in upper and lower case, plus derived characters with accents and the like, ligatures, etc. */
-	public static final String VOWELS 					= "aeiouAEIOUàáâãäåæèéêëìíîïòóôõöøœùúûüÀÁÂÃÄÅÆÈÉÊËÌÍÎÏÒÓÔÕÖØŒÙÚÛÜ";
+	/** string constant containing all Latin vowels in upper and lower case */
+	public static final String LATIN_VOWELS = "aeiouAEIOU";
 	
-	/** string constant containing all latin consonants in upper and lower case, plus derived language specifc characters like the German 'ß', the Spanish 'ñ', and the French 'ç' */
-	public static final String CONSONANTS 				= "bcdfghjklmnpqrstvwxyzçñßBCDFGHJKLMNPQRSTVWXYZÇÑ";
+	/** string constant containing all Latin consonants in upper and lower case */
+	public static final String LATIN_CONSONANTS = "bcdfghjklmnpqrstvwxyzBCDFGHJKLMNPQRSTVWXYZ";
 	
-	/** string constant containing all latin letters in upper case, plus derived characters with accents and the like, ligatures, etc. */
-	public static final String UPPER_CASE_LETTERS 		= "ABCDEFGHIJKLMNOPQRSTUVWXYZÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏĞÑÒÓÔÕÖØŒÙÚÛÜİ";
+	/** string constant containing all Latin letters in upper case */
+	public static final String LATIN_UPPER_CASE_LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 	
-	/** string constant containing all latin letters in lower case, plus derived characters with accents and the like, ligatures, etc. */
-	public static final String LOWER_CASE_LETTERS 		= "abcdefghijklmnopqrstuvwxyzßàáâãäåæçèéêëìíîïñòóôõöøœùúûüıÿ";
+	/** string constant containing all Latin letters in lower case */
+	public static final String LATIN_LOWER_CASE_LETTERS = "abcdefghijklmnopqrstuvwxyz";
+	
+	/** string constant containing all Latin letters in upper and lower case, plus derived characters with accents and the like, ligatures, etc. */
+	public static final String LETTERS = "abcdefghijklmnopqrstuvwxyzßàáâãäåæçèéêëìíîïñòóôõöœøùúûüıÿABCDEFGHIJKLMNOPQRSTUVWXYZÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏĞÑÒÓÔÕÖØŒÙÚÛÜİ";
+	
+	/** string constant containing all Latin vowels in upper and lower case, plus derived characters with accents and the like, ligatures, etc. */
+	public static final String VOWELS = "aeiouAEIOUàáâãäåæèéêëìíîïòóôõöøœùúûüÀÁÂÃÄÅÆÈÉÊËÌÍÎÏÒÓÔÕÖØŒÙÚÛÜ";
+	
+	/** string constant containing all Latin consonants in upper and lower case, plus derived language specifc characters like the German 'ß', the Spanish 'ñ', and the French 'ç' */
+	public static final String CONSONANTS = "bcdfghjklmnpqrstvwxyzçñßBCDFGHJKLMNPQRSTVWXYZÇÑ";
+	
+	/** string constant containing all Latin letters in upper case, plus derived characters with accents and the like, ligatures, etc. */
+	public static final String UPPER_CASE_LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏĞÑÒÓÔÕÖØŒÙÚÛÜİ";
+	
+	/** string constant containing all Latin letters in lower case, plus derived characters with accents and the like, ligatures, etc. */
+	public static final String LOWER_CASE_LETTERS = "abcdefghijklmnopqrstuvwxyzßàáâãäåæçèéêëìíîïñòóôõöøœùúûüıÿ";
 	
 	/** string constant containing all digits 0 through 9 */
-	public static final String DIGITS 					= "0123456789";
+	public static final String DIGITS = "0123456789";
 	
 	/** string constant containing common currency symbols */
-	public static final String CURRENCY_SYMBOLS 		= "€$£¥";
+	public static final String CURRENCY_SYMBOLS = "€$£¥";
 	
 	/** string constant containing all ASCII punctuation marks */
-	public static final String PUNCTUATION 				= "°!\"§$%&/()=¿?{[]}\\@€£+*~#'´`<>|,;.:-_^";
+	public static final String PUNCTUATION = "°!\"§$%&/()=¿?{[]}\\@€£+*~#'´`<>|,;.:-_^";
+	
+	/** string constant containing all Unicode spaces */
+	public static final String SPACES = "\u0020\u0085\u00A0\u1680\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200A\u2028\u2029\u202F\u205F\u3000";
 	
 	/** string constant containing all Unicode dashes */
 	public static final String DASHES = "-\u00AD\u2010\u2011\u2012\u2013\u2014\u2015\u2212";
 	
+	/** string constant containing all Unicode single quotes or high commas and similar characters */
+	public static final String SINGLE_QUOTES = "'\u0060\u00B4\u02B9\u02BB\u02BC\u02BD\u02CA\u02CB\u2018\u2019\u201A\u201B\u2032\u2035";
+	
+	/** string constant containing all Unicode double quotes and similar characters */
+	public static final String DOUBLE_QUOTES = "\"\u00AB\u00BB\u02BA\u02DD\u02EE\u02F5\u02F6\u201C\u201D\u201E\u201F\u2033\u2036\u301D\u301E";
+	
 	/** string constant containing punctuation marks that may appear within words, namely '-' and ''' (in their various forms) */
-	public static final String IN_WORD_PUNCTUATION 		= "-'­——’‘";
+//	public static final String IN_WORD_PUNCTUATION = "-'­——’‘";
+	public static final String IN_WORD_PUNCTUATION = (DASHES + SINGLE_QUOTES);
 	
 	/** string constant containing punctuation marks that may appear in numbers, namely ',' and '.' */
-	public static final String IN_NUMBER_PUNCTUATION 	= ",.";
+	public static final String IN_NUMBER_PUNCTUATION = ",.";
 	
 	/** string constant containing all brackets, opening and closing, round,, square, angle, and curly */
-	public static final String BRACKETS			 		= "({[<)}]>";
+	public static final String BRACKETS	= "({[<)}]>";
 	
 	/** string constant containing all opening brackets, round,, square, angle, and curly. The index of a given type of bracket in this constant is the same as the index of the corresponding bracket in CLOSING_BRACKETS */
-	public static final String OPENING_BRACKETS 		= "({[<";
+	public static final String OPENING_BRACKETS = "({[<";
 	
 	/** string constant containing all closing brackets, round,, square, angle, and curly. The index of a given type of bracket in this constant is the same as the index of the corresponding bracket in OPENING_BRACKETS */
-	public static final String CLOSING_BRACKETS 		= ")}]>";
+	public static final String CLOSING_BRACKETS = ")}]>";
 	
 	/** string constant containing all punctuation marks that structure a sentence, namely '!', '?', ',', ';', '.', ':', and '-' */
-	public static final String SENTENCE_PUNCTUATION 	= "!?,;.:-";
+	public static final String SENTENCE_PUNCTUATION = "!?,;.:-";
 	
 	/** string constant containing all punctuation marks that end a sentence, namely '!', '?', and '.' */
-	public static final String SENTENCE_ENDINGS			= "!?.";
+	public static final String SENTENCE_ENDINGS	= "!?.";
 	
 	/** string constant containing all punctuation marks usually having no space before them, namely closing brackets, and '!', '?', ',', ';', '.', ':', '´', and '`' */
-	public static final String UNSPACED_BEFORE		 	= "!)?]}>,;.:´`";
+	public static final String UNSPACED_BEFORE = "!)?]}>,;.:´`";
 	
 	/** string constant containing all punctuation marks usually having no space after them, namely opening brackets, '´', and '`' */
-	public static final String UNSPACED_AFTER		 	= "([{<´`";
+	public static final String UNSPACED_AFTER = "([{<´`";
 	
 	/** string constant containing common abbreviations, like 'Mr.' or 'Jun.' */
 	public static final String COMMON_ABBREVIATIONS = "No.Prof.Dr.Mr.Mrs.Ms.Jun.Sen.Mt.A.B.C.D.E.F.G.H.I.J.K.L.M.N.O.P.Q.R.S.T.U.V.W.X.Y.Z.";
@@ -826,10 +851,22 @@ public class StringUtils {
 	 * @return	true if and only if the String is a word and contains at least one vowel
 	 */
 	public static boolean containsVowel(CharSequence string) {
+		return containsVowel(string, true);
+	}
+
+	/**	check if a String contains at least one vowel
+	 * @param	string	the String to be tested
+	 * @param	yIsVowel	count 'y' as a vowel?
+	 * @return	true if and only if the String is a word and contains at least one vowel
+	 */
+	public static boolean containsVowel(CharSequence string, boolean yIsVowel) {
 		if (string == null)
 			return false;
 		for (int c = 0; c < string.length(); c++) {
-			if (VOWELS.indexOf(string.charAt(c)) != -1)
+			char ch = getBaseChar(string.charAt(c));
+			if (VOWELS.indexOf(ch) != -1)
+				return true;
+			else if (yIsVowel && "yY".indexOf(ch) != -1)
 				return true;
 		}
 		return false;
@@ -848,10 +885,22 @@ public class StringUtils {
 	 * @return	true if and only if the String is a word and contains at least one consonant
 	 */
 	public static boolean containsConsonant(CharSequence string) {
+		return containsConsonant(string, true);
+	}
+
+	/**	check if a String contains at least one consonant
+	 * @param	string	the String to be tested
+	 * @param	yIsConsonant	count 'y' as a consonant?
+	 * @return	true if and only if the String is a word and contains at least one consonant
+	 */
+	public static boolean containsConsonant(CharSequence string, boolean yIsConsonant) {
 		if (string == null)
 			return false;
 		for (int c = 0; c < string.length(); c++) {
-			if (CONSONANTS.indexOf(string.charAt(c)) != -1)
+			char ch = getBaseChar(string.charAt(c));
+			if (CONSONANTS.indexOf(ch) != -1)
+				return true;
+			else if (yIsConsonant && "yY".indexOf(ch) != -1)
 				return true;
 		}
 		return false;
@@ -1502,10 +1551,22 @@ public class StringUtils {
 	private static char getBaseChar(char ch, String recurseCharName) {
 		if (ch < 128)
 			return ch;
+		if (SPACES.indexOf(ch) != -1)
+			return ' ';
+		if (DASHES.indexOf(ch) != -1)
+			return '-';
+		if (DOUBLE_QUOTES.indexOf(ch) != -1)
+			return '"';
+		if (SINGLE_QUOTES.indexOf(ch) != -1)
+			return '\'';
 		if (!initCharacters())
 			return ch;
 		if (selfBasedChars.contains(new Character(ch)))
 			return ch;
+		if (ch == '\u1E9E')
+			return 'S'; // have to check this directly, as there is no PostScript name for this character
+		if (ch == '\u00DF')
+			return 's'; // check this directly, as PostScript is 'germandbls', not 'ss'
 		String[] charNames = getCharNames(ch);
 		for (int n = 0; n < charNames.length; n++) {
 			if (baseCharMappings.containsKey(charNames[n]))
@@ -1539,7 +1600,7 @@ public class StringUtils {
 	 * has no accents, it is simply returned. This method dissolves ligatures
 	 * and the like; if that effect is undesired, use the getBaseChar() method.
 	 * @param ch the original character
-	 * @return the normalzed form
+	 * @return the normalized form
 	 */
 	public static String getNormalForm(char ch) {
 		return getNormalForm(ch, null);
@@ -1547,8 +1608,14 @@ public class StringUtils {
 	private static String getNormalForm(char ch, String recurseCharName) {
 		if (ch < 128)
 			return ("" + ch);
-		if (ch == 160)
+		if (SPACES.indexOf(ch) != -1)
 			return " ";
+		if (DASHES.indexOf(ch) != -1)
+			return "-";
+		if (DOUBLE_QUOTES.indexOf(ch) != -1)
+			return "\"";
+		if (SINGLE_QUOTES.indexOf(ch) != -1)
+			return "'";
 		if (!initCharacters())
 			return ("" + ch);
 		if (ligatureMappings.containsKey(new Character(ch)))
@@ -1712,6 +1779,30 @@ public class StringUtils {
 		}
 	}
 	
+	/**
+	 * Normalize a whole string. This method is essentially a shorthand for
+	 * calling <code>getBaseChar()</code> on each individual character in the
+	 * argument string. On top of that, this method also normalizes any spaces.
+	 * @param str the string to normalize
+	 * @return the normalized string
+	 */
+	public static final String normalizeString(String str) {
+		if (str == null)
+			return null;
+		StringBuffer nStr = new StringBuffer();
+		for (int c = 0; c < str.length(); c++) {
+			char ch = str.charAt(c);
+			if (DASHES.indexOf(ch) != -1)
+				nStr.append('-');
+			else if (ch <= ' ')
+				nStr.append(' ');
+			else if (SPACES.indexOf(ch) != -1)
+				nStr.append(' ');
+			else nStr.append(StringUtils.getBaseChar(ch));
+		}
+		return nStr.toString();
+	}
+	
 	private static boolean doneInitCharacters = false;
 	private static HashMap charNamesToChars = new HashMap();
 	private static HashMap charsToCharNames = new HashMap();
@@ -1725,7 +1816,7 @@ public class StringUtils {
 	private static HashSet selfBasedChars = new HashSet();
 	private static HashMap baseCharMappings = new HashMap();
 	private static HashMap ligatureMappings = new HashMap();
-	private static boolean initCharacters() {
+	private static synchronized boolean initCharacters() {
 		if (!doneInitCharacters) try {
 			doInitCharacters();
 		}
@@ -1742,9 +1833,8 @@ public class StringUtils {
 		String sucrn = StringUtils.class.getName().replaceAll("\\.", "/");
 		InputStream cmis = StringUtils.class.getClassLoader().getResourceAsStream(sucrn.substring(0, sucrn.lastIndexOf('/')) + "/PostscriptUnicodeGlyphList.txt");
 		BufferedReader cmr = new BufferedReader(new InputStreamReader(cmis, "UTF-8"));
-		String cml;
 		HashMap charsToCharNamesL = new HashMap();
-		while ((cml = cmr.readLine()) != null) {
+		for (String cml; (cml = cmr.readLine()) != null;) {
 			if (cml.startsWith("#"))
 				continue;
 			String[] cm = cml.split("\\;");
@@ -1779,6 +1869,7 @@ public class StringUtils {
 				charNamesToChars.put(cm[0], chs);
 			}
 		}
+		cmr.close();
 		for (Iterator cit = charsToCharNamesL.keySet().iterator(); cit.hasNext();) {
 			Character ch = ((Character) cit.next());
 			ArrayList cns = ((ArrayList) charsToCharNamesL.get(ch));
@@ -1874,7 +1965,7 @@ public class StringUtils {
 			selfBasedChars.add(new Character((char) gc));
 		for (int gc = 913; gc <= 937; gc++) // upper case Greek character range
 			selfBasedChars.add(new Character((char) gc));
-		//	TODO extend this (as the need arises)
+		//	TODO extend this (as the need arises, e.g. for Cyrillic)
 		
 		//	initialize custom base character mappings
 		baseCharMappings.put("Eng", new Character('N'));
@@ -1907,6 +1998,7 @@ public class StringUtils {
 		baseCharMappings.put("guilsinglright", new Character('"'));
 		baseCharMappings.put("dotlessi", new Character('i'));
 		baseCharMappings.put("dotlessj", new Character('j'));
+		baseCharMappings.put("germandbls", new Character('s'));
 		
 		//	initialize ligatures, including Roman numbers
 		mapSuffixLigatures("paren", ")");
@@ -1915,6 +2007,8 @@ public class StringUtils {
 		mapLetterLigatures();
 		mapLetterLigature("quoterightn", "'n", false, false, true);
 		mapLetterLigature("napostrophe", "n'", false, false, true);
+		ligatureMappings.put(new Character('\u00DF'), "ss"); // have to map this directly, as PostScript name is 'germandbls', not 'ss'
+		ligatureMappings.put(new Character('\u1E9E'), "SS"); // have to map this directly, as there is no PostScript name
 		
 		System.out.println("StringUtils: PostScript character mappings initialized.");
 		doneInitCharacters = true;
@@ -2442,6 +2536,62 @@ public class StringUtils {
 		StringVector parser = new StringVector();
 		parser.parseAndAddElements(string, toReplace);
 		return parser.concatStrings(replacement);
+	}
+
+	/**
+	 * Insert escaper characters into a string, one before every occurrence of
+	 * character toEscape.
+	 * @param str the string to escape
+	 * @param toEscape the character to escape
+	 * @param escaper the escaper character
+	 * @return the escaped string
+	 */
+	public static String escapeChar(String str, char toEscape, char escaper) {
+		if (str == null)
+			return null;
+		StringBuffer escaped = new StringBuffer();
+		char ch;
+		for (int i = 0; i < str.length(); i++) {
+			ch = str.charAt(i);
+			if (ch == toEscape)
+				escaped.append(escaper);
+			escaped.append(ch);
+		}
+		return escaped.toString();
+	}
+
+	/**
+	 * Insert escaper characters into a string, one before every occurrence of
+	 * each character contained in toEscape.
+	 * @param str the string to escape
+	 * @param toEscape the array containing the characters to escape
+	 * @param escaper the escaper character
+	 * @return the escaped string
+	 */
+	public static String escapeChars(String str, char toEscape[], char escaper) {
+		return escapeChars(str, new String(toEscape), escaper);
+	}
+
+	/**
+	 * Insert escaper characters into a string, one before every occurrence of
+	 * each character contained in toEscape.
+	 * @param str the string to escape
+	 * @param toEscape the array containing the characters to escape
+	 * @param escaper the escaper character
+	 * @return the escaped string
+	 */
+	public static String escapeChars(String str, String toEscape, char escaper) {
+		if (str == null)
+			return null;
+		StringBuffer escaped = new StringBuffer();
+		char ch;
+		for (int i = 0; i < str.length(); i++) {
+			ch = str.charAt(i);
+			if (toEscape.indexOf(ch) != -1)
+				escaped.append(escaper);
+			escaped.append(ch);
+		}
+		return escaped.toString();
 	}
 	
 	/**

@@ -135,6 +135,60 @@ public class CountingSet implements Set {
 	}
 	
 	/**
+	 * Retrieve the element with the lowest (non-zero) count in the set.
+	 * @return the least frequent element in the set
+	 */
+	public Object min() {
+		return this.min(false);
+	}
+	
+	/**
+	 * Retrieve the element with the lowest (non-zero) count in the set.
+	 * @param preferLast prefer later elements with the same count?
+	 * @return the least frequent element in the set
+	 */
+	public Object min(boolean preferLast) {
+		Object minElem = null;
+		int minCount = this.size();
+		for (Iterator eit = this.iterator(); eit.hasNext();) {
+			Object elem = eit.next();
+			int count = this.getCount(elem);
+			if ((count < minCount) || (preferLast && (count == minCount))) {
+				minElem = elem;
+				minCount = count;
+			}
+		}
+		return minElem;
+	}
+	
+	/**
+	 * Retrieve the element with the highest count in the set.
+	 * @return the most frequent element in the set
+	 */
+	public Object max() {
+		return this.max(false);
+	}
+	
+	/**
+	 * Retrieve the element with the highest count in the set.
+	 * @param preferLast prefer later elements with the same count?
+	 * @return the most frequent element in the set
+	 */
+	public Object max(boolean preferLast) {
+		Object maxElem = null;
+		int maxCount = 0;
+		for (Iterator eit = this.iterator(); eit.hasNext();) {
+			Object elem = eit.next();
+			int count = this.getCount(elem);
+			if ((maxCount < count) || (preferLast && (maxCount == count))) {
+				maxElem = elem;
+				maxCount = count;
+			}
+		}
+		return maxElem;
+	}
+	
+	/**
 	 * Returns the number of times the set contains the argument element.
 	 * @param obj the element whose frequency in this set to obtain
 	 * @return the number of times the set contains the argument element
@@ -376,7 +430,7 @@ public class CountingSet implements Set {
 	 * @return <code>true</code> if this set changed as a result of the call
 	 * @see java.util.Set#addAll(java.util.Collection)
 	 */
-	boolean removeAll(CountingSet cs) {
+	public boolean removeAll(CountingSet cs) {
 		boolean changed = false;
 		if (cs == this)
 			return changed;
@@ -393,5 +447,22 @@ public class CountingSet implements Set {
 	public void clear() {
 		this.content.clear();
 		this.size = 0;
+	}
+	
+	/* (non-Javadoc)
+	 * @see java.lang.Object#toString()
+	 */
+	public String toString() {
+		StringBuffer sb = new StringBuffer();
+		sb.append("{");
+		for (Iterator it = this.content.keySet().iterator(); it.hasNext();) {
+			Object obj = it.next();
+			int objCnt = this.getCount(obj);
+			sb.append(obj + ": " + objCnt);
+			if (it.hasNext())
+				sb.append(", ");
+		}
+		sb.append("}");
+		return sb.toString();
 	}
 }

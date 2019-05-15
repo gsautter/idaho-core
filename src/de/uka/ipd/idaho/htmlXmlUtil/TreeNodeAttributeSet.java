@@ -33,6 +33,7 @@ import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.Properties;
 
+import de.uka.ipd.idaho.gamta.util.gPath.exceptions.InvalidArgumentsException;
 import de.uka.ipd.idaho.htmlXmlUtil.exceptions.ParseException;
 import de.uka.ipd.idaho.htmlXmlUtil.grammars.Grammar;
 import de.uka.ipd.idaho.htmlXmlUtil.grammars.StandardGrammar;
@@ -213,12 +214,22 @@ public class TreeNodeAttributeSet {
 	public static TreeNodeAttributeSet getTagAttributes(String tag, Grammar grammar) {
 		TreeNodeAttributeSet attributes = new TreeNodeAttributeSet(grammar);
 		if ((tag != null) || (grammar != null)) try {
-			fillTagAttributeSet(tag, grammar, attributes);
-		} catch (IOException ioe) { /* does not happen with a StringReader, but Java don't know */ }
+//			watchParse(tag);
+			fillTagAttributeSet(tag, grammar, attributes, -1);
+		}
+		catch (ParseException pe) {
+			throw new InvalidArgumentsException(pe.getMessage(), pe);
+		}
+		catch (IOException ioe) { /* does not happen with a StringReader, but Java don't know */ 
+			ioe.printStackTrace();
+		}
+//		finally {
+//			doneParse();
+//		}
 		return attributes;
 	}
 	
-	private static void fillTagAttributeSet(String tag, Grammar grammar, TreeNodeAttributeSet attributes) throws IOException {
+	private static void fillTagAttributeSet(String tag, Grammar grammar, TreeNodeAttributeSet attributes, int correctedAttributeValueQuoter) throws IOException {
 		LookaheadReader charSource = new LookaheadReader(new StringReader(tag), grammar.getCharLookahead());
 		char tagAttributeValueSeparator = grammar.getTagAttributeValueSeparator();
 		char tagEnd = grammar.getTagEnd();
@@ -231,7 +242,13 @@ public class TreeNodeAttributeSet {
 		
 		//	crop qName
 		String tagType = LookaheadReader.cropName(charSource);
+//		System.out.println("TNAS: Got tag " + tagType);
+		if (tagType.length() == 0)
+			throw new ParseException("Invalid character '" + ((char) charSource.peek()) + "', expected name");
 		skipWhitespace(charSource, grammar);
+		
+		//	set up corrected recursion
+		int lastAttributeValueQuoter = -1;
 		
 		//	crop attribute-value pairs
 		while (charSource.peek() != -1) {
@@ -243,6 +260,21 @@ public class TreeNodeAttributeSet {
 			
 			//	read attribute name
 			String attribName = LookaheadReader.cropName(charSource);
+//			System.out.println("TNAS: Got attribute name " + attribName);
+			
+			//	attribute name empty, something's wrong
+			if (attribName.length() == 0) {
+				
+				//	escape (and thus ignore) last value quoter (likely prematurely ended attribute value, which is why we're in some weird state)
+				if (grammar.correctErrors() && (lastAttributeValueQuoter != -1) && (correctedAttributeValueQuoter < lastAttributeValueQuoter)) {
+					String correctedTag = (tag.substring(0, lastAttributeValueQuoter) + grammar.escape("" + tag.charAt(lastAttributeValueQuoter)) + tag.substring(lastAttributeValueQuoter + 1));
+					attributes.clear();
+//					System.out.println("TNAS: recursing with corrected tag " + correctedTag);
+					fillTagAttributeSet(correctedTag, grammar, attributes, lastAttributeValueQuoter);
+					return;
+				}
+				else throw new ParseException("Invalid character '" + ((char) charSource.peek()) + "', expected name");
+			}
 			skipWhitespace(charSource, grammar);
 			
 			//	we have a value (tolerate missing separator if configured that way)
@@ -253,11 +285,23 @@ public class TreeNodeAttributeSet {
 				else if (!grammar.correctErrors())
 					throw new ParseException("Invalid character '" + ((char) charSource.peek()) + "', expected '" + tagAttributeValueSeparator + "'");
 				skipWhitespace(charSource, grammar);
+				if (grammar.isTagAttributeValueQuoter((char) charSource.peek())) {
+					lastAttributeValueQuoter = charSource.readThusFar();
+//					System.out.println("TNAS: quoter at " + lastAttributeValueQuoter + " (is '" + (tag.charAt(lastAttributeValueQuoter)) + "' in tag string)");
+				}
 				attribValue = LookaheadReader.cropAttributeValue(charSource, grammar, tagType, attribName, tagEnd, endTagMarker);
+				if (grammar.isTagAttributeValueQuoter(tag.charAt(charSource.readThusFar() - 1))) {
+					lastAttributeValueQuoter = (charSource.readThusFar() - 1);
+//					System.out.println("TNAS: end quoter at " + lastAttributeValueQuoter + " (is '" + (tag.charAt(lastAttributeValueQuoter)) + "' in tag string)");
+				}
+//				System.out.println("TNAS: Got attribute value " + attribValue);
 			}
 			
 			//	we have a standalone attribute, substitute name for value
-			else attribValue = attribName;
+			else {
+				attribValue = attribName;
+//				System.out.println("TNAS: Defaulted attribute value to " + attribValue);
+			}
 			
 			//	append normalized attribute
 			attributes.setAttribute(attribName, grammar.unescape(attribValue));
@@ -268,6 +312,158 @@ public class TreeNodeAttributeSet {
 		while ((charSource.peek() != -1) && grammar.isWhitespace((char) charSource.peek()))
 			charSource.read();
 	}
+	
+//	private static ThreadLocal watchList = new ThreadLocal();
+//	private static final Object watched = new Object();
+//	public static void watch() {
+//		watchList.set(watched);
+//	}
+//	public static void unwatch() {
+//		watchList.remove();
+//	}
+//	
+//	private static class WatchedParse {
+//		final String tag;
+//		final long start = System.currentTimeMillis();
+//		WatchedParse(String tag) {
+//			this.tag = tag;
+//		}
+//	}
+//	private static LinkedHashMap watchedParses = new LinkedHashMap();
+//	private static void watchParse(String tag) {
+//		if (watchList.get() == null)
+//			return;
+//		synchronized(watchedParses) {
+//			watchedParses.put(Long.valueOf(Thread.currentThread().getId()), new WatchedParse(tag));
+//		}
+//	}
+//	private static void doneParse() {
+//		if (watchList.get() == null)
+//			return;
+//		synchronized(watchedParses) {
+//			watchedParses.remove(Long.valueOf(Thread.currentThread().getId()));
+//		}
+//	}
+//	private static Thread watchedParseLogger = new Thread() {
+//		public void run() {
+//			while (true) {
+//				try {
+//					sleep(1000);
+//				} catch (InterruptedException ie) {}
+//				ArrayList wps;
+//				synchronized (watchedParses) {
+//					wps = new ArrayList(watchedParses.values());
+//				}
+//				long time = System.currentTimeMillis();
+//				for (int p = 0; p < wps.size(); p++) {
+//					WatchedParse wp = ((WatchedParse) wps.get(p));
+//					if ((60 * 1000) < (time - wp.start))
+//						System.out.println("TnasParseStuck: " + wp.tag);
+//				}
+//			}
+//		}
+//	};
+//	static {
+//		watchedParseLogger.start();
+//	}
+//	
+//	private static final Grammar html = new Html();
+//	public static void main(String[] args) throws Exception {
+////		String testTag = "<a title=\"FIGURE 70. Palpipalpus hesperius Beard and Seeman, adult female, legs (right side), solenidion w \" and eupathidia (pk ' - pk '') not labelled on leg I.\" href=\"#\" onclick=\"return displayFigure('https://zenodo.org/record/251405/files/figure.png');\">";
+//		String testTag = "<a title=\"View 'FIGURE 75. Pentamerismus sititoris Beard and Seeman, adult female, dorsum with details of palps and legs I – II; solenidion w \" and eupathidia (pk ' - pk '') not labelled.'\" href=\"#\" onclick=\"return displayFigure('https://zenodo.org/record/251409/files/figure.png');\">";
+////		String testTag = "<a title=\"FIGURE 70. Palpipalpus hesperius Beard and Seeman, adult female, legs (right side), solenidion w \" and eupathidia (pk ' - pk '') not labelled on leg I.\" href=\"#\" onclick=\"return displayFigure('https://zenodo.org/record/251405/files/figure.png\");\">";
+//		try {
+//			TreeNodeAttributeSet tnas = getTagAttributes(testTag, html);
+//			String ans[] = tnas.getAttributeNames();
+//			for (int a = 0; a < ans.length; a++)
+//				System.out.println(ans[a] + " = " + tnas.getAttribute(ans[a]));
+//		}
+//		catch (Exception e) {
+//			e.printStackTrace();
+//		}
+//	}
+//	public static void main(String[] args) throws Exception {
+////		for (int r = 0; r < 16384; r++) {
+////			StringBuffer testTagBuilder = new StringBuffer("<");
+////			int typeChars = randomLength(32, 3);
+////			for (int c = 0; c <= typeChars; c++)
+////				testTagBuilder.append(randomChar(c == 0));
+////			String testTag = (testTagBuilder.toString() + ">");
+////			System.out.println("Parsing attributes from " + testTag.length() + " chars");
+////			long start = System.currentTimeMillis();
+////			getTagAttributes(testTag, html);
+////			System.out.println(" ==> done after " + (System.currentTimeMillis() - start) + "ms");
+////		}
+////		for (int r = 0; r < 4096; r++) {
+//		for (int r = 0; r < 65536; r++) {
+//			StringBuffer testTagBuilder = new StringBuffer("<");
+//			int typeChars = randomLength(32, 3);
+//			for (int c = 0; c <= typeChars; c++)
+//				testTagBuilder.append(randomChar(c == 0));
+//			do {
+//				int spaces = randomLength(2, 1);
+//				for (int s = 0; s < spaces; s++)
+//					testTagBuilder.append(randomSpace());
+//				
+//				String testTag = (testTagBuilder.toString() + ">");
+////				System.out.println("Parsing attributes from " + testTag.length() + " chars: " + testTag);
+//				System.out.println("Parsing attributes from " + testTag.length() + " chars");
+//				long start = System.currentTimeMillis();
+//				getTagAttributes(testTag, html);
+//				System.out.println(" ==> done after " + (System.currentTimeMillis() - start) + "ms");
+//				testTag = (testTagBuilder.toString() + "/>");
+////				System.out.println("Parsing attributes from " + testTag.length() + " chars: " + testTag);
+//				System.out.println("Parsing attributes from " + testTag.length() + " chars");
+//				start = System.currentTimeMillis();
+//				getTagAttributes(testTag, html);
+//				System.out.println(" ==> done after " + (System.currentTimeMillis() - start) + "ms");
+//				
+//				spaces = randomLength(6, 1);
+//				for (int s = 0; s <= spaces; s++)
+//					testTagBuilder.append(randomSpace());
+//				int nameChars = randomLength(32, 2);
+//				for (int c = 0; c <= nameChars; c++)
+//					testTagBuilder.append(randomChar(c == 0));
+//				testTagBuilder.append('=');
+//				testTagBuilder.append('"');
+//				int valueChars = randomLength(1024, 4);
+//				for (int c = 0; c < valueChars; c++)
+//					testTagBuilder.append(randomChar(false));
+//				testTagBuilder.append('"');
+////				String testTag = (testTagBuilder.toString() + ">");
+////				System.out.println("Parsing attributes from " + testTag.length() + " chars");
+////				long start = System.currentTimeMillis();
+////				getTagAttributes(testTag, html);
+////				System.out.println(" ==> done after " + (System.currentTimeMillis() - start) + "ms");
+//			}
+////			while (testTagBuilder.length() < 16384);
+//			while (testTagBuilder.length() < 1024);
+//		}
+//	}
+//	private static int randomLength(int max, int exp) {
+//		double br = Math.random();
+//		double r = br;
+//		for (; exp > 1; exp--)
+//			r *= br;
+//		return ((int) Math.floor(max * r));
+//	}
+//	private static char randomSpace() {
+//		return " \t\r\n".charAt(randomLength(4, 4));
+//	}
+//	private static char randomChar(boolean lettersOnly) {
+//		int ch = ((int) Math.floor((lettersOnly ? 52 : 64) * Math.random()));
+//		if (ch < 26)
+//			return ((char) ('A' + ch));
+//		ch -= 26;
+//		if (ch < 26)
+//			return ((char) ('a' + ch));
+//		ch -= 26;
+//		if (ch < 10)
+//			return ((char) ('0' + ch));
+//		ch -= 10;
+//		return "-_".charAt(ch);
+//	}
+//	
 //	public static TreeNodeAttributeSet getTagAttributes(String tag, Grammar grammar) {
 //		TreeNodeAttributeSet attributes = new TreeNodeAttributeSet(grammar);
 //		

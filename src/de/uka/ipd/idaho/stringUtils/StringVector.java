@@ -69,7 +69,7 @@ import java.util.Vector;
  * scalarMultiply() methods)</li>
  * </ul>
  */
-public class StringVector implements Dictionary {
+public class StringVector implements MutableDictionary {
 	
 	private Vector vector = new Vector();
 	
@@ -180,6 +180,20 @@ public class StringVector implements Dictionary {
 		this.content.remove(s);
 		this.contentIgnoreCase.remove(s);
 		this.notifyModified();
+	}
+	
+	/* (non-Javadoc)
+	 * @see de.uka.ipd.idaho.stringUtils.MutableDictionary#supportsRemoveEntry()
+	 */
+	public boolean supportsRemoveEntry() {
+		return true;
+	}
+	
+	/* (non-Javadoc)
+	 * @see de.uka.ipd.idaho.stringUtils.MutableDictionary#removeEntry(java.lang.String)
+	 */
+	public void removeEntry(String entry) {
+		this.removeAll(entry);
 	}
 	
 	/** @see java.util.Vector#set(int, java.lang.Object)
@@ -406,6 +420,21 @@ public class StringVector implements Dictionary {
 	 */
 	public void addElementIgnoreDuplicates(String s, boolean caseSensitive) {
 		if (caseSensitive ? !this.contains(s) : !this.containsIgnoreCase(s)) this.addElement(s);
+	}
+	
+	/* (non-Javadoc)
+	 * @see de.uka.ipd.idaho.stringUtils.MutableDictionary#supportsAddEntry()
+	 */
+	public boolean supportsAddEntry() {
+		return true;
+	}
+	
+	/* (non-Javadoc)
+	 * @see de.uka.ipd.idaho.stringUtils.MutableDictionary#addEntry(java.lang.String)
+	 */
+	public void addEntry(String entry) {
+		if (entry != null)
+			this.addElementIgnoreDuplicates(entry);
 	}
 	
 	/**	check if this StringVector contains a given String

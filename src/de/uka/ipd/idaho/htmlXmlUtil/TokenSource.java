@@ -308,7 +308,7 @@ public class TokenSource {
 					else break;
 				}
 				
-				//	we're not corecting errors ...
+				//	we're not correcting errors ...
 				else throw new ParseException("Invalid character '" + ((char) this.charSource.peek()) + "', expected name");
 			}
 			

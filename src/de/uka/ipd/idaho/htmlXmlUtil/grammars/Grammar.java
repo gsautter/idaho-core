@@ -225,8 +225,8 @@ public abstract class Grammar {
 	}
 
 	/**
-	 * @return the number of chars that have to be inspected at the same time on
-	 *         order to rcognize the longest marker sequence known to this
+	 * @return the number of chars that have to be inspected at the same time
+	 *         in order to recognize the longest marker sequence known to this
 	 *         Grammar
 	 */
 	public int getCharLookahead() {

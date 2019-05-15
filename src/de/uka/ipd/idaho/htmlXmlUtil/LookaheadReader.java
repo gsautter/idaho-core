@@ -48,6 +48,7 @@ class LookaheadReader extends FilterReader {
 	private int bufferStart = 0;
 	private int bufferEnd;
 	private int lookahead;
+	private int read = 0;
 	LookaheadReader(Reader in, int lookahead) throws IOException {
 		super((in instanceof BufferedReader) ? ((BufferedReader) in) : new BufferedReader(in));
 		this.lookahead = Math.max(lookahead, 256);
@@ -56,8 +57,9 @@ class LookaheadReader extends FilterReader {
 	private void fillBuffer(int min) throws IOException {
 		if (this.bufferEnd == -1)
 			return;
-		if (min < (this.bufferEnd - this.bufferStart))
+		if (min <= (this.bufferEnd - this.bufferStart))
 			return;
+//		System.out.println("Filling buffer to " + min + " (currently " + (this.bufferEnd - this.bufferStart) + ")");
 		if (this.bufferStart != 0) {
 			for (int i = 0; i < (this.bufferEnd - this.bufferStart); i++)
 				this.charBuffer[i] = this.charBuffer[this.bufferStart + i];
@@ -66,12 +68,16 @@ class LookaheadReader extends FilterReader {
 		}
 		while (this.bufferEnd < this.charBuffer.length) {
 			int r = super.read();
+//			System.out.println(" - read " + r);
 			if (r == -1)
 				break;
 			this.charBuffer[this.bufferEnd++] = ((char) r);
 		}
-		if (this.bufferStart == this.bufferEnd)
+		if (this.bufferStart == this.bufferEnd) {
+//			System.out.println(" ==> end of input");
 			this.bufferEnd = -1;
+		}
+//		else System.out.println(" ==> now at " + (this.bufferEnd - this.bufferStart));
 		//	TODO_not consider using small char buffer instead of char-by-char reading
 		//	==> looking inside BufferedReader, the single char read() method looks like the best choice
 	}
@@ -86,6 +92,7 @@ class LookaheadReader extends FilterReader {
 		this.fillBuffer(this.lookahead + 1);
 		if (this.bufferEnd == -1)
 			return -1;
+		this.read++;
 		return this.charBuffer[this.bufferStart++];
 	}
 	public int read(char[] cbuf, int off, int len) throws IOException {
@@ -96,16 +103,18 @@ class LookaheadReader extends FilterReader {
 		while (read < len) {
 			if (this.bufferStart == this.bufferEnd)
 				break;
+			this.read++;
 			cbuf[off + read] = this.charBuffer[this.bufferStart++];
 			read++;
 		}
-		return read;
+		return ((read == 0) ? -1 : read);
 	}
 	public long skip(long n) throws IOException {
 		this.fillBuffer((int) n + this.lookahead);
 		if (this.bufferEnd == -1)
 			return 0;
 		int skip = Math.min((this.bufferEnd - this.bufferStart), ((int) n));
+		this.read += skip;
 		this.bufferStart += skip;
 		return skip;
 	}
@@ -128,7 +137,7 @@ class LookaheadReader extends FilterReader {
 		return this.peek(cbuf, 0, cbuf.length);
 	}
 	int peek(char[] cbuf, int off, int len) throws IOException {
-		this.fillBuffer(this.lookahead + 1);
+		this.fillBuffer(this.lookahead + len);
 		if (this.bufferEnd == -1)
 			return -1;
 		int peek = 0;
@@ -138,7 +147,10 @@ class LookaheadReader extends FilterReader {
 			cbuf[off + peek] = this.charBuffer[this.bufferStart + peek];
 			peek++;
 		}
-		return peek;
+		return  ((peek == 0) ? -1 : peek);
+	}
+	int readThusFar() {
+		return this.read;
 	}
 	boolean startsWith(String prefix, boolean caseSensitive) throws IOException {
 		return this.startsWith(prefix, caseSensitive, 0);

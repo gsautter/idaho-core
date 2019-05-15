@@ -170,7 +170,7 @@ public interface Annotation extends Attributed, TokenSequence, Comparable, CharS
 	/**
 	 * Retrieve the value of the annotation. Note: As opposed to the
 	 * TokenSequenceUtils.concatTokens() methods, this method returns the
-	 * underlaying char sequence as is, i.e. without normalizing whitespaces
+	 * underlying char sequence as is, i.e. without normalizing whitespaces
 	 * Note: This method does not include leading and tailing whitespaces of the
 	 * token sequence it represents
 	 * @return the Annotation's value, i.e. the part of the underlying character
