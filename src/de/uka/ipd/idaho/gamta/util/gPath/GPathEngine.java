@@ -969,48 +969,66 @@ public class GPathEngine implements GPathConstants {
 			return new GPathNumber(sum);
 		}
 		else if ("min".equalsIgnoreCase(functionName)) {
-			if ((args.length != 1) || !(args[0] instanceof GPathAnnotationSet))
-				throw new InvalidArgumentsException("The function 'min' requires 1 argument(s) of type(s) GPathAnnotationSet.");
-			GPathAnnotationSet annotationSet = ((GPathAnnotationSet) args[0]);
-			double minNum = 0;
-			String minStr = null;
-			for (int s = 0; s < annotationSet.size(); s++) {
-				GPathString str = new GPathString(annotationSet.get(s).getValue());
-				if (minStr == null)
-					minStr = str.value;
-				else if (str.value.compareTo(minStr) < 0)
-					minStr = str.value;
-				GPathNumber num = str.asNumber();
-				if (Double.isNaN(num.value))
-					minNum = Double.NaN;
-				else if (!Double.isNaN(minNum))
-					minNum = Math.min(minNum, num.value);
+			if ((args.length == 1) && (args[0] instanceof GPathAnnotationSet)) {}
+			else if (args.length == 2) {}
+			else throw new InvalidArgumentsException("The function 'min' requires 1 argument(s) of type(s) GPathAnnotationSet, or 2 argument(s).");
+			if (args.length == 1) {
+				GPathAnnotationSet annotationSet = ((GPathAnnotationSet) args[0]);
+				double minNum = Double.POSITIVE_INFINITY;
+				String minStr = null;
+				for (int s = 0; s < annotationSet.size(); s++) {
+					GPathString str = new GPathString(annotationSet.get(s).getValue());
+					if (minStr == null)
+						minStr = str.value;
+					else if (str.value.compareTo(minStr) < 0)
+						minStr = str.value;
+					GPathNumber num = str.asNumber();
+					if (Double.isNaN(num.value))
+						minNum = Double.NaN;
+					else if (!Double.isNaN(minNum))
+						minNum = Math.min(minNum, num.value);
+				}
+				if (Double.isNaN(minNum))
+					return new GPathString((minStr == null) ? "" : minStr);
+				else return new GPathNumber((minNum < Double.POSITIVE_INFINITY) ? minNum : 0);
 			}
-			if (Double.isNaN(minNum))
-				return new GPathString((minStr == null) ? "" : minStr);
-			else return new GPathNumber(minNum);
+			else return ((args[0].asNumber().value < args[1].asNumber().value) ? args[0] : args[1]);
 		}
 		else if ("max".equalsIgnoreCase(functionName)) {
-			if ((args.length != 1) || !(args[0] instanceof GPathAnnotationSet))
-				throw new InvalidArgumentsException("The function 'max' requires 1 argument(s) of type(s) GPathAnnotationSet.");
-			GPathAnnotationSet annotationSet = ((GPathAnnotationSet) args[0]);
-			double maxNum = 0;
-			String maxStr = null;
-			for (int s = 0; s < annotationSet.size(); s++) {
-				GPathString str = new GPathString(annotationSet.get(s).getValue());
-				if (maxStr == null)
-					maxStr = str.value;
-				else if (str.value.compareTo(maxStr) > 0)
-					maxStr = str.value;
-				GPathNumber num = str.asNumber();
-				if (Double.isNaN(num.value))
-					maxNum = Double.NaN;
-				else if (!Double.isNaN(maxNum))
-					maxNum = Math.max(maxNum, num.value);
+			if ((args.length == 1) && (args[0] instanceof GPathAnnotationSet)) {}
+			else if (args.length == 2) {}
+			else new InvalidArgumentsException("The function 'max' requires 1 argument(s) of type(s) GPathAnnotationSet, or two argument(s).");
+			if (args.length == 1) {
+				GPathAnnotationSet annotationSet = ((GPathAnnotationSet) args[0]);
+				double maxNum = Double.NEGATIVE_INFINITY;
+				String maxStr = null;
+				for (int s = 0; s < annotationSet.size(); s++) {
+					GPathString str = new GPathString(annotationSet.get(s).getValue());
+					if (maxStr == null)
+						maxStr = str.value;
+					else if (str.value.compareTo(maxStr) > 0)
+						maxStr = str.value;
+					GPathNumber num = str.asNumber();
+					if (Double.isNaN(num.value))
+						maxNum = Double.NaN;
+					else if (!Double.isNaN(maxNum))
+						maxNum = Math.max(maxNum, num.value);
+				}
+				if (Double.isNaN(maxNum))
+					return new GPathString((maxStr == null) ? "" : maxStr);
+				else return new GPathNumber((Double.NEGATIVE_INFINITY < maxNum) ? maxNum : 0);
 			}
-			if (Double.isNaN(maxNum))
-				return new GPathString((maxStr == null) ? "" : maxStr);
-			else return new GPathNumber(maxNum);
+			else return ((args[0].asNumber().value < args[1].asNumber().value) ? args[1] : args[0]);
+		}
+		else if ("avg".equalsIgnoreCase(functionName)) {
+			if ((args.length != 1) || !(args[0] instanceof GPathAnnotationSet))
+				throw new InvalidArgumentsException("The function 'avg' requires 1 argument(s) of type(s) GPathAnnotationSet.");
+			
+			GPathAnnotationSet annotationSet = ((GPathAnnotationSet) args[0]);
+			double sum = 0;
+			for (int s = 0; s < annotationSet.size(); s++)
+				sum += new GPathString(annotationSet.get(s).getValue()).asNumber().value;
+			return new GPathNumber(annotationSet.isEmpty() ? 0 : (sum / annotationSet.size()));
 		}
 		
 		//	positional functions
@@ -1060,6 +1078,13 @@ public class GPathEngine implements GPathConstants {
 			if (attributeValue == null)
 				return new GPathString((args.length == 1) ? "" : args[1].asString().value);
 			else return new GPathString(attributeValue.toString());
+		}
+		
+		//	defaulting function
+		else if ("default".equalsIgnoreCase(functionName)) {
+			if (args.length != 2)
+				throw new InvalidArgumentsException("The function 'default' requires 2 arguments.");
+			return (args[0].asBoolean().value ? args[0] : args[1]);
 		}
 		
 		//	string functions

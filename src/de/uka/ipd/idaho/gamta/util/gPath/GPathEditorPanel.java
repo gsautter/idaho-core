@@ -77,28 +77,45 @@ public class GPathEditorPanel extends JPanel implements DocumentListener {
 	/**	Constructor
 	 */
 	public GPathEditorPanel() {
-		this("", new JButton[0]);
+		this("", BorderLayout.SOUTH, new JButton[0]);
 	}
 	
 	/**	Constructor
-	 * @param	gPath	the GPath expression to display in the editor
+	 * @param gPath the GPath expression to display in the editor
 	 */
 	public GPathEditorPanel(String gPath) {
-		this(gPath, new JButton[0]);
+		this(gPath, BorderLayout.SOUTH, new JButton[0]);
 	}
 	
 	/**	Constructor
-	 * @param	customButtons	an array of custom buttons to include in the button panel
+	 * @param gPath the GPath expression to display in the editor
+	 * @param buttonPos the position of the button panel (one of the four edges of BorderLayout)
+	 */
+	public GPathEditorPanel(String gPath, String buttonPos) {
+		this(gPath, buttonPos, new JButton[0]);
+	}
+	
+	/**	Constructor
+	 * @param customButtons an array of custom buttons to include in the button panel
 	 */
 	public GPathEditorPanel(JButton[] customButtons) {
-		this("", customButtons);
+		this("", BorderLayout.SOUTH, customButtons);
 	}
 	
 	/**	Constructor
-	 * @param	gPath			the GPath expression to display in the editor
-	 * @param	customButtons	an array of custom buttons to include in the button panel
+	 * @param gPath the GPath expression to display in the editor
+	 * @param customButtons an array of custom buttons to include in the button panel
 	 */
 	public GPathEditorPanel(String gPath, JButton[] customButtons) {
+		this(gPath, BorderLayout.SOUTH, customButtons);
+	}
+	
+	/**	Constructor
+	 * @param gPath the GPath expression to display in the editor
+	 * @param buttonPos the position of the button panel (one of the four edges of BorderLayout)
+	 * @param customButtons an array of custom buttons to include in the button panel
+	 */
+	public GPathEditorPanel(String gPath, String buttonPos, JButton[] customButtons) {
 		super(new BorderLayout(), true);
 		
 		//	initialize editor
@@ -111,18 +128,20 @@ public class GPathEditorPanel extends JPanel implements DocumentListener {
 		//	initialize buttons
 		JButton refreshButton = new JButton("Format GPath");
 		refreshButton.setBorder(BorderFactory.createRaisedBevelBorder());
-		refreshButton.setPreferredSize(new Dimension(115, 21));
+		if (BorderLayout.NORTH.equals(buttonPos) || BorderLayout.SOUTH.equals(buttonPos))
+			refreshButton.setPreferredSize(new Dimension(115, 21));
 		refreshButton.addActionListener(new ActionListener() {
-			public void actionPerformed(ActionEvent e) {
+			public void actionPerformed(ActionEvent ae) {
 				formatGPath();
 			}
 		});
 		
 		JButton validateButton = new JButton("Validate");
 		validateButton.setBorder(BorderFactory.createRaisedBevelBorder());
-		validateButton.setPreferredSize(new Dimension(115, 21));
+		if (BorderLayout.NORTH.equals(buttonPos) || BorderLayout.SOUTH.equals(buttonPos))
+			validateButton.setPreferredSize(new Dimension(115, 21));
 		validateButton.addActionListener(new ActionListener() {
-			public void actionPerformed(ActionEvent e) {
+			public void actionPerformed(ActionEvent ae) {
 				validateGPath();
 			}
 		});
@@ -141,26 +160,40 @@ public class GPathEditorPanel extends JPanel implements DocumentListener {
 		gbc.gridy = 0;
 		gbc.gridx = 0;
 		buttonPanel.add(refreshButton, gbc.clone());
-		gbc.gridx ++;
+		if (BorderLayout.WEST.equals(buttonPos) || BorderLayout.EAST.equals(buttonPos))
+			gbc.gridy ++;
+		else gbc.gridx ++;
 		buttonPanel.add(validateButton, gbc.clone());
 		
 		//	add custom buttons
 		for (int b = 0; b < customButtons.length; b++) {
-			gbc.gridx ++;
+			if (BorderLayout.WEST.equals(buttonPos) || BorderLayout.EAST.equals(buttonPos))
+				gbc.gridy ++;
+			else gbc.gridx ++;
 			buttonPanel.add(customButtons[b], gbc.clone());
 		}
 		
 		//	put the whole stuff together
 		this.add(this.editorBox, BorderLayout.CENTER);
-		this.add(buttonPanel, BorderLayout.SOUTH);
+		this.add(buttonPanel, buttonPos);
 		this.setContent(gPath);
 	}
 	
-	/**	@return	the regular expression displayed in the editor (will be normalized before)
+	/**	@return	the GPath expression displayed in the editor (will be normalized before)
 	 */
 	public String getContent() {
-		if (this.isDirty()) this.content = RegExUtils.normalizeRegEx(this.editor.getText());
+		if (this.isDirty())
+			this.content = RegExUtils.normalizeRegEx(this.editor.getText());
 		return this.content;
+	}
+	
+	/**	@return	the currently selected part of the GPath expression displayed in the editor (will be normalized before)
+	 */
+	public String getSelectedContent() {
+		String selectedContent = this.editor.getSelectedText();
+		if (selectedContent != null)
+			selectedContent = RegExUtils.normalizeRegEx(selectedContent);
+		return selectedContent;
 	}
 	
 	/**	set the content of the editor

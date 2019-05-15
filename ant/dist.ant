@@ -5,8 +5,7 @@
 -->
 
 <project name="dist">
-	<target name="jars" depends="stringutils,htmlxmlutil,easyio,webappupdater,gamta">
-	</target>
+	<target name="jars" depends="stringutils,htmlxmlutil,easyio,webappupdater,gamta" />
 	
 	<target name="stringutils">
 		<delete file="${jar.stringutils}" />
@@ -34,6 +33,7 @@
 			<fileset dir="${src.home}" includes="**/easyIO/**/**.java" excludes="**/easyIO/**/tools/**.java"/>
 			<fileset dir="${src.home}" includes="**/easyIO/**/**.gif"/>
 			<fileset dir="${src.home}" includes="**/easyIO/**/**.txt"/>
+			<fileset dir="${src.home}" includes="**/easyIO/**/**.ks"/>
 			<fileset dir="." includes="LICENSE.txt"/>
 		</jar>
 	</target>

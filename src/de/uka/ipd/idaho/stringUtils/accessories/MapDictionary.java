@@ -10,7 +10,7 @@
  *     * Redistributions in binary form must reproduce the above copyright
  *       notice, this list of conditions and the following disclaimer in the
  *       documentation and/or other materials provided with the distribution.
- *     * Neither the name of the Universität Karlsruhe (TH) nor the
+ *     * Neither the name of the Universität Karlsruhe (TH) / KIT nor the
  *       names of its contributors may be used to endorse or promote products
  *       derived from this software without specific prior written permission.
  *
@@ -25,52 +25,44 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package de.uka.ipd.idaho.stringUtils;
+package de.uka.ipd.idaho.stringUtils.accessories;
+
+import java.util.Map;
 
 /**
- * Interface for a lookup dictionary.
+ * Implementation of a MutableDictionary backed by the key set of a Map. Case
+ * sensitivity of lookup in Maps is naturally fixed, and in general impossible
+ * to tell from the Map proper, so client code has to indicate this property to
+ * the constructor.<br/>
+ * If the argument Map is modified by client code after constructing an instance
+ * of this class around it, this class reflects the changes.<br/>
+ * This class does support removal of entries, but not addition, as there is no
+ * way of specifying a value to the key that an added entry will become.
  * 
  * @author sautter
  */
-public interface Dictionary {
+public class MapDictionary extends SetDictionary {
 	
 	/**
-	 * Check whether or not a string is contained in this Dictionary, using the
-	 * Dictionarie's default case sensitivity.
-	 * @param string the String to look up
-	 * @return true if the Dictionary contains the specified string 
+	 * Constructor
+	 * @param content the Map containing the entries as keys
+	 * @param caseSensitive is the Map case sensitive?
 	 */
-	public abstract boolean lookup(String string);
+	public MapDictionary(Map content, boolean caseSensitive) {
+		super(content.keySet(), caseSensitive);
+	}
 	
-	/**
-	 * Check if a string is contained in this Dictionary.
-	 * @param string the String to look up
-	 * @param caseSensitive do lookup case sensitive?
-	 * @return true if the Dictionary contains the specified string 
+	/* (non-Javadoc)
+	 * @see de.uka.ipd.idaho.stringUtils.accessories.SetDictionary#supportsAddEntry()
 	 */
-	public abstract boolean lookup(String string, boolean caseSensitive);
+	public boolean supportsAddEntry() {
+		return false;
+	}
 	
-	/**
-	 * Check the default case sensitivity of the dictionary.
-	 * @return true if lookups in this Dictionary are case sensitive by default
+	/* (non-Javadoc)
+	 * @see de.uka.ipd.idaho.stringUtils.accessories.SetDictionary#addEntry(java.lang.String)
 	 */
-	public abstract boolean isDefaultCaseSensitive();
-	
-	/**
-	 * Check whether or not the Dictionary is empty.	
-	 * @return true if this Dictionary contains no entries
-	 */
-	public abstract boolean isEmpty();
-	
-	/**
-	 * Retrieve the number of entries in the Dictionary.	
-	 * @return the number of entries in this Dictionary
-	 */
-	public abstract int size();
-	
-	/**
-	 * Retrieve an Iterator over the entries in the Dictionary.
-	 * @return an Iterator for iterating over the entries of this Dictionary
-	 */
-	public abstract StringIterator getEntryIterator(); 
+	public void addEntry(String entry) {
+		throw new UnsupportedOperationException("Adding entries not supported, use supportsAddEntry() to check.");
+	}
 }

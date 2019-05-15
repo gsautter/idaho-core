@@ -61,7 +61,7 @@ public class AnnotationUtils {
 	/**
 	 * Comparator ordering Annotations in terms of their position. This
 	 * comparator does neither consider the Annotation type, nor the attributes.
-	 * It merely encapsulates the compare() method provided by theis class. This
+	 * It merely encapsulates the compare() method provided by this class. This
 	 * object may only be used with Arrays or collections containing objects
 	 * implementing the Annotation interface. Using it with any other objects
 	 * causes class cast exceptions.
@@ -241,6 +241,7 @@ public class AnnotationUtils {
 			}
 			noBuilder.addElement(type);
 		}
+		System.out.println("Nesting order is " + noBuilder.concatStrings(", "));
 		
 		//	index nesting order
 		final HashMap noRanking = new HashMap();
@@ -635,7 +636,7 @@ public class AnnotationUtils {
 				Gamta.insertSpace(lastToken, token) && (t != 0) && (data.getWhitespaceAfter(t-1).length() != 0)
 				) buf.write(" ");
 			
-			//	write start tags for Annotations beginning at current Token
+			//	write start tags for Annotations beginning at current token
 			while ((annotationPointer < nestedAnnotations.length) && (nestedAnnotations[annotationPointer].getStartIndex() == t)) {
 				Annotation annotation = nestedAnnotations[annotationPointer];
 				stack.push(annotation);

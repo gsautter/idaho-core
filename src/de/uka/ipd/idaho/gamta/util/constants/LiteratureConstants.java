@@ -107,6 +107,12 @@ public interface LiteratureConstants {
 	/**	the annotation type for marking an emphasis in a document */
 	public static final String EMPHASIS_TYPE = "emphasis";
 	
+	/**	the annotation type for marking a superscript in a document */
+	public static final String SUPER_SCRIPT_TYPE = "superScript";
+	
+	/**	the annotation type for marking a subscript in a document */
+	public static final String SUB_SCRIPT_TYPE = "subScript";
+	
 	/**	the annotation type for marking a parenthesis in a document, e.g. a standalone text box, which is not part of the main document text */
 	public static final String PARENTHESIS_TYPE = "parenthesis";
 	

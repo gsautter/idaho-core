@@ -56,10 +56,10 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
-import de.uka.ipd.idaho.easyIO.EasyIO;
 import de.uka.ipd.idaho.htmlXmlUtil.Parser;
 import de.uka.ipd.idaho.htmlXmlUtil.TreeNode;
 import de.uka.ipd.idaho.htmlXmlUtil.grammars.StandardGrammar;
+import de.uka.ipd.idaho.stringUtils.StringUtils;
 //import java.util.ArrayList;
 
 /**
@@ -1029,7 +1029,7 @@ public class Settings {
 		BufferedWriter bw = ((out instanceof BufferedWriter) ? ((BufferedWriter) out) : new BufferedWriter(out));
 		String[] keys = settings.getKeys();
 		for (int k = 0; k < keys.length; k++) {
-			bw.write(keys[k] + " " + SETTING_VALUE_SEPARATOR + " " + SETTING_VALUE_DELIMITER + EasyIO.escape(settings.getSetting(keys[k], ""), TO_ESCAPE, ESCAPER) + SETTING_VALUE_DELIMITER + ";");
+			bw.write(keys[k] + " " + SETTING_VALUE_SEPARATOR + " " + SETTING_VALUE_DELIMITER + StringUtils.escapeChars(settings.getSetting(keys[k], ""), TO_ESCAPE, ESCAPER) + SETTING_VALUE_DELIMITER + ";");
 			bw.newLine();
 		}
 		if (bw != out)

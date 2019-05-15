@@ -339,6 +339,7 @@ public class GamtaClassLoader extends ClassLoader {
 			// try to load class
 			try {
 				componentClass = componentLoader.loadClass(className);
+				System.out.println("  class loaded.");
 			}
 			catch (ClassNotFoundException cnfe) {
 				System.out.println("  class not found.");
@@ -366,6 +367,7 @@ public class GamtaClassLoader extends ClassLoader {
 				try {
 					Object component = componentClass.newInstance();
 					System.out.println("  component class successfully instantiated.");
+					System.out.println("  component class loaded from " + componentClass.getClassLoader());
 					
 					String jarName = jarNamesByClassNames.getProperty(className);
 					if (componentInitializer != null)
@@ -380,6 +382,8 @@ public class GamtaClassLoader extends ClassLoader {
 				}
 				catch (NoClassDefFoundError ncdfe) {
 					System.out.println("  could not find some part of component class: " + ncdfe.getMessage());
+					System.out.println("  component class was loaded from " + componentClass.getClassLoader());
+					ncdfe.printStackTrace(System.out);
 				}
 				catch (AccessControlException ace) {
 					Permission p = ace.getPermission();
@@ -566,8 +570,6 @@ public class GamtaClassLoader extends ClassLoader {
 	}
 	
 	
-	
-	
 	private TreeMap classBytesByName = new TreeMap();
 	private TreeMap classesByName = new TreeMap();
 	
@@ -600,32 +602,94 @@ public class GamtaClassLoader extends ClassLoader {
 	 */
 	protected Class findClass(String name) throws ClassNotFoundException {
 		Class foundClass = ((Class) this.classesByName.get(name));
-		
-		if (foundClass == null) {
-			if (DEBUG) System.out.println("GCL: Loading class '" + name + "' ...");
-			
-			String classDataName = name.replaceAll("\\.", "/");
-			
-			if (!classDataName.endsWith(".class")) classDataName += ".class";
-			if (DEBUG) System.out.println("GCL:  resource name is '" + classDataName + "'");
-			
-			byte[] classBytes = ((byte[]) this.classBytesByName.get(classDataName));
-			if (classBytes != null) {
-				if (DEBUG) System.out.println("GCL:  got '" + classBytes.length + "' bytes of byte code");
-				foundClass = this.defineClass(name, classBytes, 0, classBytes.length);
-				if (DEBUG) System.out.println("GCL:  class defined");
-				this.resolveClass(foundClass);
-				if (DEBUG) System.out.println("GCL:  class resolved");
-				this.classesByName.put(name, foundClass);
-				if (DEBUG) System.out.println("GCL:  class loaded & cached");
-			}
-		}
-		
+		if (foundClass == null)
+			foundClass = this.findClassFromBytes(name);
 		if (foundClass == null) {
 			if (DEBUG) System.out.println("GCL:  class '" + name + "' not found");
 			throw new ClassNotFoundException(name);
 		}
-		else return foundClass;
+		return foundClass;
+	}
+	
+	private Class findClassFromBytes(String name) {
+		if (DEBUG) System.out.println("GCL: Loading class '" + name + "' ...");
+		
+		String classDataName = name.replaceAll("\\.", "/");
+		
+		if (!classDataName.endsWith(".class")) classDataName += ".class";
+		if (DEBUG) System.out.println("GCL:  resource name is '" + classDataName + "'");
+		
+		byte[] classBytes = this.findClassBytes(classDataName);
+		if (classBytes == null)
+			return null;
+		
+		if (DEBUG) System.out.println("GCL:  got '" + classBytes.length + "' bytes of byte code");
+		Class foundClass = this.defineClass(name, classBytes, 0, classBytes.length);
+		if (DEBUG) System.out.println("GCL:  class defined");
+		this.resolveClass(foundClass);
+		if (DEBUG) System.out.println("GCL:  class resolved");
+		this.classesByName.put(name, foundClass);
+		if (DEBUG) System.out.println("GCL:  class loaded & cached");
+		return foundClass;
+	}
+	
+	private byte[] findClassBytes(String classDataName) {
+		byte[] classBytes = ((byte[]) this.classBytesByName.get(classDataName));
+		if (classBytes != null)
+			return classBytes;
+		
+		if (DEBUG) System.out.println("GCL:  byte code not found, attempting to load it");
+		InputStream classByteSource = this.getResourceAsStream(classDataName);
+		if (classByteSource == null) {
+			if (DEBUG) System.out.println("GCL:  ==> byte code resource not found");
+			return null;
+		}
+		
+		try {
+			ByteArrayOutputStream classByteCollector = new ByteArrayOutputStream();
+			byte[] classByteBuffer = new byte[1024];
+			for (int r; (r = classByteSource.read(classByteBuffer, 0, classByteBuffer.length)) != -1;)
+				classByteCollector.write(classByteBuffer, 0, r);
+			classBytes = classByteCollector.toByteArray();
+			this.classBytesByName.put(classDataName, classBytes);
+		}
+		catch (IOException ioe) {
+			if (DEBUG) {
+				System.out.println("GCL:  ==> byte code resource loading failed: " + ioe.getMessage());
+				ioe.printStackTrace(System.out);
+			}
+		}
+		return classBytes;
+	}
+	
+	/* (non-Javadoc)
+	 * @see java.lang.ClassLoader#loadClass(java.lang.String, boolean)
+	 */
+	protected synchronized Class loadClass(String name, boolean resolve) throws ClassNotFoundException {
+		try {
+			return super.loadClass(name, resolve);
+		}
+		catch (Throwable t) {
+			if (DEBUG) {
+				System.out.println("GCL:  catching parent " + t.getClass().getName());
+				t.printStackTrace(System.out);
+			}
+			Class cls = this.findClass(name);
+			/* If we get here, we didn't get an error on our own attempt at
+			 * loading the requested class, which means we know that dependency
+			 * our parent could not resolve. This indicates the parent knows a
+			 * class that depends on something only we know, which means JAR
+			 * dependencies go against the application class loader hierarchy,
+			 * and thus most likely against the _intended_ direction of JAR
+			 * dependencies. */
+			if ((t instanceof NoClassDefFoundError) || (t instanceof ClassNotFoundException)) {
+				System.out.println("Cought " + t.getClass().getName() + " from parent on class '" + name + "'");
+				System.out.println("CHECK CLASS PATH FOR REVERSE JAR DEPENDENCIES");
+				System.err.println("Cought " + t.getClass().getName() + " from parent on class '" + name + "'");
+				System.err.println("CHECK CLASS PATH FOR REVERSE JAR DEPENDENCIES");
+			}
+			return cls;
+		}
 	}
 	
 	/**

@@ -53,8 +53,8 @@ import de.uka.ipd.idaho.htmlXmlUtil.accessories.HtmlPageBuilder.HtmlPageBuilderH
  * most one instance for each webapp, distinguished by context path. This
  * instance is created when the first servlet attempts to retrieve it. In
  * particular, this class provides the following services:<br>
- * A registry allowing servlets to to obtain references to one another, e.g. to
- * facilitate communication via method invocations insetad of local HTTP
+ * A registry allowing servlets to obtain references to one another, e.g. to
+ * facilitate communication via method invocations instead of local HTTP
  * loopback. Note that servlet containers may instantiate servlets only when
  * they are first accessed via HTTP, so the absence of a servlet from the
  * registry does not necessarily mean that it is absent - it might just yet to
@@ -105,7 +105,7 @@ public class WebAppHost {
 	private File rootFolder;
 	private File webInfFolder;
 	private Settings settings;
-	private HashMap registry = new HashMap();
+	private HashMap servletRegistry = new HashMap();
 	private TreeMap reinitializableServletsByName = new TreeMap();
 	
 	private WebAppHost(String path) {
@@ -162,11 +162,11 @@ public class WebAppHost {
 	 * assigned to the servlet in the web.xml. If there is no servlet with the
 	 * specified name or has not been instantiated yet, this method returns
 	 * null.
-	 * @param sn the name of the servlet
+	 * @param name the name of the servlet
 	 * @return the servlet with the specified name
 	 */
-	public synchronized Servlet getServlet(String sn) {
-		return ((Servlet) this.registry.get(sn));
+	public synchronized Servlet getServlet(String name) {
+		return ((Servlet) this.servletRegistry.get(name));
 	}
 	
 	/**
@@ -176,7 +176,7 @@ public class WebAppHost {
 	 */
 	public synchronized void registerServlet(Servlet servlet) {
 		String sn = servlet.getServletConfig().getServletName();
-		this.registry.put(sn, servlet);
+		this.servletRegistry.put(sn, servlet);
 		if (servlet instanceof WebServlet)
 			this.reinitializableServletsByName.put(sn, servlet);
 		System.out.println("WebAppHost (" + this.path + "): registered servlet as '" + sn + "', class is " + servlet.getClass().getName());

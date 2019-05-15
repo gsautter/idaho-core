@@ -417,6 +417,10 @@ public class GenericGamtaXML extends TokenReceiver {
 			//	write start markers for Annotations beginning at current Token
 			while ((annotationPointer < nestedAnnotations.length) && (nestedAnnotations[annotationPointer].getStartIndex() == t)) {
 				QueriableAnnotation annotation = nestedAnnotations[annotationPointer];
+				if (annotationNumbersByID.containsKey(annotation.getAnnotationID())) {
+					annotationPointer++;
+					continue;
+				}
 				buf.write(produceStartTag(annotation, annotationPointer));
 				
 				//	store annotation in index so end marker can be written at appropriate position
@@ -426,7 +430,7 @@ public class GenericGamtaXML extends TokenReceiver {
 					endingList = new LinkedList();
 					annotationsByEndIndex.put(endingListKey, endingList);
 				}
-				endingList.add(annotation);
+				endingList.addLast(annotation);
 				annotationNumbersByID.put(annotation.getAnnotationID(), new Integer(annotationPointer));
 				
 				annotationPointer++;

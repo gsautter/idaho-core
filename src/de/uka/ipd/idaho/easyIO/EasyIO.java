@@ -44,10 +44,12 @@ import java.sql.DriverManager;
 import java.sql.DriverPropertyInfo;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.SQLFeatureNotSupportedException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.Properties;
+import java.util.logging.Logger;
 
 import javax.mail.Address;
 import javax.mail.Authenticator;
@@ -64,6 +66,7 @@ import javax.mail.internet.MimeMultipart;
 
 import de.uka.ipd.idaho.easyIO.settings.Settings;
 import de.uka.ipd.idaho.easyIO.sql.TableDefinition;
+import de.uka.ipd.idaho.stringUtils.StringUtils;
 
 ///**
 // * Utility library for multiple IO purposes. In particular, this library can:
@@ -364,7 +367,7 @@ public class EasyIO {
 					return con;
 				}
 				
-				//	using url authentication
+				//	using URL authentication
 				else {
 					
 					//	connection url given --> simply use it
@@ -414,6 +417,16 @@ public class EasyIO {
 			}
 		}
 		
+		private void reGetJdbcConnection() {
+			Connection oldJdbcCon = this.jdbcCon; // need to hold on to this so we recognize whether or not some other thread beat us to re-connecting
+			synchronized (this) {
+				if (this.jdbcCon == oldJdbcCon) {
+					this.jdbcCon = this.getJdbcConnection(); // try and dynamically reconnect after database restart
+					this.jdbcValid = (this.jdbcCon != null); // check success
+				}
+			}
+		}
+		
 		/**
 		 * Wrapper for JDBC drivers that are loaded at runtime (DriverManager
 		 * requires drivers to be loaded through system classloader for some
@@ -444,10 +457,14 @@ public class EasyIO {
 			public boolean jdbcCompliant() {
 				return this.driver.jdbcCompliant();
 			}
+			public Logger getParentLogger() throws SQLFeatureNotSupportedException {
+				throw new SQLFeatureNotSupportedException();
+//				return this.driver.getParentLogger();
+			}
 		}
 		
 		/**	check if a table with the specified name exists
-		 * @param	tableName	the name of the table that's existance is to be checked
+		 * @param	tableName	the name of the table that's existence is to be checked
 		 * @return	true if and only if a table with the specified name exists
 		 */
 		public boolean ensureTable(String tableName) {
@@ -513,11 +530,6 @@ public class EasyIO {
 							System.out.println("StandardIoProvider: altering column\n  " + updates[u]);
 							this.executeUpdateQuery(updates[u]);
 						}
-//						StringVector updates = definition.getUpdateQueries(existingDefinition, this.jdbcSyntax);
-//						for (int i = 0; i < updates.size(); i++) {
-//							System.out.println("StandardIoProvider: altering column\n  " + updates.get(i));
-//							this.executeUpdateQuery(updates.get(i));
-//						}
 						return true;
 					}
 					catch (SQLException updateSqlEx) {
@@ -554,12 +566,6 @@ public class EasyIO {
 								System.out.println("StandardIoProvider: creating or altering column\n  " + updates[u]);
 								this.executeUpdateQuery(updates[u]);
 							}
-//							StringVector updates = definition.getUpdateQueries(existingDefinition, this.jdbcSyntax);
-//							for (int i = 0; i < updates.size(); i++) {
-//								updateQuery = updates.get(i);
-//								System.out.println("StandardIoProvider: creating or altering column\n  " + updates.get(i));
-//								this.executeUpdateQuery(updates.get(i));
-//							}
 							return true;
 						}
 						catch (SQLException updateSqlEx) {
@@ -1002,7 +1008,25 @@ public class EasyIO {
 		 * @throws SQLException
 		 */
 		public SqlQueryResult executeSelectQuery(String query, boolean copy) throws SQLException {
-			if (this.jdbcValid && (query != null) && query.toLowerCase().startsWith("select")) {
+//			if (this.jdbcValid && (query != null) && query.toLowerCase().startsWith("select")) {
+//				Statement st = null;
+//				SqlQueryResult sqr = null;
+//				try {
+//					st = (copy ? this.jdbcCon.createStatement() : this.jdbcCon.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY));
+//					sqr = new SqlQueryResult(query, st.executeQuery(this.prepareQuery(query)), copy);
+//					return sqr;
+//				}
+//				finally {
+//					if ((copy || (sqr == null)) && (st != null))
+//						st.close();
+//				}
+//			}
+//			else return null;
+			return this.executeSelectQuery(query, copy, true);
+		}
+		
+		private SqlQueryResult executeSelectQuery(String query, boolean copy, boolean isOriginalRequest) throws SQLException {
+			if (this.jdbcValid && (query != null) && query.toLowerCase().startsWith("select")) try {
 				Statement st = null;
 				SqlQueryResult sqr = null;
 				try {
@@ -1015,7 +1039,19 @@ public class EasyIO {
 						st.close();
 				}
 			}
-			else return null;
+			catch (SQLException sqle) {
+				if (isOriginalRequest && this.isConnectionClosedErrorMessage(sqle.getMessage())) {
+					System.out.println("IoProvider: " + sqle.getClass().getName() + " (" + sqle.getMessage() + ") while ececuting query, attempting re-connect ...");
+					this.reGetJdbcConnection(); // try and dynamically reconnect after database restart
+					if (this.jdbcValid) {
+						System.out.println(" ==> database connection re-established successfully");
+						return this.executeSelectQuery(query, copy, false); // try again to process query (no use trying to reconnect again, though)
+					}
+					else System.out.println(" ==> failed to re-establish database connection");
+				}
+				throw sqle;
+			}
+			return null;
 		}
 		
 		/**	execute a select query over the default JDBC connection
@@ -1033,7 +1069,23 @@ public class EasyIO {
 		 * @throws SQLException
 		 */
 		public int executeUpdateQuery(String query) throws SQLException {
-			if (this.jdbcValid && (query != null)) {
+//			if (this.jdbcValid && (query != null)) {
+//				Statement st = null;
+//				try {
+//					st = this.jdbcCon.createStatement();
+//					return st.executeUpdate(this.prepareQuery(query));
+//				}
+//				finally {
+//					if (st != null)
+//						st.close();
+//				}
+//			}
+//			else return 0;
+			return this.executeUpdateQuery(query, true);
+		}
+		
+		private int executeUpdateQuery(String query, boolean isOriginalRequest) throws SQLException {
+			if (this.jdbcValid && (query != null)) try {
 				Statement st = null;
 				try {
 					st = this.jdbcCon.createStatement();
@@ -1044,13 +1096,43 @@ public class EasyIO {
 						st.close();
 				}
 			}
-			else return 0;
+			catch (SQLException sqle) {
+				if (isOriginalRequest && this.isConnectionClosedErrorMessage(sqle.getMessage())) {
+					System.out.println("IoProvider: " + sqle.getClass().getName() + " (" + sqle.getMessage() + ") while ececuting query, attempting re-connect ...");
+					this.reGetJdbcConnection(); // try and dynamically reconnect after database restart
+					if (this.jdbcValid) {
+						System.out.println(" ==> database connection re-established successfully");
+						return this.executeUpdateQuery(query, false); // try again to process query (no use trying to reconnect again, though)
+					}
+					else System.out.println(" ==> failed to re-establish database connection");
+				}
+				throw sqle;
+			}
+			return 0;
 		}
 		
 		private final String prepareQuery(String query) {
 			if (query.endsWith(";"))
 				return (this.jdbcTerminalSemicolon ? query : query.substring(0, (query.length() - 1)));
 			else return (this.jdbcTerminalSemicolon ? (query + ";") : query);
+		}
+		
+		private boolean isConnectionClosedErrorMessage(String cseMessage) {
+			//	TODO figure out how to make this more generic, or base it on some pattern in syntax file
+			if (cseMessage == null)
+				return false;
+			cseMessage = cseMessage.toLowerCase();
+			
+			if ((cseMessage.indexOf("connection") != -1) && (cseMessage.indexOf("closed") != -1))
+				return true;
+			if ((cseMessage.indexOf("verbindung") != -1) && (cseMessage.indexOf("geschlossen") != -1))
+				return true;
+			if ((cseMessage.indexOf("verbindung") != -1) && (cseMessage.indexOf("beendet") != -1))
+				return true;
+			if ((cseMessage.indexOf("verbindung") != -1) && (cseMessage.indexOf("abgebrochen") != -1))
+				return true;
+			
+			return false;
 		}
 		
 		/** @see de.uka.ipd.idaho.easyIO.IoProvider#isJdbcAvailable()
@@ -1535,7 +1617,7 @@ public class EasyIO {
 	 * @return the escaped string
 	 */
 	public static String sqlEscape(String data) {
-		return escape(data, '\'', '\'');
+		return StringUtils.escapeChar(data, '\'', '\'');
 	}
 
 	/**
@@ -1549,18 +1631,6 @@ public class EasyIO {
 		string = string.replaceAll("\\s+", "%");
 		string = string.replaceAll("\\'", "%");
 		return string;
-//		String sqlString = string;
-//		StringVector escaper = new StringVector();
-//		
-//		escaper.parseAndAddElements(sqlString, " ");
-//		sqlString = escaper.concatStrings("%");
-//		
-//		escaper.clear();
-//		
-//		escaper.parseAndAddElements(sqlString, "'");
-//		sqlString = escaper.concatStrings("%");
-//		
-//		return sqlString;
 	}
 
 	/**
@@ -1570,19 +1640,10 @@ public class EasyIO {
 	 * @param toEscape the Character to be escaped
 	 * @param escaper the Character to be used for escaping
 	 * @return the escaped string
+	 * @deprecated use StringUtils.escapeChar() instead
 	 */
 	public static String escape(String data, char toEscape, char escaper) {
-		if (data == null)
-			return null;
-		StringBuffer assembler = new StringBuffer();
-		char currentChar;
-		for (int i = 0; i < data.length(); i++) {
-			currentChar = data.charAt(i);
-			if (currentChar == toEscape)
-				assembler.append(escaper);
-			assembler.append(currentChar);
-		}
-		return assembler.toString();
+		return StringUtils.escapeChar(data, toEscape, escaper);
 	}
 
 	/**
@@ -1592,19 +1653,9 @@ public class EasyIO {
 	 * @param toEscape the array containing the Characters to be escaped
 	 * @param escaper the Character to be used for escaping
 	 * @return the escaped string
+	 * @deprecated use StringUtils.escapeChars() instead
 	 */
 	public static String escape(String data, char toEscape[], char escaper) {
-		if (data == null)
-			return null;
-		StringBuffer assembler = new StringBuffer();
-		String escapeChars = new String(toEscape);
-		char currentChar;
-		for (int i = 0; i < data.length(); i++) {
-			currentChar = data.charAt(i);
-			if (escapeChars.indexOf(currentChar) != -1)
-				assembler.append(escaper);
-			assembler.append(currentChar);
-		}
-		return assembler.toString();
+		return StringUtils.escapeChars(data, toEscape, escaper);
 	}
 }
