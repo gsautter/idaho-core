@@ -10,11 +10,11 @@
  *     * Redistributions in binary form must reproduce the above copyright
  *       notice, this list of conditions and the following disclaimer in the
  *       documentation and/or other materials provided with the distribution.
- *     * Neither the name of the Universität Karlsruhe (TH) nor the
+ *     * Neither the name of the Universitaet Karlsruhe (TH) nor the
  *       names of its contributors may be used to endorse or promote products
  *       derived from this software without specific prior written permission.
  *
- * THIS SOFTWARE IS PROVIDED BY UNIVERSITÄT KARLSRUHE (TH) / KIT AND CONTRIBUTORS 
+ * THIS SOFTWARE IS PROVIDED BY UNIVERSITAET KARLSRUHE (TH) / KIT AND CONTRIBUTORS 
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
  * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
  * ARE DISCLAIMED. IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE FOR ANY
@@ -477,7 +477,7 @@ public class TreeTools {
 		String textIndex = getTextIndexPart(index);
 		
 		//	read indices
-		IntVector indices = ((tag.startsWith("\"")) ? parseIndices(root.countNodesInSubtree("PcData"), index) : parseIndices(root.getChildNodeCount(), index));
+		IntVector indices = ((tag.startsWith("\"")) ? parseIndices(root.countNodesInSubtree(TreeNode.DATA_NODE_TYPE), index) : parseIndices(root.getChildNodeCount(), index));
 		
 		//	evaluate query part
 		
@@ -492,7 +492,7 @@ public class TreeTools {
 		
 		//	text tag
 		else if (tag.startsWith("\"")) {
-			TreeNode[] temp = getAllNodesOfType(root, "PcData");
+			TreeNode[] temp = getAllNodesOfType(root, TreeNode.DATA_NODE_TYPE);
 			Vector matchingNodes = new Vector();
 			String pattern = ((tag.length() > 2) ? tag.substring(1, (tag.length() - 1)) : "");
 			
@@ -512,7 +512,7 @@ public class TreeTools {
 			
 			int i = 0;
 			while (i < resTemp.length) {
-				TreeNode[] temp = getAllNodesOfType(resTemp[i], "PcData");
+				TreeNode[] temp = getAllNodesOfType(resTemp[i], TreeNode.DATA_NODE_TYPE);
 				
 				//	apply pattern
 				boolean match = false;
@@ -522,7 +522,7 @@ public class TreeTools {
 				if (match) resNodes.addElement(resTemp[i]);
 			}
 			
-			//	apply inices
+			//	apply indices
 			for (int j = 0; j < indices.size(); j++) if (indices.get(j) < resNodes.size()) resultNodes.addElement(resNodes.get(indices.get(j)));
 		}
 		
@@ -1164,7 +1164,7 @@ public class TreeTools {
 	 * value
 	 * @param root the root node of the tree to search in
 	 * @param searchValue the value to search
-	 * @return the path of the first data node that's value containes the search
+	 * @return the path of the first data node that's value contains the search
 	 *         String (in depth first order)
 	 */
 	public static String getPathOfValue(TreeNode root, String searchValue) {

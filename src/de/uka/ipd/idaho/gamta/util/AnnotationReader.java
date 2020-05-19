@@ -10,11 +10,11 @@
  *     * Redistributions in binary form must reproduce the above copyright
  *       notice, this list of conditions and the following disclaimer in the
  *       documentation and/or other materials provided with the distribution.
- *     * Neither the name of the Universität Karlsruhe (TH) nor the
+ *     * Neither the name of the Universitaet Karlsruhe (TH) nor the
  *       names of its contributors may be used to endorse or promote products
  *       derived from this software without specific prior written permission.
  *
- * THIS SOFTWARE IS PROVIDED BY UNIVERSITÄT KARLSRUHE (TH) / KIT AND CONTRIBUTORS 
+ * THIS SOFTWARE IS PROVIDED BY UNIVERSITAET KARLSRUHE (TH) / KIT AND CONTRIBUTORS 
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
  * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
  * ARE DISCLAIMED. IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE FOR ANY
@@ -31,6 +31,7 @@ package de.uka.ipd.idaho.gamta.util;
 import java.io.IOException;
 import java.io.Reader;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.Set;
@@ -38,6 +39,7 @@ import java.util.Stack;
 
 import de.uka.ipd.idaho.gamta.Annotation;
 import de.uka.ipd.idaho.gamta.AnnotationUtils;
+import de.uka.ipd.idaho.gamta.AnnotationUtils.XmlOutputOptions;
 import de.uka.ipd.idaho.gamta.Gamta;
 import de.uka.ipd.idaho.gamta.QueriableAnnotation;
 import de.uka.ipd.idaho.gamta.Token;
@@ -53,7 +55,7 @@ public class AnnotationReader extends Reader {
 	
 	private QueriableAnnotation source;
 	private String indent = null;
-	private boolean outputIDs = false;
+	private XmlOutputOptions outputOptions;
 	
 	private Annotation[] nestedAnnotations;
 	private Stack stack = new Stack();
@@ -75,14 +77,12 @@ public class AnnotationReader extends Reader {
 	
 	private HashSet lineBroken = new HashSet();
 	
-	private Set attributeFilter;
-	
 	/**
 	 * Constructor
 	 * @param source the DocumentPart to read from
 	 */
 	public AnnotationReader(QueriableAnnotation source) {
-		this(source, false, null, null, null);
+		this(source, null, wrapXmlOutputOptions(false, null, null));
 	}
 	
 	/**
@@ -91,7 +91,7 @@ public class AnnotationReader extends Reader {
 	 * @param outputIDs include annotation IDs in the output?
 	 */
 	public AnnotationReader(QueriableAnnotation source, boolean outputIDs) {
-		this(source, outputIDs, null, null, null);
+		this(source, null, wrapXmlOutputOptions(outputIDs, null, null));
 	}
 	
 	/**
@@ -101,7 +101,7 @@ public class AnnotationReader extends Reader {
 	 *            (specifying null will result in no indentation)
 	 */
 	public AnnotationReader(QueriableAnnotation source, String indent) {
-		this(source, false, indent, null, null);
+		this(source, indent, wrapXmlOutputOptions(false, null, null));
 	}
 	
 	/**
@@ -112,7 +112,7 @@ public class AnnotationReader extends Reader {
 	 *            (specifying null will result in no indentation)
 	 */
 	public AnnotationReader(QueriableAnnotation source, boolean outputIDs, String indent) {
-		this(source, outputIDs, indent, null, null);
+		this(source, indent, wrapXmlOutputOptions(outputIDs, null, null));
 	}
 	
 	/**
@@ -126,7 +126,7 @@ public class AnnotationReader extends Reader {
 	 *            attributes)
 	 */
 	public AnnotationReader(QueriableAnnotation source, Set typeFilter, Set attributeFilter) {
-		this(source, false, null, typeFilter, attributeFilter);
+		this(source, null, wrapXmlOutputOptions(false, typeFilter, attributeFilter));
 	}
 	
 	/**
@@ -141,7 +141,7 @@ public class AnnotationReader extends Reader {
 	 *            attributes)
 	 */
 	public AnnotationReader(QueriableAnnotation source, boolean outputIDs, Set typeFilter, Set attributeFilter) {
-		this(source, outputIDs, null, typeFilter, attributeFilter);
+		this(source, null, wrapXmlOutputOptions(outputIDs, typeFilter, attributeFilter));
 	}
 	
 	/**
@@ -157,7 +157,7 @@ public class AnnotationReader extends Reader {
 	 *            attributes)
 	 */
 	public AnnotationReader(QueriableAnnotation source, String indent, Set typeFilter, Set attributeFilter) {
-		this(source, false, indent, typeFilter, attributeFilter);
+		this(source, indent, wrapXmlOutputOptions(false, typeFilter, attributeFilter));
 	}
 	
 	/**
@@ -174,26 +174,79 @@ public class AnnotationReader extends Reader {
 	 *            attributes)
 	 */
 	public AnnotationReader(QueriableAnnotation source, boolean outputIDs, String indent, Set typeFilter, Set attributeFilter) {
-		this.source = source;
-		this.outputIDs = outputIDs;
-		this.indent = (((indent == null) || (indent.length() == 0)) ? null : indent);
-		this.attributeFilter = attributeFilter;
-		
-		//	get nested annotations
-		this.nestedAnnotations = this.source.getAnnotations();
-		
-		//	apply filter if given
-		if (typeFilter != null) {
-			ArrayList typeFilteredAnnotations = new ArrayList();
-			for (int a = 0; a < this.nestedAnnotations.length; a++)
-				if (typeFilter.contains(this.nestedAnnotations[a].getType()))
-					typeFilteredAnnotations.add(this.nestedAnnotations[a]);
-			this.nestedAnnotations = ((Annotation[]) typeFilteredAnnotations.toArray(new Annotation[typeFilteredAnnotations.size()]));
+		this(source, indent, wrapXmlOutputOptions(outputIDs, typeFilter, attributeFilter));
+	}
+	
+	private static final XmlOutputOptions xmlWriteOptionsNoId = new XmlOutputOptions() {
+		public boolean writeAnnotations(String annotType) {
+			return true;
 		}
+		public boolean writeAttribute(String name) {
+			return true;
+		}
+		public boolean includeIDs(String annotType) {
+			return false;
+		}
+		public boolean escapeTokes() {
+			return true;
+		}
+		public boolean escapeAttributeValues() {
+			return true;
+		}
+	};
+	private static final XmlOutputOptions xmlWriteOptionsWithId = new XmlOutputOptions() {
+		public boolean writeAnnotations(String annotType) {
+			return true;
+		}
+		public boolean writeAttribute(String name) {
+			return true;
+		}
+		public boolean includeIDs(String annotType) {
+			return true;
+		}
+		public boolean escapeTokes() {
+			return true;
+		}
+		public boolean escapeAttributeValues() {
+			return true;
+		}
+	};
+	//	package private for use in annotation input stream
+	static XmlOutputOptions wrapXmlOutputOptions(boolean outputIDs, Set typeFilter, Set attributeFilter) {
+		if ((typeFilter == null) && (attributeFilter == null))
+			return (outputIDs ? xmlWriteOptionsWithId : xmlWriteOptionsNoId);
+		XmlOutputOptions options = new XmlOutputOptions();
+		options.setIncludeIdTypes(Collections.emptySet(), outputIDs);
+		if (typeFilter != null)
+			options.setAnnotationTypes(typeFilter, false);
+		if (attributeFilter != null)
+			options.setAttributeNames(attributeFilter, false);
+		return options;
+	}
+	
+	/**
+	 * Constructor
+	 * @param source the DocumentPart to read from
+	 * @param indent the String to insert for each level of indentation
+	 *            (specifying null will result in no indentation)
+	 * @param options an object holding the output options.
+	 */
+	public AnnotationReader(QueriableAnnotation source, String indent, XmlOutputOptions options) {
+		this.source = source;
+		this.indent = (((indent == null) || (indent.length() == 0)) ? null : indent);
+		this.outputOptions = options;
+		
+		//	get nested annotations and apply filter
+		Annotation[] nestedAnnotations = this.source.getAnnotations();
+		ArrayList typeFilteredAnnotations = new ArrayList();
+		for (int a = 0; a < nestedAnnotations.length; a++)
+			if (this.outputOptions.writeAnnotations(nestedAnnotations[a].getType()))
+				typeFilteredAnnotations.add(nestedAnnotations[a]);
+		this.nestedAnnotations = ((Annotation[]) typeFilteredAnnotations.toArray(new Annotation[typeFilteredAnnotations.size()]));
 		
 		//	make sure there is a root element
 		if ((this.nestedAnnotations.length == 0) || (this.nestedAnnotations[0].size() < this.source.size())) {
-			Annotation[] nestedAnnotations = new Annotation[this.nestedAnnotations.length + 1];
+			nestedAnnotations = new Annotation[this.nestedAnnotations.length + 1];
 			nestedAnnotations[0] = this.source;
 			System.arraycopy(this.nestedAnnotations, 0, nestedAnnotations, 1, this.nestedAnnotations.length);
 			this.nestedAnnotations = nestedAnnotations;
@@ -206,7 +259,7 @@ public class AnnotationReader extends Reader {
 		this.source = null;
 		
 		this.lineBuffer = null;
-		this.lineAssembler = null;
+//		this.lineAssembler = null;
 		this.string = null;
 		
 		this.nestedAnnotations = null;
@@ -225,15 +278,17 @@ public class AnnotationReader extends Reader {
 		if (this.bufferLevel < len) {
 			int added = this.fillBuffer((len - this.bufferLevel));
 			
-			if ((this.bufferLevel == 0) && (added == 0)) return -1;
+			if ((this.bufferLevel == 0) && (added == 0))
+				return -1;
 			else this.bufferLevel += added;
 		}
 		
 		int w = 0;
 		while (w < len) {
 			if (this.stringOffset == this.string.length()) {
-				if (this.lineBuffer.isEmpty()) return w;
-				this.string = this.lineBuffer.removeFirst().toString();
+				if (this.lineBuffer.isEmpty())
+					return w;
+				this.string = ((String) this.lineBuffer.removeFirst());
 				this.stringOffset = 0;
 			}
 			else {
@@ -322,7 +377,7 @@ public class AnnotationReader extends Reader {
 					for (int i = 0; i < this.stack.size(); i++)
 						this.lineAssembler.append(this.indent);
 				
-				this.lineAssembler.append(AnnotationUtils.produceStartTag(annotation, this.outputIDs, this.attributeFilter, true));
+				this.lineAssembler.append(AnnotationUtils.produceStartTag(annotation, this.outputOptions));
 				
 				this.stack.push(annotation);
 				this.annotationPointer++;

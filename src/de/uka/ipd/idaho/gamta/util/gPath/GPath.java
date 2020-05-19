@@ -10,11 +10,11 @@
  *     * Redistributions in binary form must reproduce the above copyright
  *       notice, this list of conditions and the following disclaimer in the
  *       documentation and/or other materials provided with the distribution.
- *     * Neither the name of the Universität Karlsruhe (TH) nor the
+ *     * Neither the name of the Universitaet Karlsruhe (TH) nor the
  *       names of its contributors may be used to endorse or promote products
  *       derived from this software without specific prior written permission.
  *
- * THIS SOFTWARE IS PROVIDED BY UNIVERSITÄT KARLSRUHE (TH) / KIT AND CONTRIBUTORS 
+ * THIS SOFTWARE IS PROVIDED BY UNIVERSITAET KARLSRUHE (TH) / KIT AND CONTRIBUTORS 
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
  * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
  * ARE DISCLAIMED. IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE FOR ANY
@@ -191,129 +191,138 @@ public class GPath implements GPathConstants {
 	 * @return the specified GPath expression in a form readable for users, in particular broken to multiple lines and indented
 	 */
 	public static String explodePath(String gPath, String indent) {
-		if ((gPath.indexOf("\n") == -1) && (gPath.indexOf("\r") == -1) && (gPath.indexOf("\f") == -1)) {
-			
-			StringVector lines = new StringVector();
-			
-			//	generate path lines
-			String[] tokens = GPathParser.tokenize(gPath);
-			StringBuffer assembler = new StringBuffer();
-			boolean canBeOp = false;
-			String lastToken = "";
-			for (int t = 0; t < tokens.length; t++) {
-				String token = tokens[t];
-				if ("[(".indexOf(token) != -1) {
-					if (assembler.length() != 0) {
-						lines.addElement(assembler.toString());
-						assembler = new StringBuffer();
-					}
-					lines.addElement(token);
-					canBeOp = false;
-				}
-				else if ("])".indexOf(token) != -1) {
-					if (assembler.length() != 0) {
-						lines.addElement(assembler.toString());
-						assembler = new StringBuffer();
-					}
-					lines.addElement(token);
-					canBeOp = false;
-				}
-				else if ("/".equals(token)) {
-					if (assembler.length() != 0) {
-						lines.addElement(assembler.toString());
-						assembler = new StringBuffer();
-					}
-					lines.addElement(token);
-					canBeOp = false;
-				}
-				else if (canBeOp && (" and or ".indexOf(" " + token + " ") != -1)) {//  + - * div mod < > = <= != >=
-					if (assembler.length() != 0) {
-						lines.addElement(assembler.toString());
-						assembler = new StringBuffer();
-					}
-					lines.addElement(token);
-					canBeOp = false;
-				}
-				else {
-					if ((assembler.length() != 0) && !"/".equals(token) && !"/".equals(lastToken) && !"::".equals(token) && !"::".equals(lastToken) && !"@".equals(lastToken) && (!"#".equals(lastToken) || (TOKEN_AXIS_EXTENSIONS.indexOf(" " + token + " ") == -1))) assembler.append(" ");
-					assembler.append(token);
-					canBeOp = true;
-				}
-				
-				//	remember last token
-				lastToken = token;
-			}
-			if (assembler.length() != 0) lines.addElement(assembler.toString());
-			
-			//	concat short lines
-			int index = 0;
-			String line;
-			String n1Line;
-			String n2Line;
-			while ((index + 1) < lines.size()) {
-				line = lines.get(index);
-				n1Line = lines.get(index + 1);
-				n2Line = (((index + 2) < lines.size()) ? lines.get(index + 2) : "");
-				if (("[(".indexOf(line) != -1) && ("[(".indexOf(line) == "])".indexOf(n2Line))) {
-					lines.setElementAt((line + n1Line + n2Line), index);
-					lines.removeElementAt(index + 1);
-					lines.removeElementAt(index + 1);
-				}
-				else if (n1Line.equals("(") && n2Line.equals(")")) {
-					lines.setElementAt((line + n1Line + n2Line), index);
-					lines.removeElementAt(index + 1);
-					lines.removeElementAt(index + 1);
-				}
-				else if (line.equals(".") && n1Line.equals("/")) {
-					lines.setElementAt((line + n1Line + n2Line), index);
-					lines.removeElementAt(index + 1);
-					lines.removeElementAt(index + 1);
-				}
-				else index ++;
-			}
-			index = 0;
-			while ((index + 1) < lines.size()) {
-				line = lines.get(index);
-				n1Line = lines.get(index + 1);
-				if ((line.indexOf(" ") == -1) && ("[(".indexOf(line) == -1) && (" and or div mod ".indexOf(" " + line + " ") == -1) && n1Line.startsWith("(")) {
-					lines.setElementAt((line + n1Line), index);
-					lines.removeElementAt(index + 1);
-				}
-				else if (("<=>!+-*".indexOf(n1Line.charAt(0)) != -1) && (n1Line.indexOf(" ") != -1)) {
-					lines.setElementAt((line + " " + n1Line), index);
-					lines.removeElementAt(index + 1);
-				}
-				else index ++;
-			}
-			
-			//	indent lines
-			int indentDepth = 0;
-			String indentString = "";
-			for (int l = 0; l < lines.size(); l++) {
-				line = lines.get(l);
-				if (line.endsWith("(") || line.endsWith("[")) {
-					lines.setElementAt((indentString + line), l);
-					indentDepth++;
-					indentString = "";
-					for (int i = 0; i < indentDepth; i++)
-						indentString += indent;
-				}
-				else if (line.startsWith(")") || line.startsWith("]")) {
-					indentDepth--;
-					indentString = "";
-					for (int i = 0; i < indentDepth; i++)
-						indentString += indent;
-					lines.setElementAt((indentString + line), l);
-				}
-				else lines.setElementAt((indentString + line), l);
-			}
-			
-			//	concatenate and return result
-			return lines.concatStrings("\n");
-		}
 		
 		//	path already exploded
-		else return gPath;
+		if ((gPath.indexOf("\n") != -1) || (gPath.indexOf("\r") != -1))
+			return gPath;
+		
+		//	generate path lines
+		StringVector lines = new StringVector();
+		String[] tokens = GPathParser.tokenize(gPath);
+		StringBuffer assembler = new StringBuffer();
+		boolean canBeOp = false;
+		String lastToken = "";
+		for (int t = 0; t < tokens.length; t++) {
+			String token = tokens[t];
+			if ("[(".indexOf(token) != -1) {
+				if (assembler.length() != 0) {
+					lines.addElement(assembler.toString());
+					assembler = new StringBuffer();
+				}
+				lines.addElement(token);
+				canBeOp = false;
+			}
+			else if ("])".indexOf(token) != -1) {
+				if (assembler.length() != 0) {
+					lines.addElement(assembler.toString());
+					assembler = new StringBuffer();
+				}
+				lines.addElement(token);
+				canBeOp = false;
+			}
+			else if ("/".equals(token)) {
+				if (assembler.length() != 0) {
+					lines.addElement(assembler.toString());
+					assembler = new StringBuffer();
+				}
+				lines.addElement(token);
+				canBeOp = false;
+			}
+			else if (canBeOp && (" and or ".indexOf(" " + token + " ") != -1)) {//  + - * div mod < > = <= != >=
+				if (assembler.length() != 0) {
+					lines.addElement(assembler.toString());
+					assembler = new StringBuffer();
+				}
+				lines.addElement(token);
+				canBeOp = false;
+			}
+			else {
+				if ((assembler.length() != 0) && !"/".equals(token) && !"/".equals(lastToken) && !"::".equals(token) && !"::".equals(lastToken) && !"@".equals(lastToken) && (!"#".equals(lastToken) || (TOKEN_AXIS_EXTENSIONS.indexOf(" " + token + " ") == -1))) assembler.append(" ");
+				assembler.append(token);
+				canBeOp = true;
+			}
+			
+			//	remember last token
+			lastToken = token;
+		}
+		if (assembler.length() != 0) lines.addElement(assembler.toString());
+		
+		//	concat short lines
+		String line;
+		String n1Line;
+		String n2Line;
+		for (int index = 0; (index + 1) < lines.size();) {
+			line = lines.get(index);
+			n1Line = lines.get(index + 1);
+			n2Line = (((index + 2) < lines.size()) ? lines.get(index + 2) : "");
+			if (("[(".indexOf(line) != -1) && ("[(".indexOf(line) == "])".indexOf(n2Line))) {
+//				lines.setElementAt((line + n1Line + n2Line), index);
+//				lines.removeElementAt(index + 1);
+//				lines.removeElementAt(index + 1);
+				lines.removeElementAt(index);
+				lines.removeElementAt(index);
+				lines.setElementAt((line + n1Line + n2Line), index);
+			}
+			else if (n1Line.equals("(") && n2Line.equals(")")) {
+//				lines.setElementAt((line + n1Line + n2Line), index);
+//				lines.removeElementAt(index + 1);
+//				lines.removeElementAt(index + 1);
+				lines.removeElementAt(index);
+				lines.removeElementAt(index);
+				lines.setElementAt((line + n1Line + n2Line), index);
+			}
+			else if (line.equals(".") && n1Line.equals("/")) {
+//				lines.setElementAt((line + n1Line + n2Line), index);
+//				lines.removeElementAt(index + 1);
+//				lines.removeElementAt(index + 1);
+				lines.removeElementAt(index);
+				lines.removeElementAt(index);
+				lines.setElementAt((line + n1Line + n2Line), index);
+			}
+			else index ++;
+		}
+		for (int index = 0; (index + 1) < lines.size();) {
+			line = lines.get(index);
+			n1Line = lines.get(index + 1);
+			if ((line.indexOf(" ") == -1) && ("[(".indexOf(line) == -1) && (" and or div mod ".indexOf(" " + line + " ") == -1) && n1Line.startsWith("(")) {
+//				lines.setElementAt((line + n1Line), index);
+//				lines.removeElementAt(index + 1);
+				lines.removeElementAt(index);
+				lines.setElementAt((line + n1Line), index);
+			}
+			else if (("<=>!+-*".indexOf(n1Line.charAt(0)) != -1) && (n1Line.indexOf(" ") != -1)) {
+//				lines.setElementAt((line + " " + n1Line), index);
+//				lines.removeElementAt(index + 1);
+				lines.removeElementAt(index);
+				lines.setElementAt((line + " " + n1Line), index);
+			}
+			else index ++;
+		}
+		
+		//	indent lines
+		int indentDepth = 0;
+		String indentString = "";
+		for (int l = 0; l < lines.size(); l++) {
+			line = lines.get(l);
+			if (line.endsWith("(") || line.endsWith("[")) {
+				lines.setElementAt((indentString + line), l);
+				indentDepth++;
+				indentString = "";
+				for (int i = 0; i < indentDepth; i++)
+					indentString += indent;
+			}
+			else if (line.startsWith(")") || line.startsWith("]")) {
+				indentDepth--;
+				indentString = "";
+				for (int i = 0; i < indentDepth; i++)
+					indentString += indent;
+				lines.setElementAt((indentString + line), l);
+			}
+			else lines.setElementAt((indentString + line), l);
+		}
+		
+		//	concatenate and return result
+		return lines.concatStrings("\n");
 	}
 	
 	/**	normalize a GPath expression (inverse to the explodePath() methods)
@@ -322,26 +331,30 @@ public class GPath implements GPathConstants {
 	 */
 	public static String normalizePath(String gPath) {
 		StringVector lines = new StringVector();
-		lines.parseAndAddElements(gPath, "\n");
-		if (lines.isEmpty()) return "";
-		String normalizedPath = lines.get(0).trim();
+		lines.parseAndAddElements(gPath.replace('\r', '\n'), "\n+");
+		if (lines.isEmpty())
+			return "";
+		String lastLine = lines.get(0).trim();
+		StringBuffer nPath = new StringBuffer(lastLine);
 		for (int l = 1; l < lines.size(); l++) {
 			String line = lines.get(l).trim();
-			if (!line.startsWith(")")
+			if (true
+					&& !line.startsWith(")")
 					&& !line.startsWith("]")
 					&& !line.startsWith("[")
 					&& !line.startsWith("/")
 					&& !line.startsWith("::")
-					&& !normalizedPath.endsWith("(")
-					&& !normalizedPath.endsWith("[")
-					&& !normalizedPath.endsWith("]")
-					&& !normalizedPath.endsWith("/")
-					&& !normalizedPath.endsWith("::")
-					&& !normalizedPath.endsWith("@")
-					&& (!normalizedPath.endsWith("#") || (TOKEN_AXIS_EXTENSIONS.indexOf(" " + line + " ") == -1))
-				) normalizedPath += " ";
-			normalizedPath += line;
+					&& !lastLine.endsWith("(")
+					&& !lastLine.endsWith("[")
+					&& !lastLine.endsWith("]")
+					&& !lastLine.endsWith("/")
+					&& !lastLine.endsWith("::")
+					&& !lastLine.endsWith("@")
+					&& (!lastLine.endsWith("#") || (TOKEN_AXIS_EXTENSIONS.indexOf(" " + line + " ") == -1))
+				) nPath.append(' '); //normalizedPath += " ";
+			nPath.append(line);
+			lastLine = line;
 		}
-		return normalizedPath;
+		return nPath.toString();
 	}
 }

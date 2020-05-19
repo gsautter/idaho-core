@@ -10,11 +10,11 @@
  *     * Redistributions in binary form must reproduce the above copyright
  *       notice, this list of conditions and the following disclaimer in the
  *       documentation and/or other materials provided with the distribution.
- *     * Neither the name of the Universität Karlsruhe (TH) nor the
+ *     * Neither the name of the Universitaet Karlsruhe (TH) nor the
  *       names of its contributors may be used to endorse or promote products
  *       derived from this software without specific prior written permission.
  *
- * THIS SOFTWARE IS PROVIDED BY UNIVERSITÄT KARLSRUHE (TH) / KIT AND CONTRIBUTORS 
+ * THIS SOFTWARE IS PROVIDED BY UNIVERSITAET KARLSRUHE (TH) / KIT AND CONTRIBUTORS 
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
  * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
  * ARE DISCLAIMED. IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE FOR ANY
@@ -368,13 +368,18 @@ public class StringVector implements MutableDictionary {
 			this.caseSensitive = caseSensitive;
 		}
 		public int compare(Object o1, Object o2) {
-			if (o1 == null) return ((o2 == null) ? 0 : (this.descending ? -1 : 1));
-			if (o2 == null) return ((o1 == null) ? 0 : (this.descending ? 1 : -1));
-			if (!(o1 instanceof String)) return ((!(o2 instanceof String)) ? 0 : (this.descending ? -1 : 1));
-			if (!(o2 instanceof String)) return ((!(o1 instanceof String)) ? 0 : (this.descending ? 1 : -1));
+			if (o1 == null)
+				return ((o2 == null) ? 0 : (this.descending ? -1 : 1));
+			if (o2 == null)
+				return ((o1 == null) ? 0 : (this.descending ? 1 : -1));
+			if (!(o1 instanceof String))
+				return ((!(o2 instanceof String)) ? 0 : (this.descending ? -1 : 1));
+			if (!(o2 instanceof String))
+				return ((!(o1 instanceof String)) ? 0 : (this.descending ? 1 : -1));
 			int c;
-			if (this.caseSensitive) c = o1.toString().compareTo(o2.toString());
-			else c = o1.toString().toLowerCase().compareTo(o2.toString().toLowerCase());
+			if (this.caseSensitive)
+				c = ((String) o1).compareTo((String) o2);
+			else c = ((String) o1).compareToIgnoreCase((String) o2);
 			return (this.descending ? -c : c);
 		}
 	}
@@ -1327,12 +1332,10 @@ public class StringVector implements MutableDictionary {
 		if (reader == null) return sv;
 		BufferedReader buf = ((reader instanceof BufferedReader) ? ((BufferedReader) reader) : new BufferedReader(reader));
 		StringVector elementLines = new StringVector();
-		String line = buf.readLine();
-		while (line != null) {
+		for (String line; (line = buf.readLine()) != null;) {
 			elementLines.parseAndAddElements(line, lineSeparator);
 			sv.addElement(elementLines.concatStrings("\n"));
 			elementLines.clear();
-			line = buf.readLine();
 		}
 		return sv;
 	}
@@ -1399,7 +1402,7 @@ public class StringVector implements MutableDictionary {
 	 */
 	public void storeContent(File file, String lineSeparator) throws IOException {
 		FileWriter fw = new FileWriter(file);
-		storeContent(fw);
+		this.storeContent(fw, lineSeparator);
 		fw.close();
 	}
 	

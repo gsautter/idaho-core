@@ -10,11 +10,11 @@
  *     * Redistributions in binary form must reproduce the above copyright
  *       notice, this list of conditions and the following disclaimer in the
  *       documentation and/or other materials provided with the distribution.
- *     * Neither the name of the Universität Karlsruhe (TH) nor the
+ *     * Neither the name of the Universitaet Karlsruhe (TH) nor the
  *       names of its contributors may be used to endorse or promote products
  *       derived from this software without specific prior written permission.
  *
- * THIS SOFTWARE IS PROVIDED BY UNIVERSITÄT KARLSRUHE (TH) / KIT AND CONTRIBUTORS 
+ * THIS SOFTWARE IS PROVIDED BY UNIVERSITAET KARLSRUHE (TH) / KIT AND CONTRIBUTORS 
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
  * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
  * ARE DISCLAIMED. IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE FOR ANY
@@ -36,7 +36,7 @@ import de.uka.ipd.idaho.htmlXmlUtil.grammars.StandardGrammar;
 
 
 /**
- * A TreeNode represents a single node in the tree retresentation of HTML/XML
+ * A TreeNode represents a single node in the tree representation of HTML/XML
  * data. It is highly similar to a DOM element and fully compatible to the DOM
  * specification, despite some method naming differences.
  * 
@@ -49,35 +49,33 @@ public class TreeNode {
 	 * root node of its own, i.e. for input which is a sequence of HTML/XML
 	 * documents rather than a single document
 	 */
-	public static final String ROOT_NODE_TYPE = "PcRoot";
-	
-//	public static final String ELEMENT_NODE_TYPE = "PcElement";
+	public static final String ROOT_NODE_TYPE = "R_O_O_T";
 	
 	/**
 	 * Type for nodes holding character data
 	 */
-	public static final String DATA_NODE_TYPE = "PcData";
+	public static final String DATA_NODE_TYPE = "D_A_T_A";
 	
 	/**
 	 * Type for nodes holding comments
 	 */
-	public static final String COMMENT_NODE_TYPE = "PcComment";
+	public static final String COMMENT_NODE_TYPE = "C_O_M_M_E_N_T";
 	
 	/**
 	 * Type for nodes holding embedded DTD data
 	 */
-	public static final String DTD_NODE_TYPE = "PcDTD";
+	public static final String DTD_NODE_TYPE = "D_T_D";
 	
 	/**
 	 * Type for nodes holding embedded processing instructions
 	 */
-	public static final String PROCESSING_INSTRUCTION_NODE_TYPE = "PcInstruction";
+	public static final String PROCESSING_INSTRUCTION_NODE_TYPE = "I_N_S_T_R_U_C_T_I_O_N";
 	
 	/**
 	 * Type for attribute nodes. This type is only used in DOM compatibility
 	 * mode, otherwise a TreeNode returns its attributes as plain strings.
 	 */
-	public static final String ATTRIBUTE_NODE_TYPE = "PcAttribute";
+	public static final String ATTRIBUTE_NODE_TYPE = "A_T_T_R_I_B_U_T_E";
 	
 	private final String nodeType;
 	private final String nodeValue;
@@ -98,7 +96,7 @@ public class TreeNode {
 	 */
 	public TreeNode(TreeNode parent, String type, String value, TreeNodeAttributeSet attributes) {
 		this.nodeType = type;
-		this.nodeValue = ((type.equalsIgnoreCase(DATA_NODE_TYPE) || type.equalsIgnoreCase(COMMENT_NODE_TYPE) || type.equalsIgnoreCase(ATTRIBUTE_NODE_TYPE) || type.equalsIgnoreCase(PROCESSING_INSTRUCTION_NODE_TYPE) || type.equalsIgnoreCase(DTD_NODE_TYPE)) ? value : "");
+		this.nodeValue = ((DATA_NODE_TYPE.equals(type) || COMMENT_NODE_TYPE.equals(type) || ATTRIBUTE_NODE_TYPE.equals(type) || PROCESSING_INSTRUCTION_NODE_TYPE.equals(type) || DTD_NODE_TYPE.equals(type)) ? value : "");
 		this.parentNode = parent;
 		this.attributes = attributes;
 	}
@@ -338,13 +336,13 @@ public class TreeNode {
 		return this.treeToCode(new StandardGrammar());
 	}
 	/**	convert this node and it's subtree to code, using a standard Grammar
-	 * @param 	indent		the (whitespace) sequence to be inserted at the beginning of a line once per tree level for indention
+	 * @param 	indent		the (whitespace) sequence to be inserted at the beginning of a line once per tree level for indentation
 	 * @return	a code representation of this tree as a String
 	 */
 	public String treeToCode(String indent) {
 		return this.treeToCode(indent, 0, (new StandardGrammar()));
 	}
-	/**	convert this node and it's subtree to code, using the specified Grammar's standard indention
+	/**	convert this node and it's subtree to code, using the specified Grammar's standard indentation
 	 * @param	grammar		the Grammar according to which the code is to be generated 
 	 * @return	a code representation of this tree as a String
 	 */
@@ -353,7 +351,7 @@ public class TreeNode {
 		return this.treeToCode(g.getStandardIndent(), 0, g);
 	}
 	/**	convert this node and it's subtree to code
-	 * @param 	indent		the (whitespace) sequence to be inserted at the beginning of a line once per tree level for indention
+	 * @param 	indent		the (whitespace) sequence to be inserted at the beginning of a line once per tree level for indentation
 	 * @param	grammar		the Grammar according to which the code is to be generated 
 	 * @return	a code representation of this tree as a String
 	 */
@@ -370,21 +368,16 @@ public class TreeNode {
 		for (int i = 0; i < level; i++)
 			indent = indent + ind;
 		
-//		//	data or comment node
-//		if (this.nodeType.equalsIgnoreCase(DATA_NODE_TYPE) || this.nodeType.equalsIgnoreCase(COMMENT_NODE_TYPE) || this.nodeType.equalsIgnoreCase(DTD_NODE_TYPE) || this.nodeType.equalsIgnoreCase(PROCESSING_INSTRUCTION_NODE_TYPE))
-//			return this.nodeValue + "\n";
-//		
 		//	comment, DTD, etc. node
-		if (this.nodeType.equalsIgnoreCase(COMMENT_NODE_TYPE) || this.nodeType.equalsIgnoreCase(DTD_NODE_TYPE) || this.nodeType.equalsIgnoreCase(PROCESSING_INSTRUCTION_NODE_TYPE))
+		if (COMMENT_NODE_TYPE.equals(this.nodeType) || DTD_NODE_TYPE.equals(this.nodeType) || PROCESSING_INSTRUCTION_NODE_TYPE.equals(this.nodeType))
 			return this.nodeValue + "\n";
 		
 		//	data node
-		else if (this.nodeType.equalsIgnoreCase(DATA_NODE_TYPE))
-//			return grammar.escape(this.nodeValue) + "\n";
+		else if (DATA_NODE_TYPE.equals(this.nodeType))
 			return ((this.nodeValue.trim().length() == 0) ? "" : (grammar.escape(this.nodeValue) + "\n"));
 		
-		//	singular data node as only child 
-		else if ((this.childNodes.size() == 1) && ((TreeNode) this.childNodes.get(0)).getNodeType().equalsIgnoreCase(DATA_NODE_TYPE))
+		//	single data node as only child 
+		else if ((this.childNodes.size() == 1) && DATA_NODE_TYPE.equals(((TreeNode) this.childNodes.get(0)).getNodeType()))
 			return (indent + this.getStartTag(grammar) + grammar.escape(((TreeNode) this.childNodes.get(0)).getNodeValue()) + this.getEndTag(grammar) + "\n");
 		
 		//	no child nodes
@@ -399,7 +392,7 @@ public class TreeNode {
 				if (this.childNodes.get(i) != null) returnValue = returnValue.append(((TreeNode) this.childNodes.get(i)).treeToCode(ind, (this.nodeType.equals(ROOT_NODE_TYPE) ? level : (level + 1)), grammar));
 			
 			//	root node
-			if (this.nodeType.equals(ROOT_NODE_TYPE))
+			if (ROOT_NODE_TYPE.equals(this.nodeType))
 				return returnValue.toString();
 			
 			//	non-root node
@@ -439,28 +432,21 @@ public class TreeNode {
 	
 	//	main conversion method for recursive code generation out of the tree
 	private void treeToCode(TokenReceiver receiver, String ind, int level, Grammar gram) throws IOException {
-		
 		Grammar grammar = ((gram != null) ? gram : new StandardGrammar());
-		
 		String indent = "";
-		for (int i = 0; i < level; i++) {
+		for (int i = 0; i < level; i++)
 			indent = indent + ind;
-		}
 		
-//		//	data or comment node
-//		if (this.nodeType.equalsIgnoreCase(DATA_NODE_TYPE) || this.nodeType.equalsIgnoreCase(COMMENT_NODE_TYPE) || this.nodeType.equalsIgnoreCase(DTD_NODE_TYPE) || this.nodeType.equalsIgnoreCase(PROCESSING_INSTRUCTION_NODE_TYPE))
-//			receiver.storeToken(this.nodeValue, level);
-//			
 		//	comment, DTD, etc node
-		if (this.nodeType.equalsIgnoreCase(COMMENT_NODE_TYPE) || this.nodeType.equalsIgnoreCase(DTD_NODE_TYPE) || this.nodeType.equalsIgnoreCase(PROCESSING_INSTRUCTION_NODE_TYPE))
+		if (COMMENT_NODE_TYPE.equals(this.nodeType) || DTD_NODE_TYPE.equals(this.nodeType) || PROCESSING_INSTRUCTION_NODE_TYPE.equals(this.nodeType))
 			receiver.storeToken(this.nodeValue, level);
 			
-		//	datanode
-		else if (this.nodeType.equalsIgnoreCase(DATA_NODE_TYPE))
+		//	data node
+		else if (DATA_NODE_TYPE.equals(this.nodeType))
 			receiver.storeToken(grammar.escape(this.nodeValue), level);
 			
 		//	singular data node as only child 
-		else if ((this.childNodes.size() == 1) && ((TreeNode) this.childNodes.get(0)).getNodeType().equalsIgnoreCase(DATA_NODE_TYPE))
+		else if ((this.childNodes.size() == 1) && DATA_NODE_TYPE.equals(((TreeNode) this.childNodes.get(0)).getNodeType()))
 			receiver.storeToken((indent + this.getStartTag(grammar) + grammar.escape(((TreeNode) this.childNodes.get(0)).getNodeValue()) + this.getEndTag(grammar)), level);
 			
 		//	no child nodes
@@ -471,16 +457,16 @@ public class TreeNode {
 		else {
 			
 			//	write start tag
-			if (!this.nodeType.equals(ROOT_NODE_TYPE)) receiver.storeToken((indent + this.getStartTag(grammar)), level);
+			if (!ROOT_NODE_TYPE.equals(this.nodeType)) receiver.storeToken((indent + this.getStartTag(grammar)), level);
 			
 			//	iterate through children
 			for (int i = 0; i < this.childNodes.size(); i++) {
 				if (this.childNodes.get(i) != null)
-					((TreeNode) this.childNodes.get(i)).treeToCode(receiver, ind, (this.nodeType.equals(ROOT_NODE_TYPE) ? level : (level + 1)), grammar);
+					((TreeNode) this.childNodes.get(i)).treeToCode(receiver, ind, (ROOT_NODE_TYPE.equals(this.nodeType) ? level : (level + 1)), grammar);
 			}
 			
 			//	write end tag
-			if (!this.nodeType.equals(ROOT_NODE_TYPE)) receiver.storeToken((indent + this.getEndTag(grammar)), level);
+			if (!ROOT_NODE_TYPE.equals(this.nodeType)) receiver.storeToken((indent + this.getEndTag(grammar)), level);
 		}
 	}
 	
@@ -586,9 +572,9 @@ public class TreeNode {
 	public int getTreeDepth() {
 		int depth = -1;
 		TreeNode tn = this;
-		while ((tn != null) && !tn.getNodeType().equals(TreeNode.ROOT_NODE_TYPE)) {
+		while ((tn != null) && !ROOT_NODE_TYPE.equals(tn.nodeType)) {
 			tn = tn.getParent();
-			depth ++;
+			depth++;
 		}
 		return depth;
 	}
@@ -677,21 +663,20 @@ public class TreeNode {
 	/**	@see	java.lang.Object#toString()
 	 */
 	public String toString() {
-		if (this.nodeType.equalsIgnoreCase(DATA_NODE_TYPE))
+		if (DATA_NODE_TYPE.equals(this.nodeType))
 			return this.nodeValue;
 		else return this.nodeType + ": " + this.getAttributesForTag(' ', '=', '"');
 	}
 	
 	/**	@see	java.lang.Object#equals(java.lang.Object)
 	 */
-	public boolean equals(Object o) {
-		return (((o != null) && (o instanceof TreeNode)) ? this.equals((TreeNode) o) : super.equals(o));
+	public boolean equals(Object obj) {
+		return ((obj instanceof TreeNode) && this.equals((TreeNode) obj));
 	}
 	
 	/**	@see	java.lang.Object#equals(java.lang.Object)
 	 */
 	public boolean equals(TreeNode node) {
-		if (node == null) return false;
-		return (node.toString().equals(this.toString()) && (this.documentOrderPosition == node.documentOrderPosition));
+		return ((node != null) && node.toString().equals(this.toString()) && (this.documentOrderPosition == node.documentOrderPosition));
 	}
 }

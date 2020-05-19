@@ -10,11 +10,11 @@
  *     * Redistributions in binary form must reproduce the above copyright
  *       notice, this list of conditions and the following disclaimer in the
  *       documentation and/or other materials provided with the distribution.
- *     * Neither the name of the Universität Karlsruhe (TH) nor the
+ *     * Neither the name of the Universitaet Karlsruhe (TH) nor the
  *       names of its contributors may be used to endorse or promote products
  *       derived from this software without specific prior written permission.
  *
- * THIS SOFTWARE IS PROVIDED BY UNIVERSITÄT KARLSRUHE (TH) / KIT AND CONTRIBUTORS 
+ * THIS SOFTWARE IS PROVIDED BY UNIVERSITAET KARLSRUHE (TH) / KIT AND CONTRIBUTORS 
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
  * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
  * ARE DISCLAIMED. IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE FOR ANY
@@ -47,8 +47,6 @@ import javax.swing.SwingUtilities;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 
-import de.uka.ipd.idaho.stringUtils.regExUtils.RegExUtils;
-
 /**
  * An editor panel for GPath expressions, includng syntax check functions.
  * Through the buttons that can be passed to the constructor, the functionality
@@ -68,7 +66,7 @@ public class GPathEditorPanel extends JPanel implements DocumentListener {
 	private String content = "";
 	private String indent = "  ";
 	
-	private String fontName = "Verdana";
+	private String fontName = "Monospaced";
 	private int fontSize = 12;
 	private Color fontColor = Color.BLACK;
 	
@@ -183,7 +181,7 @@ public class GPathEditorPanel extends JPanel implements DocumentListener {
 	 */
 	public String getContent() {
 		if (this.isDirty())
-			this.content = RegExUtils.normalizeRegEx(this.editor.getText());
+			this.content = GPath.normalizePath(this.editor.getText());
 		return this.content;
 	}
 	
@@ -192,7 +190,7 @@ public class GPathEditorPanel extends JPanel implements DocumentListener {
 	public String getSelectedContent() {
 		String selectedContent = this.editor.getSelectedText();
 		if (selectedContent != null)
-			selectedContent = RegExUtils.normalizeRegEx(selectedContent);
+			selectedContent = GPath.normalizePath(selectedContent);
 		return selectedContent;
 	}
 	
@@ -200,7 +198,7 @@ public class GPathEditorPanel extends JPanel implements DocumentListener {
 	 * @param	gPath	the regular expression to display in the editor
 	 */
 	public void setContent(String gPath) {
-		this.content = RegExUtils.normalizeRegEx(gPath);
+		this.content = GPath.normalizePath(gPath);
 		this.refreshDisplay();
 		this.dirty = false;
 	}

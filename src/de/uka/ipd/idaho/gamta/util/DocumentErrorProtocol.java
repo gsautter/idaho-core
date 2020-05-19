@@ -10,11 +10,11 @@
  *     * Redistributions in binary form must reproduce the above copyright
  *       notice, this list of conditions and the following disclaimer in the
  *       documentation and/or other materials provided with the distribution.
- *     * Neither the name of the Universität Karlsruhe (TH) / KIT nor the
+ *     * Neither the name of the Universitaet Karlsruhe (TH) / KIT nor the
  *       names of its contributors may be used to endorse or promote products
  *       derived from this software without specific prior written permission.
  *
- * THIS SOFTWARE IS PROVIDED BY UNIVERSITÄT KARLSRUHE (TH) / KIT AND CONTRIBUTORS 
+ * THIS SOFTWARE IS PROVIDED BY UNIVERSITAET KARLSRUHE (TH) / KIT AND CONTRIBUTORS 
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
  * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
  * ARE DISCLAIMED. IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE FOR ANY
@@ -50,6 +50,46 @@ import de.uka.ipd.idaho.gamta.Attributed;
  * @author sautter
  */
 public abstract class DocumentErrorProtocol {
+	
+	/** the attribute for holding the category of an error, e.g. in an XML representation of an error protocol */
+	public static final String ERROR_CATEGORY_ATTRIBUTE = "category";
+	
+	/** the attribute for holding the type of an error, e.g. in an XML representation of an error protocol */
+	public static final String ERROR_TYPE_ATTRIBUTE = "type";
+	
+	/** the attribute for holding the description of an error, e.g. in an XML representation of an error protocol */
+	public static final String ERROR_DESCRIPTION_ATTRIBUTE = "description";
+	
+	/** the attribute for holding the severity of an error, e.g. in an XML representation of an error protocol */
+	public static final String ERROR_SEVERITY_ATTRIBUTE = "severity";
+	
+	/** the attribute for holding the source of an error, e.g. in an XML representation of an error protocol */
+	public static final String ERROR_SOURCE_ATTRIBUTE = "source";
+	
+	/** the attribute for holding some sort of identifier for the subject of an error, e.g. in an XML representation of an error protocol */
+	public static final String ERROR_SUBJECT_ID_ATTRIBUTE = "subjectId";
+	
+	
+	/** the attribute for holding the total number of errors, e.g. in an XML representation of an error protocol */
+	public static final String ERROR_COUNT_ATTRIBUTE = "errorCount";
+	
+	/** the attribute for holding the total number of error categories, e.g. in an XML representation of an error protocol */
+	public static final String ERROR_CATEGORY_COUNT_ATTRIBUTE = "errorCategories";
+	
+	/** the attribute for holding the total number of error types, e.g. in an XML representation of an error protocol */
+	public static final String ERROR_TYPE_COUNT_ATTRIBUTE = "errorTypes";
+	
+	/** the attribute for holding the total number of blocker errors, e.g. in an XML representation of an error protocol */
+	public static final String BLOCKER_ERROR_COUNT_ATTRIBUTE = "blockerCount";
+	
+	/** the attribute for holding the total number of critical errors, e.g. in an XML representation of an error protocol */
+	public static final String CRITICAL_ERROR_COUNT_ATTRIBUTE = "criticalCount";
+	
+	/** the attribute for holding the total number of major errors, e.g. in an XML representation of an error protocol */
+	public static final String MAJOR_ERROR_COUNT_ATTRIBUTE = "majorCount";
+	
+	/** the attribute for holding the total number of minor errors, e.g. in an XML representation of an error protocol */
+	public static final String MINOR_ERROR_COUNT_ATTRIBUTE = "minorCount";
 	
 	/**
 	 * Abstract recorder of document error protocols.
@@ -386,7 +426,26 @@ public abstract class DocumentErrorProtocol {
 	 * @param description the detailed error description
 	 * @param severity the severity of the error (one of 'blocker', 'critical', 'major', and 'minor')
 	 */
-	public abstract void addError(String source, Attributed subject, Attributed parent, String category, String type, String description, String severity);
+	public final void addError(String source, Attributed subject, Attributed parent, String category, String type, String description, String severity) {
+		this.addError(source, subject, parent, category, type, description, severity, false);
+	}
+	
+	/**
+	 * Add an error to the protocol. Any de-duplication efforts are up to
+	 * implementations, if any de-duplication is to happen at all. The source
+	 * argument is intended as a link back to the source of the error, e.g. for
+	 * re-checking purposes; it may be null. The <code>falsePositive</code>
+	 * argument is only ever true on de-serializing an error protocol.
+	 * @param source the name of the error source
+	 * @param subject the object the error pertains to
+	 * @param parent the object the error subject belongs to
+	 * @param category the error category (for grouping)
+	 * @param type the error type (for grouping)
+	 * @param description the detailed error description
+	 * @param severity the severity of the error (one of 'blocker', 'critical', 'major', and 'minor')
+	 * @param falsePositive add the error as a false positive?
+	 */
+	public abstract void addError(String source, Attributed subject, Attributed parent, String category, String type, String description, String severity, boolean falsePositive);
 	
 	/**
 	 * Retrieve the total number of errors in the protocol.
@@ -461,10 +520,42 @@ public abstract class DocumentErrorProtocol {
 	
 	/**
 	 * Remove an error from the protocol. The runtime class of the argument
-	 * error is the one of the errors obtained from the getError() methods.
+	 * error is the one of the errors obtained from the <code>getError()</code>
+	 * methods.
 	 * @param error the error to remove
 	 */
 	public abstract void removeError(DocumentError error);
+	
+	/**
+	 * Check whether or not error is marked as a false positive. The runtime
+	 * class of the argument error is the one of the errors obtained from the
+	 * <code>getError()</code> methods.
+	 * @param error the error to check for false positive
+	 */
+	public abstract boolean isFalsePositive(DocumentError error);
+	
+	/**
+	 * Mark an error as a false positive. Any downstream attempt at adding the
+	 * same error to the protocol should be ignored by implementations. The
+	 * runtime class of the argument error is the one of the errors obtained
+	 * from the <code>getError()</code> methods.
+	 * @param error the error to mark as a false positive
+	 */
+	public abstract boolean markFalsePositive(DocumentError error);
+	
+	/**
+	 * Un-mark an error as a false positive to facilitate re-adding it to the
+	 * protocol. The runtime class of the argument error is the one of the
+	 * errors obtained from the <code>getError()</code> methods.
+	 * @param error the error to un-mark as a false positive
+	 */
+	public abstract boolean unmarkFalsePositive(DocumentError error);
+	
+	/**
+	 * Retrieve all errors in the protocol that were marked as false positives.
+	 * @return an array holding the false positive errors
+	 */
+	public abstract DocumentError[] getFalsePositives();
 	
 	/**
 	 * Obtain a comparator for sorting the errors in the protocol. The runtime
@@ -519,8 +610,13 @@ public abstract class DocumentErrorProtocol {
 			this.subject = subject;
 			this.category = category;
 			this.type = type;
-			this.description = description;
+			this.description = checkDescription(description);
 			this.severity = checkSeverity(severity);
+		}
+		private static String checkDescription(String description) {
+			description = description.replaceAll("[\\r\\n\\t\\f]+", " ");
+			description = description.replaceAll("[\\s]+", " ");
+			return description;
 		}
 		private static String checkSeverity(String severity) {
 			if (SEVERITY_BLOCKER.equalsIgnoreCase(severity))
@@ -569,6 +665,7 @@ public abstract class DocumentErrorProtocol {
 		//	persist error protocol
 		BufferedWriter epBw = ((out instanceof BufferedWriter) ? ((BufferedWriter) out) : new BufferedWriter(out));
 		String[] categories = dep.getErrorCategories();
+		DocumentError[] falsePositives = null;
 		for (int c = 0; c < categories.length; c++) {
 			
 			//	store category proper
@@ -600,6 +697,27 @@ public abstract class DocumentErrorProtocol {
 					for (int d = 0; d < sData.length; d++)
 						epBw.write("\t" + sData[d]);
 					epBw.newLine();
+				}
+				
+				//	store false positives
+				if (falsePositives == null)
+					falsePositives = dep.getFalsePositives();
+				for (int fp = 0; fp < falsePositives.length; fp++) {
+					if (falsePositives[fp] == null)
+						continue;
+					if (!categories[c].equals(falsePositives[fp].category))
+						continue;
+					if (!types[t].equals(falsePositives[fp].type))
+						continue;
+					epBw.write("ERROR");
+					epBw.write("\t" + falsePositives[fp].severity);
+					epBw.write("\t" + falsePositives[fp].description);
+					epBw.write("\t" + falsePositives[fp].source);
+					String[] sData = falsePositives[fp].getSubjectData();
+					for (int d = 0; d < sData.length; d++)
+						epBw.write("\t" + sData[d]);
+					epBw.newLine();
+					falsePositives[fp] = null;
 				}
 			}
 		}
@@ -659,21 +777,28 @@ public abstract class DocumentErrorProtocol {
 				continue;
 			}
 			
+			//	do we have an actual error or false positive?
+//			if (!"ERROR".equals(data[0]))
+//				continue; // something weird, ignore it
+			if (!"ERROR".equals(data[0]) && !"FALPOS".equals(data[0]))
+				continue; // something weird, ignore it
+			if (data.length < (isSeverity(data[1]) ? 4 : 3))
+				continue; // not the data we expected ...
+			
 			//	read error (handle absence of severity for now, we do have a few existing protocols without it out there)
 			//	TODO remove severity absence hack
-			if ("ERROR".equals(data[0])) {
-				int i = 1;
-				String severity = (isSeverity(data[i]) ? data[i++] : DocumentError.SEVERITY_CRITICAL);
-				String description = data[i++];
-				String source = data[i++];
-				Attributed subject = null;
-				if (data.length > i) {
-					String[] sData = new String[data.length - i];
-					System.arraycopy(data, i, sData, 0, sData.length);
-					subject = dep.findErrorSubject(doc, sData);
-				}
-				dep.addError(source, subject, doc, category, type, description, severity);
+			int i = 1;
+			String severity = (isSeverity(data[i]) ? data[i++] : DocumentError.SEVERITY_CRITICAL);
+			String description = data[i++];
+			String source = data[i++];
+			Attributed subject = null;
+			if (data.length > i) {
+				String[] sData = new String[data.length - i];
+				System.arraycopy(data, i, sData, 0, sData.length);
+				subject = dep.findErrorSubject(doc, sData);
 			}
+//			dep.addError(source, subject, doc, category, type, description, severity);
+			dep.addError(source, subject, doc, category, type, description, severity, "FALPOS".equals(data[0]));
 		}
 		epBr.close();
 	}

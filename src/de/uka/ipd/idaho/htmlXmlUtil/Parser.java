@@ -10,11 +10,11 @@
  *     * Redistributions in binary form must reproduce the above copyright
  *       notice, this list of conditions and the following disclaimer in the
  *       documentation and/or other materials provided with the distribution.
- *     * Neither the name of the Universität Karlsruhe (TH) nor the
+ *     * Neither the name of the Universitaet Karlsruhe (TH) nor the
  *       names of its contributors may be used to endorse or promote products
  *       derived from this software without specific prior written permission.
  *
- * THIS SOFTWARE IS PROVIDED BY UNIVERSITÄT KARLSRUHE (TH) / KIT AND CONTRIBUTORS 
+ * THIS SOFTWARE IS PROVIDED BY UNIVERSITAET KARLSRUHE (TH) / KIT AND CONTRIBUTORS 
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
  * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
  * ARE DISCLAIMED. IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE FOR ANY
@@ -36,7 +36,7 @@ import java.io.Writer;
 import java.util.Stack;
 import java.util.Vector;
 
-import de.uka.ipd.idaho.htmlXmlUtil.accessories.TreeTools;
+import de.uka.ipd.idaho.htmlXmlUtil.TokenSource.Token;
 import de.uka.ipd.idaho.htmlXmlUtil.exceptions.InvalidNestingException;
 import de.uka.ipd.idaho.htmlXmlUtil.exceptions.MissingEndTagException;
 import de.uka.ipd.idaho.htmlXmlUtil.exceptions.UnexpectedEndTagException;
@@ -570,7 +570,9 @@ public class Parser {
 		 */
 		public boolean consumeToken() throws IOException {
 			if (this.input.hasMoreTokens()) {
-				this.consumToken(this.input.retrieveToken());
+//				this.consumToken(this.input.retrieveToken());
+				Token token = this.input.retrieveToken();
+				this.consumToken(token.value, token.start);
 				return true;
 			}
 			else return false;
@@ -588,7 +590,8 @@ public class Parser {
 			return ((this.stream || this.hasMoreTokens()) ? null : this.rootNode);
 		}
 		
-		private void consumToken(String token) throws IOException {
+//		private void consumToken(String token) throws IOException {
+		private void consumToken(String token, int tokenStart) throws IOException {
 			
 			//	catch empty tokens
 			if (token == null)
@@ -626,7 +629,8 @@ public class Parser {
 						
 						//	if end tag(s) missing and not correcting errors, throw Exception
 						if (!correctErrors && (this.missingEndTags.size() > 0))
-							throw new MissingEndTagException("The following tag(s) have not been closed properly: <" + TreeTools.concatVector(this.missingEndTags, ">, <") + ">");
+//							throw new MissingEndTagException("The following tag(s) have not been closed properly: <" + TreeTools.concatVector(this.missingEndTags, ">, <") + ">");
+							throw new MissingEndTagException(("<" + this.missingEndTags.get(0) + ">"), ("<" + tagType + ">"), tokenStart);
 						
 						//	rise one tree level and write end tag
 						if (!this.stack.empty())
@@ -646,7 +650,8 @@ public class Parser {
 						
 						//	if tag not open and not correcting errors, throw Exception
 						if (!correctErrors)
-							throw new UnexpectedEndTagException("The following tag has never been opened: <" + tagType + ">");
+//							throw new UnexpectedEndTagException("The following tag has never been opened: <" + tagType + ">");
+							throw new UnexpectedEndTagException(("<" + tagType + ">"), (this.stack.empty() ? "end of input" : ("<" + this.stack.peek() + ">")), tokenStart);
 					}
 				}
 				
@@ -662,7 +667,8 @@ public class Parser {
 						
 						//	if not correcting errors, throw Exception
 						if (!correctErrors)
-							throw new InvalidNestingException("<" + this.stack.peek() + "> is not a valid parent for <" + tagType + "> in the context of the Grammar in use (" + grammar.getClass().getName() + ")");
+//							throw new InvalidNestingException("<" + this.stack.peek() + "> is not a valid parent for <" + tagType + "> in the context of the Grammar in use (" + grammar.getClass().getName() + ")");
+							throw new InvalidNestingException(("<" + tagType + ">"), ("<" + this.stack.peek() + ">"), grammar, tokenStart);
 						
 						//	ascend to appropriate parent tag, close lower tags implicitly and write end tags
 						this.stack.pop();

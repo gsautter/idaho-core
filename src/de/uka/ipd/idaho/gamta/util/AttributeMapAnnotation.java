@@ -188,7 +188,6 @@ public class AttributeMapAnnotation extends AbstractAttributed implements Queria
 		if (this.tokens != null)
 			return;
 		this.tokens = new CharTokenSequence(this.charData, this.tokenizer);
-//		System.out.println("Token sequence created");
 	}
 	
 	/* (non-Javadoc)

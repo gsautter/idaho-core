@@ -10,11 +10,11 @@
  *     * Redistributions in binary form must reproduce the above copyright
  *       notice, this list of conditions and the following disclaimer in the
  *       documentation and/or other materials provided with the distribution.
- *     * Neither the name of the Universität Karlsruhe (TH) nor the
+ *     * Neither the name of the Universitaet Karlsruhe (TH) nor the
  *       names of its contributors may be used to endorse or promote products
  *       derived from this software without specific prior written permission.
  *
- * THIS SOFTWARE IS PROVIDED BY UNIVERSITÄT KARLSRUHE (TH) / KIT AND CONTRIBUTORS 
+ * THIS SOFTWARE IS PROVIDED BY UNIVERSITAET KARLSRUHE (TH) / KIT AND CONTRIBUTORS 
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
  * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
  * ARE DISCLAIMED. IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE FOR ANY
@@ -34,9 +34,11 @@ import java.io.StringWriter;
 import java.io.Writer;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 import java.util.Stack;
 import java.util.regex.Pattern;
@@ -129,30 +131,30 @@ public class AnnotationUtils {
 	}
 	
 	/**
-	 * Check if an Annotation ends with the Token directly preceeding the first
+	 * Check if an Annotation ends with the Token directly preceding the first
 	 * Token of another Annotation in the backing TokenSequence.
 	 * @param annotation1 the first Annotation to test
 	 * @param annotation2 the second Annotation to test
 	 * @return true is and only if annotation1 ends with the Token directly
-	 *         preceeding the first Token of annotation2 in the backing
+	 *         preceding the first Token of annotation2 in the backing
 	 *         TokenSequence
 	 */
-	public static boolean preceeds(Annotation annotation1, Annotation annotation2) {
+	public static boolean precedes(Annotation annotation1, Annotation annotation2) {
 		return (annotation1.getEndIndex() == annotation2.getStartIndex());
 	}
 	
 	/**
-	 * Check if an Annotation neighbours another Annotation, i.e. preceeds or
+	 * Check if an Annotation neighbors another Annotation, i.e. precedes or
 	 * follows it.Note: This method is provided for convenience, the returned
 	 * boolean is equal to<br>
-	 * <code>(preceeds(annotation1, annotation2) || follows(annotation1, annotation2))</code>
+	 * <code>(precedes(annotation1, annotation2) || follows(annotation1, annotation2))</code>
 	 * @param annotation1 the first Annotation to test
 	 * @param annotation2 the second Annotation to test
-	 * @return true is and only if annotation1 neighbours annotation2, i.e.
-	 *         preceeds or follows it
+	 * @return true is and only if annotation1 neighbors annotation2, i.e.
+	 *         precedes or follows it
 	 */
 	public static boolean neighbors(Annotation annotation1, Annotation annotation2) {
-		return (preceeds(annotation1, annotation2) || follows(annotation1, annotation2));
+		return (precedes(annotation1, annotation2) || follows(annotation1, annotation2));
 	}
 	
 	/**
@@ -160,14 +162,15 @@ public class AnnotationUtils {
 	 * does neither consider the Annotation type, nor the attributes).
 	 * @param annotation1 the first Annotation
 	 * @param annotation2 the second Annotation
-	 * @return a value lesst than, equal to, or gteater than zero, depending on
+	 * @return a value less than, equal to, or greater than zero, depending on
 	 *         whether annotation1 is less than, equal to, or greater than
 	 *         annotation2 in terms of position
 	 */
 	public static int compare(Annotation annotation1, Annotation annotation2) {
 		int s1 = annotation1.getStartIndex();
 		int s2 = annotation2.getStartIndex();
-		if (s1 == s2) return (annotation2.size() - annotation1.size());
+		if (s1 == s2)
+			return (annotation2.size() - annotation1.size());
 		else return (s1 - s2);
 	}
 	
@@ -192,8 +195,10 @@ public class AnnotationUtils {
 	 *         annotation1 and annotation2 have the same type
 	 */
 	public static boolean equals(Annotation annotation1, Annotation annotation2, boolean compareType) {
-		if (annotation1.getStartIndex() != annotation2.getStartIndex()) return false;
-		if (annotation1.size() != annotation2.size()) return false;
+		if (annotation1.getStartIndex() != annotation2.getStartIndex())
+			return false;
+		if (annotation1.size() != annotation2.size())
+			return false;
 		return (!compareType || annotation1.getType().equals(annotation2.getType()));
 	}
 	
@@ -218,7 +223,8 @@ public class AnnotationUtils {
 		
 		//	do cache lookup
 		Comparator comparator = ((Comparator) typeComparatorCache.get(nestingOrder));
-		if (comparator != null) return comparator;
+		if (comparator != null)
+			return comparator;
 		
 		//	parse custom nesting order
 		StringVector noParser = new StringVector();
@@ -241,6 +247,7 @@ public class AnnotationUtils {
 			}
 			noBuilder.addElement(type);
 		}
+		noBuilder.addContentIgnoreDuplicates(noParser);
 		System.out.println("Nesting order is " + noBuilder.concatStrings(", "));
 		
 		//	index nesting order
@@ -256,34 +263,36 @@ public class AnnotationUtils {
 			public int compare(Object type1, Object type2) {
 				
 				//	keep documents outside every other Annotation, regardless of configuration
-				if (DocumentRoot.DOCUMENT_TYPE.equals(type1)) return (DocumentRoot.DOCUMENT_TYPE.equals(type2) ? 0 : -1);
-				if (DocumentRoot.DOCUMENT_TYPE.equals(type2)) return 1;
+				if (DocumentRoot.DOCUMENT_TYPE.equals(type1))
+					return (DocumentRoot.DOCUMENT_TYPE.equals(type2) ? 0 : -1);
+				if (DocumentRoot.DOCUMENT_TYPE.equals(type2))
+					return 1;
 				
 				//	get ordering numbers
 				Integer i1 = ((Integer) noRanking.get(type1));
 				Integer i2 = ((Integer) noRanking.get(type2));
 				
 				//	both specified, compare
-				if ((i1 != null) && (i2 != null)) return i1.compareTo(i2);
+				if ((i1 != null) && (i2 != null))
+					return i1.compareTo(i2);
 				
 				//	second type not specified, assume it to be some detail
-				else if (i1 != null) return -1;
+				else if (i1 != null)
+					return -1;
 				
 				//	first type not specified, assume it to be some detail
-				else if (i2 != null) return 1;
+				else if (i2 != null)
+					return 1;
 				
 				//	none of the types specified
 				else return 0;
 			}
-			
 			public String toString() {
 				return nestingOrder;
 			}
-			
 			public boolean equals(Object obj) {
 				return ((obj != null) && nestingOrder.equals(obj.toString()));
 			}
-			
 			public int hashCode() {
 				return nestingOrder.hashCode();
 			}
@@ -295,7 +304,7 @@ public class AnnotationUtils {
 		//	return comparator
 		return comparator;
 	}
-	private static HashMap typeComparatorCache = new HashMap();
+	private static Map typeComparatorCache = Collections.synchronizedMap(new HashMap());
 	
 	/**
 	 * Produce a comparator from a specific annotation nesting order.
@@ -308,7 +317,8 @@ public class AnnotationUtils {
 		
 		//	do cache lookup
 		Comparator comparator = ((Comparator) comparatorCache.get(nestingOrder));
-		if (comparator != null) return comparator;
+		if (comparator != null)
+			return comparator;
 		
 		//	get type comparator
 		final Comparator typeComparator = getTypeComparator(nestingOrder);
@@ -336,7 +346,30 @@ public class AnnotationUtils {
 		//	return comparator
 		return comparator;
 	}
-	private static HashMap comparatorCache = new HashMap();
+	private static Map comparatorCache = Collections.synchronizedMap(new HashMap());
+	
+	private static final XmlOutputOptions startTagOptionsNoId = new XmlOutputOptions() {
+		public boolean writeAttribute(String name) {
+			return true;
+		}
+		public boolean includeIDs(String annotType) {
+			return false;
+		}
+		public boolean escapeAttributeValues() {
+			return true;
+		}
+	};
+	private static final XmlOutputOptions startTagOptionsWithId = new XmlOutputOptions() {
+		public boolean writeAttribute(String name) {
+			return true;
+		}
+		public boolean includeIDs(String annotType) {
+			return true;
+		}
+		public boolean escapeAttributeValues() {
+			return true;
+		}
+	};
 	
 	/**
 	 * Produce an XML start tag for an Annotation. This method includes all
@@ -346,7 +379,7 @@ public class AnnotationUtils {
 	 * @return an XML start tag for the specified Annotation
 	 */
 	public static String produceStartTag(Annotation data) {
-		return produceStartTag(data, null, true);
+		return produceStartTag(data, startTagOptionsNoId);
 	}
 	
 	/**
@@ -358,7 +391,7 @@ public class AnnotationUtils {
 	 * @return an XML start tag for the specified Annotation
 	 */
 	public static String produceStartTag(Annotation data, boolean includeId) {
-		return produceStartTag(data, includeId, null, true);
+		return produceStartTag(data, (includeId ? startTagOptionsWithId : startTagOptionsNoId));
 	}
 	
 	/**
@@ -377,7 +410,9 @@ public class AnnotationUtils {
 	 * @return an XML start tag for the specified Annotation
 	 */
 	public static String produceStartTag(Annotation data, Set attributeFilter, boolean escapeValues) {
-		return produceStartTag(data, false, attributeFilter, escapeValues);
+		if ((attributeFilter == null) && escapeValues) // avoids frequent creation of option wrapper (just too many external calls)
+			return produceStartTag(data, startTagOptionsNoId);
+		else return produceStartTag(data, false, attributeFilter, escapeValues);
 	}
 	
 	/**
@@ -397,17 +432,35 @@ public class AnnotationUtils {
 	 * @return an XML start tag for the specified Annotation
 	 */
 	public static String produceStartTag(Annotation data, boolean includeId, Set attributeFilter, boolean escapeValues) {
+		if ((attributeFilter == null) && escapeValues) // avoids frequent creation of option wrapper (just too many external calls)
+			return produceStartTag(data, (includeId ? startTagOptionsWithId : startTagOptionsNoId));
+		XmlOutputOptions options = new XmlOutputOptions();
+		options.setIncludeIdTypes(Collections.emptySet(), includeId);
+		if (attributeFilter != null)
+			options.setAttributeNames(attributeFilter, false);
+		options.setEscape(escapeValues);
+		return produceStartTag(data, options);
+	}
+	
+	/**
+	 * Produce an XML start tag for an Annotation, including attributes and a
+	 * UUID as specified by the argument options.
+	 * @param data the Annotation to produce a start tag for
+	 * @param options the output options specifying details
+	 * @return an XML start tag for the specified Annotation
+	 */
+	public static String produceStartTag(Annotation data, XmlOutputOptions options) {
 		StringBuffer tagAssembler = new StringBuffer("<");
 		tagAssembler.append(data.getType());
-		if (includeId)
+		if (options.includeIDs(data.getType()) && !data.hasAttribute("id"))
 			tagAssembler.append(" id=\"" + data.getAnnotationID() + "\"");
 		String[] ans = data.getAttributeNames();
 		for (int a = 0; a < ans.length; a++)
-			if ((attributeFilter == null) || attributeFilter.contains(ans[a])) {
+			if (options.writeAttribute(data.getType(), ans[a])) {
 				Object value = data.getAttribute(ans[a]);
 				if (value != null) {
 					String valueString = value.toString();
-					if (escapeValues)
+					if (options.escapeAttributeValues())
 						valueString = escapeForXml(valueString, true);
 					tagAssembler.append(" " + ans[a] + "=\"" + valueString + "\"");
 				}
@@ -461,6 +514,41 @@ public class AnnotationUtils {
 		}
 	}
 	
+	private static final XmlOutputOptions xmlWriteOptionsNoId = new XmlOutputOptions() {
+		public boolean writeAnnotations(String annotType) {
+			return true;
+		}
+		public boolean writeAttribute(String name) {
+			return true;
+		}
+		public boolean includeIDs(String annotType) {
+			return false;
+		}
+		public boolean escapeTokes() {
+			return true;
+		}
+		public boolean escapeAttributeValues() {
+			return true;
+		}
+	};
+	private static final XmlOutputOptions xmlWriteOptionsWithId = new XmlOutputOptions() {
+		public boolean writeAnnotations(String annotType) {
+			return true;
+		}
+		public boolean writeAttribute(String name) {
+			return true;
+		}
+		public boolean includeIDs(String annotType) {
+			return true;
+		}
+		public boolean escapeTokes() {
+			return true;
+		}
+		public boolean escapeAttributeValues() {
+			return true;
+		}
+	};
+	
 	/**
 	 * Write the content of a Queriable Annotation marked up with XML to the
 	 * specified Writer. This method writes all annotations and includes all
@@ -471,7 +559,7 @@ public class AnnotationUtils {
 	 * @return true if and only if the output was written successfully
 	 */
 	public static boolean writeXML(QueriableAnnotation data, Writer output) throws IOException {
-		return writeXML(data, output, null);
+		return writeXML(data, output, xmlWriteOptionsNoId);
 	}
 	
 	/**
@@ -485,7 +573,7 @@ public class AnnotationUtils {
 	 * @return true if and only if the output was written successfully
 	 */
 	public static boolean writeXML(QueriableAnnotation data, Writer output, boolean writeIDs) throws IOException {
-		return writeXML(data, output, writeIDs, null);
+		return writeXML(data, output, (writeIDs ? xmlWriteOptionsWithId : xmlWriteOptionsNoId));
 	}
 	
 	/**
@@ -504,7 +592,9 @@ public class AnnotationUtils {
 	 * @return true if and only if the output was written successfully
 	 */
 	public static boolean writeXML(QueriableAnnotation data, Writer output, Set annotationTypes) throws IOException {
-		return writeXML(data, output, annotationTypes, null, true);
+		if (annotationTypes == null) // avoids frequent creation of option wrapper (just too many external calls)
+			return writeXML(data, output, xmlWriteOptionsNoId);
+		else return writeXML(data, output, annotationTypes, null, true);
 	}
 	
 	/**
@@ -524,8 +614,11 @@ public class AnnotationUtils {
 	 * @return true if and only if the output was written successfully
 	 */
 	public static boolean writeXML(QueriableAnnotation data, Writer output, boolean writeIDs, Set annotationTypes) throws IOException {
+		if (annotationTypes == null) // avoids frequent creation of option wrapper (just too many external calls)
+			return writeXML(data, output, (writeIDs ? xmlWriteOptionsWithId : xmlWriteOptionsNoId));
 		return writeXML(data, output, writeIDs, annotationTypes, null, true);
 	}
+	
 	/**
 	 * Write the content of a Queriable Annotation marked up with XML to the
 	 * specified Writer. The specified annotation type set (if any) is checked
@@ -546,6 +639,8 @@ public class AnnotationUtils {
 	 * @return true if and only if the output was written successfully
 	 */
 	public static boolean writeXML(QueriableAnnotation data, Writer output, Set annotationTypes, Set attributeFilter, boolean escape) throws IOException {
+		if ((annotationTypes == null) && (attributeFilter == null) && escape) // avoids frequent creation of option wrapper (just too many external calls)
+			return writeXML(data, output, xmlWriteOptionsNoId);
 		return writeXML(data, output, false, annotationTypes, attributeFilter, escape);
 	}
 	
@@ -570,19 +665,164 @@ public class AnnotationUtils {
 	 * @return true if and only if the output was written successfully
 	 */
 	public static boolean writeXML(QueriableAnnotation data, Writer output, boolean writeIDs, Set annotationTypes, Set attributeFilter, boolean escape) throws IOException {
+		if ((annotationTypes == null) && (attributeFilter == null) && escape) // avoids frequent creation of option wrapper (just too many external calls)
+			return writeXML(data, output, (writeIDs ? xmlWriteOptionsWithId : xmlWriteOptionsNoId));
+		XmlOutputOptions options = new XmlOutputOptions();
+		options.setIncludeIdTypes(Collections.emptySet(), writeIDs);
+		if (annotationTypes != null)
+			options.setAnnotationTypes(annotationTypes, false);
+		if (attributeFilter != null)
+			options.setAttributeNames(attributeFilter, false);
+		options.setEscape(escape);
+		return writeXML(data, output, options);
+	}
+	
+	/**
+	 * Object holding options for XML output.
+	 * 
+	 * @author sautter
+	 */
+	public static class XmlOutputOptions {
+		private Set includeIdTypes = null;
+		private boolean invertIncludeIdTypes = true;
+		private Set annotationTypes = null;
+		private boolean invertAnnotationTypes = false;
+		private Set attributeNames = null;
+		private boolean invertAttributeNames = false;
+		private boolean escape = true;
+		
+		/**
+		 * Set the annotation types to include in the output (positive filter).
+		 * To use a negative filter, set <code>invert</code> to true and provide
+		 * a set of annotation types to exclude instead.
+		 * @param annotationTypes the annotation types to include
+		 * @param invert invert set containment?
+		 */
+		public void setAnnotationTypes(Set annotationTypes, boolean invert) {
+			this.annotationTypes = annotationTypes;
+			this.invertAnnotationTypes = invert;
+		}
+		
+		/**
+		 * Set the attribute names to include in the output (positive filter).
+		 * To use a negative filter, set <code>invert</code> to true and provide
+		 * a set of attribute names to exclude instead.
+		 * @param attributeNames the attribute names to include
+		 * @param invert invert set containment?
+		 */
+		public void setAttributeNames(Set attributeNames, boolean invert) {
+			this.attributeNames = attributeNames;
+			this.invertAttributeNames = invert;
+		}
+		
+		/**
+		 * Set the annotation types to include the UUID for (positive filter).
+		 * To use a negative filter, set <code>invert</code> to true and provide
+		 * a set of annotation types to exclude the UUID for instead.
+		 * @param includeIdTypes the annotation types to include the UUIDs for
+		 * @param invert invert set containment?
+		 */
+		public void setIncludeIdTypes(Set includeIdTypes, boolean invert) {
+			this.includeIdTypes = includeIdTypes;
+			this.invertIncludeIdTypes = invert;
+		}
+		
+		/**
+		 * Set to false to disable escaping attribute values and textual
+		 * content.
+		 * @param escape the escape property to set
+		 */
+		public void setEscape(boolean escape) {
+			this.escape = escape;
+		}
+		
+		/**
+		 * Check whether or not to include annotations of a given type in the
+		 * output.
+		 * @param annotType the annotation type to check
+		 * @return true if annotations of the argument type should be output
+		 */
+		public boolean writeAnnotations(String annotType) {
+			if (this.annotationTypes == null)
+				return !this.invertAnnotationTypes;
+			else return (this.annotationTypes.contains(annotType) != this.invertAnnotationTypes);
+		}
+		
+		/**
+		 * Check whether or not to include attributes with a given name in the
+		 * output.
+		 * @param name the attribute name to check
+		 * @return true if attributes with the argument name should be output
+		 */
+		public boolean writeAttribute(String name) {
+			if (this.attributeNames == null)
+				return !this.invertAttributeNames;
+			else return (this.attributeNames.contains(name) != this.invertAttributeNames);
+		}
+		
+		/**
+		 * Check whether or not to include attributes with a given name in the
+		 * output for an annotation of a given type. This implementation simply
+		 * defaults to the one-argument <code>writeAttribute()</code> method,
+		 * sub classes may overwrite it for more fine-grained control.
+		 * @param annotType the annotation type to check
+		 * @param name the attribute name to check
+		 * @return true if attributes with the argument name should be output
+		 */
+		public boolean writeAttribute(String anotType, String name) {
+			return this.writeAttribute(name);
+		}
+		
+		/**
+		 * Check whether or not to include the UUIDs of annotations of a given
+		 * type in the output.
+		 * @param annotType the annotation type to check
+		 * @return true if annotations of the argument type should be output
+		 *        with their UUIDs
+		 */
+		public boolean includeIDs(String annotType) {
+			if (this.includeIdTypes == null)
+				return !this.invertIncludeIdTypes;
+			else return (this.includeIdTypes.contains(annotType) != this.invertIncludeIdTypes);
+		}
+		
+		/**
+		 * Check whether or not to escape textual content tokens in the output.
+		 * @return true if textual content tokens should be escaped
+		 */
+		public boolean escapeTokes() {
+			return this.escape;
+		}
+		
+		/**
+		 * Check whether or not to escape attribute values in the output.
+		 * @return true if attribute values should be escaped
+		 */
+		public boolean escapeAttributeValues() {
+			return this.escape;
+		}
+	}
+	
+	/**
+	 * Write the content of a Queriable Annotation marked up with XML to the
+	 * specified Writer, using the argument options.
+	 * @param data the Annotation to write
+	 * @param output the Writer to write to
+	 * @param options an object holding the output options.
+	 * @return true if and only if the output was written successfully
+	 */
+	public static boolean writeXML(QueriableAnnotation data, Writer output, XmlOutputOptions options) throws IOException {
 		BufferedWriter buf = ((output instanceof BufferedWriter) ? ((BufferedWriter) output) : new BufferedWriter(output));
 		
 		//	get annotations
 		Annotation[] nestedAnnotations = data.getAnnotations();
 		
 		//	filter annotations
-		if (annotationTypes != null) {
-			ArrayList annotationList = new ArrayList();
-			for (int a = 0; a < nestedAnnotations.length; a++)
-				if (annotationTypes.contains(nestedAnnotations[a].getType()))
-					annotationList.add(nestedAnnotations[a]);
-			nestedAnnotations = ((Annotation[]) annotationList.toArray(new Annotation[annotationList.size()]));
-		}
+		ArrayList annotationList = new ArrayList();
+		for (int a = 0; a < nestedAnnotations.length; a++)
+			if (options.writeAnnotations(nestedAnnotations[a].getType()))
+				annotationList.add(nestedAnnotations[a]);
+		nestedAnnotations = ((Annotation[]) annotationList.toArray(new Annotation[annotationList.size()]));
 		
 		//	make sure there is a root element
 		if ((nestedAnnotations.length == 0) || (nestedAnnotations[0].size() < data.size())) {
@@ -638,15 +878,15 @@ public class AnnotationUtils {
 			
 			//	write start tags for Annotations beginning at current token
 			while ((annotationPointer < nestedAnnotations.length) && (nestedAnnotations[annotationPointer].getStartIndex() == t)) {
-				Annotation annotation = nestedAnnotations[annotationPointer];
+				Annotation annotation = nestedAnnotations[annotationPointer++];
 				stack.push(annotation);
-				annotationPointer++;
 				
 				//	line break
-				if (!lastWasLineBreak) buf.newLine();
+				if (!lastWasLineBreak)
+					buf.newLine();
 				
 				//	add start tag
-				buf.write(produceStartTag(annotation, writeIDs, attributeFilter, escape));
+				buf.write(produceStartTag(annotation, options));
 				lastWasTag = true;
 				lastWasLineBreak = false;
 				
@@ -659,7 +899,7 @@ public class AnnotationUtils {
 			}
 			
 			//	append current Token
-			if (escape)
+			if (options.escapeTokes())
 				buf.write(escapeForXml(token.getValue()));
 			else buf.write(token.getValue());
 			

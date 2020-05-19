@@ -10,11 +10,11 @@
  *     * Redistributions in binary form must reproduce the above copyright
  *       notice, this list of conditions and the following disclaimer in the
  *       documentation and/or other materials provided with the distribution.
- *     * Neither the name of the Universität Karlsruhe (TH) nor the
+ *     * Neither the name of the Universitaet Karlsruhe (TH) nor the
  *       names of its contributors may be used to endorse or promote products
  *       derived from this software without specific prior written permission.
  *
- * THIS SOFTWARE IS PROVIDED BY UNIVERSITÄT KARLSRUHE (TH) / KIT AND CONTRIBUTORS 
+ * THIS SOFTWARE IS PROVIDED BY UNIVERSITAET KARLSRUHE (TH) / KIT AND CONTRIBUTORS 
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
  * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
  * ARE DISCLAIMED. IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE FOR ANY
@@ -528,7 +528,7 @@ public class AnnotationPatternMatcher {
 	 */
 	public static class AnnotationIndex {
 		HashMap index = new HashMap();
-		HashSet annotTypes = new HashSet();
+		CountingSet annotTypes = new CountingSet();
 		AnnotationIndex defIndex;
 		QueriableAnnotation data;
 		HashSet dataRetrievedTypes;
@@ -557,7 +557,7 @@ public class AnnotationPatternMatcher {
 		 * @param annot the annotation to index
 		 */
 		public void addAnnotation(Annotation annot) {
-			this.getAnnotationList(annot.getType(), annot.getStartIndex(), true).add(annot);
+			this.addAnnotation(annot, annot.getType());
 		}
 		
 		/**
@@ -566,7 +566,7 @@ public class AnnotationPatternMatcher {
 		 */
 		public void addAnnotations(Annotation[] annots) {
 			for (int a = 0; a < annots.length; a++)
-				this.getAnnotationList(annots[a].getType(), annots[a].getStartIndex(), true).add(annots[a]);
+				this.addAnnotation(annots[a]);
 		}
 		
 		/**
@@ -575,7 +575,8 @@ public class AnnotationPatternMatcher {
 		 * @param type the type to index the annotation for
 		 */
 		public void addAnnotation(Annotation annot, String type) {
-			this.getAnnotationList(type, annot.getStartIndex(), true).add(annot);
+			if (this.getAnnotationList(type, annot.getStartIndex(), true).add(annot))
+				this.annotTypes.add(type);
 		}
 		
 		/**
@@ -585,7 +586,49 @@ public class AnnotationPatternMatcher {
 		 */
 		public void addAnnotations(Annotation[] annots, String type) {
 			for (int a = 0; a < annots.length; a++)
-				this.getAnnotationList(type, annots[a].getStartIndex(), true).add(annots[a]);
+				this.addAnnotation(annots[a], type);
+		}
+		
+		/**
+		 * Remove a single annotation from the index.
+		 * @param annot the annotation to remove
+		 */
+		public void removeAnnotation(Annotation annot) {
+			this.removeAnnotation(annot, annot.getType());
+		}
+		
+		/**
+		 * Remove a single annotation from the index for a custom type.
+		 * @param annot the annotation to remove
+		 * @param type the type to remove the annotation for
+		 */
+		public void removeAnnotation(Annotation annot, String type) {
+			ArrayList al = this.getAnnotationList(type, annot.getStartIndex(), false);
+			if (al == null)
+				return;
+			if (al.remove(annot))
+				this.annotTypes.remove(type);
+			if (al.isEmpty())
+				this.index.remove("" + annot.getStartIndex() + " " + type);
+		}
+		
+		/**
+		 * Remove an array of annotations from the index.
+		 * @param annots the annotations to remove
+		 */
+		public void removeAnnotations(Annotation[] annots) {
+			for (int a = 0; a < annots.length; a++)
+				this.removeAnnotation(annots[a]);
+		}
+		
+		/**
+		 * Remove an array of annotations from the index for a custom type.
+		 * @param annots the annotations to remove
+		 * @param type the type to remove the annotations for
+		 */
+		public void removeAnnotations(Annotation[] annots, String type) {
+			for (int a = 0; a < annots.length; a++)
+				this.removeAnnotation(annots[a], type);
 		}
 		
 		/**
@@ -629,8 +672,6 @@ public class AnnotationPatternMatcher {
 		}
 		
 		ArrayList getAnnotationList(String type, int startIndex, boolean create) {
-			if (create)
-				this.annotTypes.add(type);
 			String alk = ("" + startIndex + " " + type);
 			ArrayList al = ((ArrayList) this.index.get(alk));
 			if ((al == null) && create) {
@@ -1378,6 +1419,36 @@ public class AnnotationPatternMatcher {
 			return index;
 		}
 	}
+//	
+//	//	PARSING AND MATCHING TEST
+//	public static void main(String[] args) throws Exception {
+//		String pattern;
+//		pattern = "<stopWord>* <lastName> @:lastName ','? <firstName> @:firstName";
+////		pattern = "(<stopWord>* <lastName>{1,2}){2,} ','? <firstName>";
+////		pattern = "(<a>{1,3}|(<b><c>{2,4})){2,} ','? <d> (','? <e>)?";
+////		pattern = "'Mr.'? (<fn>|<in>)+ (<i>* <ln>)+ (','? <a>)?";
+////		pattern = "'Mr.'? (<fn>|\"[A-Z]\\\\.\")+@:firstName (<i>* <ln>)+@:lastName[', '] (','? <a>)?";
+////		pattern = "'Mr.'? (<fn>@:fn|\"[A-Z]\\\\.\")+@(./@fn):firstName (<i>* <ln>)+@:lastName (','? <a>)?";
+//		pattern = "'Mr.'? (<fn>|\"[A-Z]\\\\.\"@:initial)+@:firstName (<i>* <ln>)+@:lastName (','? <a test=\"./@something\" type=\"\">)?";
+////		pattern = "<bibRefCitation>\n')'?\n<number>";
+//		AnnotationPattern ap = getPattern(Gamta.INNER_PUNCTUATION_TOKENIZER, pattern);
+//		System.out.println(ap.toString());
+//		MutableAnnotation doc = SgmlDocumentReader.readDocument(new StringReader("Mr. <fn test=\"test\">Tommy</fn> <in>F.</in> <ln><fn>Lee</fn></ln> <i>van</i> <i>den</i> <ln>Jones</ln>, <a>Jr.</a>"));
+//		MatchTree[] mts = getMatchTrees(doc, ap.toString());
+//		for (int a = 0; a < mts.length; a++)
+//			System.out.println(mts[a].toString());
+//		Annotation[] ans = getMatches(doc, ap.toString());
+//		for (int a = 0; a < ans.length; a++)
+//			System.out.println(ans[a].toXML());
+////		AnnotationUtils.writeXML(doc, new OutputStreamWriter(System.out));
+////		System.out.println();
+////		MutableAnnotation doc = SgmlDocumentReader.readDocument(new StringReader("<d>n. <l a=\"y\"><l>ln-a</l> <l a=\"x\">ln-b</l></l>, <i>i-i</i>, <l><l>ln-a</l> ln-b</l> <i>i-i</i>, Jr. n 2345.</d>"));
+////		AnnotationUtils.writeXML(doc, new OutputStreamWriter(System.out));
+////		Annotation[] ans = getMatches(doc, "<l a=\"(a|b|x)\"> ','? <i> ', Jr'?");
+////		for (int a = 0; a < ans.length; a++) {
+////			System.out.println(ans[a].toXML());
+////		}
+//	}
 	
 	/** the name of the attribute holding the list of source elements of enumerations, namely 'elements' */
 	public static final String ENUMERATION_ELEMENTS_ATTRIBUTE = "elements";
@@ -1491,10 +1562,10 @@ public class AnnotationPatternMatcher {
 		//	expand seed enumerations
 		ArrayList newEnums = new ArrayList();
 		do {
-			System.out.println("Attempting expansion");
+			if (DEBUG_ENUMERATION_ASSEMBLY) System.out.println("Attempting expansion");
 			newEnums.clear();
 			MatchTree[] enumMatches = getMatchTrees(tokens, enumPartIndex, "<enumeration> <separator> <cElement>");
-			System.out.println(" - got " + enumMatches.length + " expanded matches");
+			if (DEBUG_ENUMERATION_ASSEMBLY) System.out.println(" - got " + enumMatches.length + " expanded matches");
 			for (int l = 0; l < enumMatches.length; l++) {
 				Annotation enumMatch = enumMatches[l].getMatch();
 				addElementList(enumMatches[l], enumMatch);
@@ -1503,11 +1574,14 @@ public class AnnotationPatternMatcher {
 					if (DEBUG_ENUMERATION_ASSEMBLY) System.out.println("Added enumeration " + enumMatch.toXML());
 				}
 			}
+			enumPartIndex.removeAnnotations(((Annotation[]) enums.toArray(new Annotation[enums.size()])), "enumeration");
+			if (DEBUG_ENUMERATION_ASSEMBLY) System.out.println(" - got " + newEnums.size() + " new matches");
 			enums.addAll(newEnums);
 			enumPartIndex.addAnnotations(((Annotation[]) newEnums.toArray(new Annotation[newEnums.size()])), "enumeration");
 		} while (newEnums.size() != 0);
 		
 		//	finalize enumerations
+		enumPartIndex.addAnnotations(((Annotation[]) enums.toArray(new Annotation[enums.size()])), "enumeration");
 		MatchTree[] enumMatches = getMatchTrees(tokens, enumPartIndex, "<enumeration> ((<separator>|<endSeparator>) (<cElement>|<eElement>))?");
 		for (int l = 0; l < enumMatches.length; l++) {
 			Annotation enumMatch = enumMatches[l].getMatch();
@@ -1565,36 +1639,28 @@ public class AnnotationPatternMatcher {
 		}
 		return elementIDs.toString();
 	}
-	
-	/**
-	 * @param args
-	 */
-	public static void main(String[] args) throws Exception {
-		String pattern;
-		pattern = "<stopWord>* <lastName> @:lastName ','? <firstName> @:firstName";
-//		pattern = "(<stopWord>* <lastName>{1,2}){2,} ','? <firstName>";
-//		pattern = "(<a>{1,3}|(<b><c>{2,4})){2,} ','? <d> (','? <e>)?";
-//		pattern = "'Mr.'? (<fn>|<in>)+ (<i>* <ln>)+ (','? <a>)?";
-//		pattern = "'Mr.'? (<fn>|\"[A-Z]\\\\.\")+@:firstName (<i>* <ln>)+@:lastName[', '] (','? <a>)?";
-//		pattern = "'Mr.'? (<fn>@:fn|\"[A-Z]\\\\.\")+@(./@fn):firstName (<i>* <ln>)+@:lastName (','? <a>)?";
-		pattern = "'Mr.'? (<fn>|\"[A-Z]\\\\.\"@:initial)+@:firstName (<i>* <ln>)+@:lastName (','? <a test=\"./@something\" type=\"\">)?";
-//		pattern = "<bibRefCitation>\n')'?\n<number>";
-		AnnotationPattern ap = getPattern(Gamta.INNER_PUNCTUATION_TOKENIZER, pattern);
-		System.out.println(ap.toString());
-		MutableAnnotation doc = SgmlDocumentReader.readDocument(new StringReader("Mr. <fn test=\"test\">Tommy</fn> <in>F.</in> <ln><fn>Lee</fn></ln> <i>van</i> <i>den</i> <ln>Jones</ln>, <a>Jr.</a>"));
-		MatchTree[] mts = getMatchTrees(doc, ap.toString());
-		for (int a = 0; a < mts.length; a++)
-			System.out.println(mts[a].toString());
-		Annotation[] ans = getMatches(doc, ap.toString());
-		for (int a = 0; a < ans.length; a++)
-			System.out.println(ans[a].toXML());
-//		AnnotationUtils.writeXML(doc, new OutputStreamWriter(System.out));
-//		System.out.println();
-//		MutableAnnotation doc = SgmlDocumentReader.readDocument(new StringReader("<d>n. <l a=\"y\"><l>ln-a</l> <l a=\"x\">ln-b</l></l>, <i>i-i</i>, <l><l>ln-a</l> ln-b</l> <i>i-i</i>, Jr. n 2345.</d>"));
-//		AnnotationUtils.writeXML(doc, new OutputStreamWriter(System.out));
-//		Annotation[] ans = getMatches(doc, "<l a=\"(a|b|x)\"> ','? <i> ', Jr'?");
-//		for (int a = 0; a < ans.length; a++) {
-//			System.out.println(ans[a].toXML());
+//	
+//	//	ENUMERATION TEST
+//	public static void main(String[] args) throws Exception {
+//		final int elements = 100;
+//		StringBuffer sb = new StringBuffer("John Doe");
+//		for (int e = 0; e < elements; e++)
+//			sb.append(", John Doe");
+//		sb.append(", and John Doe");
+//		TokenSequence ts = Gamta.newTokenSequence(sb, null);
+//		Annotation[] annots = new Annotation[1 + elements + 1];
+//		for (int a = 0; a < annots.length; a++) {
+//			if ((a+1) == annots.length)
+//				annots[a] = Gamta.newAnnotation(ts, "personName", ((a * 3) + 1), 2);
+//			else annots[a] = Gamta.newAnnotation(ts, "personName", (a * 3), 2);
 //		}
-	}
+//		StringVector seps = new StringVector();
+//		seps.addElement(",");
+//		StringVector endSeps = new StringVector();
+//		endSeps.addElement(",");
+//		endSeps.addElement(", and");
+//		long start = System.currentTimeMillis();
+//		Annotation[] enums = getEnumerations(ts, annots, seps, endSeps);
+//		System.out.println("Got " + enums.length + " enumerations in " + (System.currentTimeMillis() - start) + "ms");
+//	}
 }

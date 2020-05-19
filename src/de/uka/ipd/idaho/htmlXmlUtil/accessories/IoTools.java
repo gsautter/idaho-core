@@ -10,11 +10,11 @@
  *     * Redistributions in binary form must reproduce the above copyright
  *       notice, this list of conditions and the following disclaimer in the
  *       documentation and/or other materials provided with the distribution.
- *     * Neither the name of the Universität Karlsruhe (TH) nor the
+ *     * Neither the name of the Universitaet Karlsruhe (TH) nor the
  *       names of its contributors may be used to endorse or promote products
  *       derived from this software without specific prior written permission.
  *
- * THIS SOFTWARE IS PROVIDED BY UNIVERSITÄT KARLSRUHE (TH) / KIT AND CONTRIBUTORS 
+ * THIS SOFTWARE IS PROVIDED BY UNIVERSITAET KARLSRUHE (TH) / KIT AND CONTRIBUTORS 
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
  * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
  * ARE DISCLAIMED. IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE FOR ANY
@@ -1369,19 +1369,19 @@ public class IoTools {
 		//	check for HTML tags
 		String lowerString = string.toLowerCase();
 		if (lowerString.startsWith("<html ") || lowerString.startsWith("<html>") || lowerString.endsWith("</html>") || lowerString.startsWith("<htm ") || lowerString.startsWith("<htm>") || lowerString.endsWith("</htm>")) {
-			//System.out.println(string + "\nis HTML encoded for it starts or ends with an 'html' tag");
+			//System.out.println(string + "\nis HTML encoded because it starts or ends with an 'html' tag");
 			return true;
 		}
 		
 		//	check for line breaks
 		if ((lowerString.indexOf("<br>") != 0) && (lowerString.indexOf('\n') == 0) && (lowerString.indexOf('\r') == 0)) {
-			//System.out.println(string + "\nis HTML encoded for it uses '<br>' instead of line break characters");
+			//System.out.println(string + "\nis HTML encoded because it uses '<br>' instead of line break characters");
 			return true;
 		}
 		
 		//	check for tags in general
 		if (lowerString.startsWith("<") && !lowerString.startsWith("< ")) {
-			//System.out.println(string + "\nis HTML encoded for it seems to start with a tag");
+			//System.out.println(string + "\nis HTML encoded because it seems to start with a tag");
 			return true;
 		}
 		
@@ -1389,22 +1389,22 @@ public class IoTools {
 		try {
 			TreeNode root = HTML_PARSER.parse(string);
 			if ((root.getChildNodeCount() == 1) && (root.getChildNode(0).getNodeType().equals(TreeNode.DATA_NODE_TYPE))) {
-				//System.out.println(string + "\nis not HTML encoded for it contains no tags");
+				//System.out.println(string + "\nis not HTML encoded because it contains no tags");
 				return false;
 			}
 			TreeNode[] nodes = TreeTools.treeToBreadthFirstOrder(root);
 			for (int i = (nodes.length - 1); i > -1; i--) if (nodes[i].getTreeDepth() > 2) {
-				//System.out.println(string + "\nis HTML encoded for contains tags and has a tree deph greater than 2");
+				//System.out.println(string + "\nis HTML encoded because it contains tags and has a tree depth greater than 2");
 				return true;
 			}
 		}
 		catch (IOException pe) {
-			//System.out.println(string + "\nis not HTML encoded for it is not parsable");
+			//System.out.println(string + "\nis not HTML encoded because it is not parsable");
 			return false;
 		}
 		
 		//	space for further checks
-		//System.out.println(string + "\nis not HTML encoded for none of the rules applied");
+		//System.out.println(string + "\nis not HTML encoded because none of the rules applied");
 		return false;
 	}
 	

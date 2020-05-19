@@ -10,11 +10,11 @@
  *     * Redistributions in binary form must reproduce the above copyright
  *       notice, this list of conditions and the following disclaimer in the
  *       documentation and/or other materials provided with the distribution.
- *     * Neither the name of the Universität Karlsruhe (TH) nor the
+ *     * Neither the name of the Universitaet Karlsruhe (TH) nor the
  *       names of its contributors may be used to endorse or promote products
  *       derived from this software without specific prior written permission.
  *
- * THIS SOFTWARE IS PROVIDED BY UNIVERSITÄT KARLSRUHE (TH) / KIT AND CONTRIBUTORS 
+ * THIS SOFTWARE IS PROVIDED BY UNIVERSITAET KARLSRUHE (TH) / KIT AND CONTRIBUTORS 
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
  * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
  * ARE DISCLAIMED. IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE FOR ANY
@@ -33,7 +33,7 @@ import de.uka.ipd.idaho.gamta.util.gPath.GPathVariableResolver;
 import de.uka.ipd.idaho.gamta.util.gPath.types.GPathObject;
 
 /**
- * The interface to implement for custom GANTA Script functions
+ * The interface to implement for custom GAMTA Script functions
  * 
  * @author sautter
  */
@@ -53,7 +53,7 @@ public interface GScriptFunction {
 	/**
 	 * Retrieve the types of the parameters this function takes (beside the
 	 * document to process). The types must be from the GPath (Gamta adaptation
-	 * of XPath) type hirarchy (GPathObject - GPathBoolean, GPathNumber,
+	 * of XPath) type hierarchy (GPathObject - GPathBoolean, GPathNumber,
 	 * GPathString, GPathAnnotationSet).
 	 * @return the types of the parameters this function takes
 	 */

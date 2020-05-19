@@ -10,11 +10,11 @@
  *     * Redistributions in binary form must reproduce the above copyright
  *       notice, this list of conditions and the following disclaimer in the
  *       documentation and/or other materials provided with the distribution.
- *     * Neither the name of the Universität Karlsruhe (TH) nor the
+ *     * Neither the name of the Universitaet Karlsruhe (TH) nor the
  *       names of its contributors may be used to endorse or promote products
  *       derived from this software without specific prior written permission.
  *
- * THIS SOFTWARE IS PROVIDED BY UNIVERSITÄT KARLSRUHE (TH) / KIT AND CONTRIBUTORS 
+ * THIS SOFTWARE IS PROVIDED BY UNIVERSITAET KARLSRUHE (TH) / KIT AND CONTRIBUTORS 
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
  * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
  * ARE DISCLAIMED. IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE FOR ANY
@@ -555,7 +555,7 @@ public class XsltUtils {
 		}
 		
 		/**
-		 * Acording to the purpose of this class, this method does nothing.
+		 * According to the purpose of this class, this method does nothing.
 		 * @see java.io.FilterWriter#flush()
 		 */
 		public void flush() throws IOException {
@@ -564,7 +564,7 @@ public class XsltUtils {
 		}
 		
 		/**
-		 * Acording to the purpose of this class, this method does nothing.
+		 * According to the purpose of this class, this method does nothing.
 		 * @see java.io.FilterWriter#close()
 		 */
 		public void close() throws IOException {}
@@ -828,7 +828,7 @@ public class XsltUtils {
 	
 	/**
 	 * Produce an XSLT transformer pool from a stylesheet loaded from some input
-	 * stream. If the agrument name is null, there are no cache lookups, and the
+	 * stream. If the argument name is null, there are no cache lookups, and the
 	 * transformer pool will not be cached.
 	 * @param xsltIn an input stream to load the stylesheet from
 	 * @param name the name of the input stream, for caching
@@ -841,7 +841,7 @@ public class XsltUtils {
 	
 	/**
 	 * Produce an XSLT transformer pool from a stylesheet loaded from some input
-	 * stream. If the agrument name is null, there are no cache lookups, and the
+	 * stream. If the argument name is null, there are no cache lookups, and the
 	 * transformer pool will not be cached.
 	 * @param xsltIn an input stream to load the stylesheet from
 	 * @param name the name of the input stream, for caching
@@ -866,7 +866,7 @@ public class XsltUtils {
 	
 	/**
 	 * Produce an XSLT transformer pool from a stylesheet loaded from some
-	 * reader. If the agrument name is null, there are no cache lookups, and the
+	 * reader. If the argument name is null, there are no cache lookups, and the
 	 * transformer pool will not be cached.
 	 * @param xsltIn a reader to load the stylesheet from
 	 * @param name the name of the input stream, for caching
@@ -879,7 +879,7 @@ public class XsltUtils {
 	
 	/**
 	 * Produce an XSLT transformer pool from a stylesheet loaded from some
-	 * reader. If the agrument name is null, there are no cache lookups, and the
+	 * reader. If the argument name is null, there are no cache lookups, and the
 	 * transformer pool will not be cached.
 	 * @param xsltIn a reader to load the stylesheet from
 	 * @param name the name of the input stream, for caching
@@ -911,7 +911,7 @@ public class XsltUtils {
 	}
 	
 	/**
-	 * Produce an XSLT transformer pool from a stylesheet. If the agrument name
+	 * Produce an XSLT transformer pool from a stylesheet. If the argument name
 	 * is null, there are no cache lookups, and the transformer pool will not be
 	 * cached.
 	 * @param name the name of the input stream, for caching
@@ -924,7 +924,7 @@ public class XsltUtils {
 	}
 	
 	/**
-	 * Produce an XSLT transformer pool from a stylesheet. If the agrument name
+	 * Produce an XSLT transformer pool from a stylesheet. If the argument name
 	 * is null, there are no cache lookups, and the transformer pool will not be
 	 * cached.
 	 * @param name the name of the input stream, for caching
@@ -962,42 +962,6 @@ public class XsltUtils {
 			throw new IOException(e.getClass().getName() + " (" + e.getMessage() + ") while creating XSL Transformer Pool from '" + name + "'.");
 		}
 	}
-//	public static synchronized Transformer getTransformer(String xsltAddress, boolean allowCache) throws IOException {
-//		
-//		if (allowCache && transformerCache.containsKey(xsltAddress)) {
-//			System.out.println("XsltUtils: transformer cache hit for '" + xsltAddress + "'");
-//			return ((Transformer) transformerCache.get(xsltAddress));
-//		}
-//		
-//		if (transformerFactory == null) {
-//			transformerFactory = TransformerFactory.newInstance();
-//			System.out.println("XsltUtils: transformer factory instantiated");
-//		}
-//		
-//		try {
-//			InputStream tis = new ByteOrderMarkFilterInputStream(
-//					xsltAddress.startsWith("http://") ? 
-//						new URL(xsltAddress).openStream()
-//						:
-//						new FileInputStream(new File(xsltAddress))
-//					);
-//			Transformer transformer = transformerFactory.newTransformer(new StreamSource(new InputStreamReader(tis, "UTF-8")));
-//			transformer.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "yes");
-//			tis.close();
-//			System.out.println("XsltUtils: loaded transformer from '" + xsltAddress + "'");
-//			
-//			if ((transformer == transformerCache.put(xsltAddress, transformer)) && !allowCache) {
-//				transformerFactory = null;
-//				System.out.println("XsltUtils: transformer factory caches transformer instances, setting factory to null and recursing.");
-//				return getTransformer(xsltAddress, allowCache);
-//			}
-//			else return transformer;
-//		}
-//		
-//		catch (Exception e) {
-//			throw new IOException(e.getClass().getName() + " (" + e.getMessage() + ") while creating XSL Transformer from '" + xsltAddress + "'.");
-//		}
-//	}
 	
 	private static HashMap transformerCache = new HashMap();
 	
@@ -1042,7 +1006,7 @@ public class XsltUtils {
 	 * result in better performance in high-load situations because no extra
 	 * transformers have to be created to meet demand. However, this comes at
 	 * the cost of some memory for keeping the transformers. The default pool
-	 * size is 3. However, new transformers are only created if all exesting
+	 * size is 3. However, new transformers are only created if all existing
 	 * ones are in use when another transformer is needed.<br>
 	 * Parameters and properties set with this class are set with all
 	 * transformers in the pool. Thus, implementations with highly
@@ -1101,7 +1065,7 @@ public class XsltUtils {
 		 * Obtain a transformer from the pool for explicit configuration an use.
 		 * If no transformer is available in the pool due to heavy use, a new
 		 * transformer is created.
-		 * @return a transfromer from the pool
+		 * @return a transformer from the pool
 		 */
 		public synchronized PooledTransformer getTransformer() {
 //			System.out.println("TransformerPool: retrieving transformer ...");
@@ -1181,7 +1145,7 @@ public class XsltUtils {
 		
 		/**
 		 * This implementation works on the centralized parameter store of the
-		 * transformer pool. The parameters are put into individual tranformers
+		 * transformer pool. The parameters are put into individual transformers
 		 * right before they are returned from the getTransformer() method, and
 		 * cleared again when a pooled transformer is returned to the pool by
 		 * calling its handBack() method.
@@ -1193,7 +1157,7 @@ public class XsltUtils {
 		
 		/**
 		 * This implementation works on the centralized parameter store of the
-		 * transformer pool. The parameters are put into individual tranformers
+		 * transformer pool. The parameters are put into individual transformers
 		 * right before they are returned from the getTransformer() method, and
 		 * cleared again when a pooled transformer is returned to the pool by
 		 * calling its handBack() method.
@@ -1205,7 +1169,7 @@ public class XsltUtils {
 		
 		/**
 		 * This implementation works on the centralized parameter store of the
-		 * transformer pool. The parameters are put into individual tranformers
+		 * transformer pool. The parameters are put into individual transformers
 		 * right before they are returned from the getTransformer() method, and
 		 * cleared again when a pooled transformer is returned to the pool by
 		 * calling its handBack() method.
@@ -1217,7 +1181,7 @@ public class XsltUtils {
 		
 		/**
 		 * This implementation set the centralized URI resolver of the
-		 * transformer pool, which is put into individual tranformers right
+		 * transformer pool, which is put into individual transformers right
 		 * before they are returned from the getTransformer() method, and
 		 * cleared again when a pooled transformer is returned to the pool by
 		 * calling its handBack() method.
@@ -1229,7 +1193,7 @@ public class XsltUtils {
 		
 		/**
 		 * This implementation returns the centralized URI resolver of the
-		 * transformer pool, which is put into individual tranformers right
+		 * transformer pool, which is put into individual transformers right
 		 * before they are returned from the getTransformer() method, and
 		 * cleared again when a pooled transformer is returned to the pool by
 		 * calling its handBack() method.
@@ -1242,7 +1206,7 @@ public class XsltUtils {
 		/**
 		 * This implementation writes to the centralized property store of the
 		 * transformer pool, which also contains the properties set in the
-		 * stylesheet. The properties are put into individual tranformers right
+		 * stylesheet. The properties are put into individual transformers right
 		 * before they are returned from the getTransformer() method, and
 		 * cleared again when a pooled transformer is returned to the pool by
 		 * calling its handBack() method.
@@ -1257,7 +1221,7 @@ public class XsltUtils {
 		/**
 		 * This implementation returns a view of the centralized property store
 		 * of the transformer pool, which also contains the properties set in
-		 * the stylesheet. The properties are put into individual tranformers
+		 * the stylesheet. The properties are put into individual transformers
 		 * right before they are returned from the getTransformer() method, and
 		 * cleared again when a pooled transformer is returned to the pool by
 		 * calling its handBack() method.
@@ -1270,7 +1234,7 @@ public class XsltUtils {
 		/**
 		 * This implementation works on the centralized property store of the
 		 * transformer pool, which also contains the properties set in the
-		 * stylesheet. The properties are put into individual tranformers right
+		 * stylesheet. The properties are put into individual transformers right
 		 * before they are returned from the getTransformer() method, and
 		 * cleared again when a pooled transformer is returned to the pool by
 		 * calling its handBack() method.
@@ -1282,7 +1246,7 @@ public class XsltUtils {
 		
 		/**
 		 * This implementation works on the centralized property store of the
-		 * transformer pool. The properties are put into individual tranformers
+		 * transformer pool. The properties are put into individual transformers
 		 * right before they are returned from the getTransformer() method, and
 		 * cleared again when a pooled transformer is returned to the pool by
 		 * calling its handBack() method.
@@ -1301,7 +1265,7 @@ public class XsltUtils {
 		public void reset() {}
 		
 		/**
-		 * This imeplementation does not have any effect because instances of
+		 * This implementation does not have any effect because instances of
 		 * this class do not perform transformations themselves but internally
 		 * delegate to actual transformers held in an internal pool for
 		 * multi-thread use. Implementations requiring access to error handlers
@@ -1313,7 +1277,7 @@ public class XsltUtils {
 		public void setErrorListener(ErrorListener listener) throws IllegalArgumentException {}
 		
 		/**
-		 * This imeplementation always returns null because instances of this
+		 * This implementation always returns null because instances of this
 		 * class do not perform transformations themselves but internally
 		 * delegate to actual transformers held in an internal pool for
 		 * multi-thread use. Implementations requiring access to error handlers
@@ -1367,7 +1331,7 @@ public class XsltUtils {
 			 * afterward. Code using this class should not use a transformer
 			 * after invoking this method. In fact, invoking this method should
 			 * be the last thing done before letting go of the reference to the
-			 * pooled trasnformer.
+			 * pooled transformer.
 			 */
 			public void handBack() {
 				this.reset();

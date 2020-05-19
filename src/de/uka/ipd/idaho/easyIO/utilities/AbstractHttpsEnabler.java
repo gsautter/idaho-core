@@ -10,11 +10,11 @@
  *     * Redistributions in binary form must reproduce the above copyright
  *       notice, this list of conditions and the following disclaimer in the
  *       documentation and/or other materials provided with the distribution.
- *     * Neither the name of the Universität Karlsruhe (TH) / KIT nor the
+ *     * Neither the name of the Universitaet Karlsruhe (TH) / KIT nor the
  *       names of its contributors may be used to endorse or promote products
  *       derived from this software without specific prior written permission.
  *
- * THIS SOFTWARE IS PROVIDED BY UNIVERSITÄT KARLSRUHE (TH) / KIT AND CONTRIBUTORS 
+ * THIS SOFTWARE IS PROVIDED BY UNIVERSITAET KARLSRUHE (TH) / KIT AND CONTRIBUTORS 
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
  * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
  * ARE DISCLAIMED. IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE FOR ANY
@@ -99,6 +99,7 @@ public abstract class AbstractHttpsEnabler extends SSLSocketFactory implements X
 	protected AbstractHttpsEnabler(boolean useKeyStore) {
 		this.useKeyStore = useKeyStore;
 	}
+	
 	/**
 	 * Initialize the HTTPS enabler. This method does two things: First, it
 	 * initializes the key store if the constructor flag indicates to use one.
@@ -537,6 +538,40 @@ public abstract class AbstractHttpsEnabler extends SSLSocketFactory implements X
 			System.out.println("Could not refresh trust manager: " + kse.getMessage());
 			kse.printStackTrace(System.out);
 		}
+	}
+	
+	/**
+	 * Generally enable HTTPS in a JVM by installing a trust-all certificate
+	 * manager. This method is mainly intended as a helper in test code, to
+	 * save creating such a certificate manager there. It should be used with
+	 * extreme care in other settings.
+	 * @throws IOException
+	 */
+	public static void enableHttps() throws IOException {
+		enableHttps(null);
+	}
+	
+	/**
+	 * Generally enable HTTPS in a JVM by installing a trust-all certificate
+	 * manager. This method is mainly intended as a helper in test code, to
+	 * save creating such a certificate manager there. It should be used with
+	 * extreme care in other settings.
+	 * @param protocol the protocol to use
+	 * @throws IOException
+	 */
+	public static void enableHttps(String protocol) throws IOException {
+		AbstractHttpsEnabler https = new AbstractHttpsEnabler(false) {
+			protected OutputStream getKeyStoreOutputStream() throws IOException {
+				return null;
+			}
+			protected InputStream getKeyStoreInputStream() throws IOException {
+				return null;
+			}
+			protected boolean askPermissionToAccept(X509Certificate[] chain) throws CertificateEncodingException {
+				return true;
+			}
+		};
+		https.init(protocol);
 	}
 	
 	public static void main(String[] args) throws Exception {

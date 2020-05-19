@@ -10,11 +10,11 @@
  *     * Redistributions in binary form must reproduce the above copyright
  *       notice, this list of conditions and the following disclaimer in the
  *       documentation and/or other materials provided with the distribution.
- *     * Neither the name of the Universität Karlsruhe (TH) / KIT nor the
+ *     * Neither the name of the Universitaet Karlsruhe (TH) / KIT nor the
  *       names of its contributors may be used to endorse or promote products
  *       derived from this software without specific prior written permission.
  *
- * THIS SOFTWARE IS PROVIDED BY UNIVERSITÄT KARLSRUHE (TH) / KIT AND CONTRIBUTORS 
+ * THIS SOFTWARE IS PROVIDED BY UNIVERSITAET KARLSRUHE (TH) / KIT AND CONTRIBUTORS 
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
  * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
  * ARE DISCLAIMED. IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE FOR ANY
@@ -48,6 +48,7 @@ public class ParallelJobRunner {
 	
 	private static boolean runLinear = false;
 	private static int maxCoresPerJob = -1;
+	private static int jobThreadTraceInterval = -1;
 	
 	/**
 	 * Test if parallel job execution is switched on or off.
@@ -101,8 +102,38 @@ public class ParallelJobRunner {
 		if (maxCores < 1)
 			maxCores = Integer.MAX_VALUE; // handle incoming 'unlimited'
 		if (0 < maxCoresPerJob)
-			maxCores = Math.min(maxCores, maxCoresPerJob); // impose central limitation if present
+			maxCores = Math.min(maxCores, maxCoresPerJob); // impose global limitation if present
 		return Math.min(maxCores, (Runtime.getRuntime().availableProcessors() - 1)); // impose hardware limitation, leaving one thread for JVM proper, UI, etc.
+	}
+	
+	/**
+	 * Get the number of milliseconds between two rounds of stack trace prints
+	 * for the threads working on a job. A zero or negative interval indicates
+	 * worker tracing is inactive. This feature is mostly intended for debug
+	 * purposes, namely to observe threads via logging rather than breakpoints,
+	 * which might be advantageous for investigating race conditions that might
+	 * not even occur when a debugger interrupts or suspends worker threads on
+	 * some breakpoints, or also in scenarios that would require a lot of
+	 * stepping before reaching the problematic instructions.
+	 * @return the current trace interval
+	 */
+	public static int getTraceInterval() {
+		return jobThreadTraceInterval;
+	}
+	
+	/**
+	 * Set the number of milliseconds between two rounds of stack trace prints
+	 * for the threads working on a job. Setting a zero or negative interval
+	 * deactivates worker tracing. This feature is mostly intended for debug
+	 * purposes, namely to observe threads via logging rather than breakpoints,
+	 * which might be advantageous for investigating race conditions that might
+	 * not even occur when a debugger interrupts or suspends worker threads on
+	 * some breakpoints, or also in scenarios that would require a lot of
+	 * stepping before reaching the problematic instructions.
+	 * @param traceInterval the trace interval to set
+	 */
+	public static void setTraceInterval(int traceInterval) {
+		jobThreadTraceInterval = traceInterval;
 	}
 	
 	/**
@@ -123,14 +154,45 @@ public class ParallelJobRunner {
 			job.run(); // execute right away in single thread mode
 			return;
 		}
+		
 		Thread[] threads = new Thread[maxCores];
 		for (int t = 0; t < threads.length; t++)
 			threads[t] = new Thread(job);
 		for (int t = 0; t < threads.length; t++)
 			threads[t].start();
+		TracerThread tracer = null;
+		if (jobThreadTraceInterval > 0)
+			tracer = new TracerThread(threads);
 		for (int t = 0; t < threads.length; t++) try {
 			threads[t].join();
 		} catch (InterruptedException ie) {t--; /* we have to make sure all threads are finished before returning */}
+		if (tracer != null)
+			tracer.shutdown();
+	}
+	
+	private static class TracerThread extends Thread {
+		private int traceInterval = jobThreadTraceInterval;
+		private Thread[] threads;
+		TracerThread(Thread[] threads) {
+			this.threads = threads;
+			this.start();
+		}
+		public void run() {
+			while (this.traceInterval > 0) {
+				for (int t = 0; t < this.threads.length; t++) {
+					StackTraceElement[] stes = this.threads[t].getStackTrace();
+					System.out.println(this.threads[t].getName() + ":");
+					for (int e = 0; e < stes.length; e++)
+						System.out.println("  at " + stes[e].toString());
+				}
+				try {
+					sleep(this.traceInterval);
+				} catch (InterruptedException ie) {}
+			}
+		}
+		void shutdown() {
+			this.traceInterval = -1;
+		}
 	}
 	
 	private static abstract class ParallelLoop {
@@ -275,6 +337,8 @@ public class ParallelJobRunner {
 				
 				//	do the work
 				try {
+					if (jobThreadTraceInterval > 0)
+						System.out.println(Thread.currentThread().getName() + ": processing index " + index);
 					this.loop.doFor(index);
 				}
 				catch (Exception t) {
@@ -426,6 +490,8 @@ public class ParallelJobRunner {
 				
 				//	do the work
 				try {
+					if (jobThreadTraceInterval > 0)
+						System.out.println(Thread.currentThread().getName() + ": processing object " + object);
 					this.loop.doIteration(object);
 				}
 				catch (Exception t) {

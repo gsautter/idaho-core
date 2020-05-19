@@ -10,11 +10,11 @@
  *     * Redistributions in binary form must reproduce the above copyright
  *       notice, this list of conditions and the following disclaimer in the
  *       documentation and/or other materials provided with the distribution.
- *     * Neither the name of the Universität Karlsruhe (TH) nor the
+ *     * Neither the name of the Universitaet Karlsruhe (TH) nor the
  *       names of its contributors may be used to endorse or promote products
  *       derived from this software without specific prior written permission.
  *
- * THIS SOFTWARE IS PROVIDED BY UNIVERSITÄT KARLSRUHE (TH) / KIT AND CONTRIBUTORS 
+ * THIS SOFTWARE IS PROVIDED BY UNIVERSITAET KARLSRUHE (TH) / KIT AND CONTRIBUTORS 
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
  * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
  * ARE DISCLAIMED. IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE FOR ANY
@@ -34,7 +34,7 @@ import de.uka.ipd.idaho.gamta.util.ProgressMonitor;
 /**
  * A window that monitors the progress of some computation and displays it.
  * Typical implementors of this interface are dialogs or frames that contain a
- * progree monitor panel.
+ * progress monitor panel.
  * 
  * @author sautter
  */
@@ -75,7 +75,7 @@ public interface ProgressMonitorWindow extends ProgressMonitor {
 	public abstract void popUp(boolean block);
 	
 	/**
-	 * Close the progress monitor window. An invokation of this method should
+	 * Close the progress monitor window. An invocation of this method should
 	 * make any blocking invocation of popUp() return.
 	 */
 	public abstract void close();

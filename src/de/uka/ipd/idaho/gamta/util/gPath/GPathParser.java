@@ -10,11 +10,11 @@
  *     * Redistributions in binary form must reproduce the above copyright
  *       notice, this list of conditions and the following disclaimer in the
  *       documentation and/or other materials provided with the distribution.
- *     * Neither the name of the Universität Karlsruhe (TH) nor the
+ *     * Neither the name of the Universitaet Karlsruhe (TH) nor the
  *       names of its contributors may be used to endorse or promote products
  *       derived from this software without specific prior written permission.
  *
- * THIS SOFTWARE IS PROVIDED BY UNIVERSITÄT KARLSRUHE (TH) / KIT AND CONTRIBUTORS 
+ * THIS SOFTWARE IS PROVIDED BY UNIVERSITAET KARLSRUHE (TH) / KIT AND CONTRIBUTORS 
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
  * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
  * ARE DISCLAIMED. IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE FOR ANY
@@ -56,7 +56,8 @@ public class GPathParser {
 	public static GPath parsePath(String path) {
 		
 		//	check path
-		if ((path == null) || (path.length() == 0)) return new GPath();
+		if ((path == null) || (path.length() == 0))
+			return new GPath();
 		
 		//	do cache lookup
 		GPath gp = ((GPath) pathCache.get(path));
@@ -154,7 +155,8 @@ public class GPathParser {
 	private static GPathStep parseStep(String[] stepTokens) {
 		
 		//	check parameter
-		if (stepTokens == null) return null;
+		if (stepTokens == null)
+			return null;
 		
 		//	abbreviated step
 		if (stepTokens.length == 0) {
@@ -363,13 +365,16 @@ public class GPathParser {
 				//	process inner parts of predicates, etc.
 				if (openBrackets.peek().equals(token)) {
 					openBrackets.pop();
+					lastWasOperator = false;
 					canBeOperator = true;
 				}
 				else if ("(".equals(token)) {
+					lastWasOperator = false;
 					canBeOperator = false;
 					openBrackets.push(")");
 				}
 				else if ("[".equals(token)) {
+					lastWasOperator = false;
 					canBeOperator = false;
 					openBrackets.push("]");
 				}
@@ -389,6 +394,7 @@ public class GPathParser {
 			//	start of annotation test brackets
 			else if ("(".equals(token)) {
 				collector.add(token);
+				lastWasOperator = false;
 				canBeOperator = false;
 				openBrackets.push(")");
 			}
@@ -396,6 +402,7 @@ public class GPathParser {
 			//	start of predicate
 			else if ("[".equals(token)) {
 				collector.add(token);
+				lastWasOperator = false;
 				canBeOperator = false;
 				openBrackets.push("]");
 			}
@@ -465,13 +472,16 @@ public class GPathParser {
 				//	process inner parts of predicates, etc.
 				if (openBrackets.peek().equals(token)) {
 					openBrackets.pop();
+					lastWasOperator = false;
 					canBeOperator = true;
 				}
 				else if ("(".equals(token)) {
+					lastWasOperator = false;
 					canBeOperator = false;
 					openBrackets.push(")");
 				}
 				else if ("[".equals(token)) {
+					lastWasOperator = false;
 					canBeOperator = false;
 					openBrackets.push("]");
 				}
@@ -492,6 +502,7 @@ public class GPathParser {
 			else if ("(".equals(token)) {
 				collector.add(token);
 				canBeOperator = false;
+				lastWasOperator = false;
 				openBrackets.push(")");
 			}
 			
@@ -499,6 +510,7 @@ public class GPathParser {
 			else if ("[".equals(token)) {
 				collector.add(token);
 				canBeOperator = false;
+				lastWasOperator = false;
 				openBrackets.push("]");
 			}
 			
@@ -869,14 +881,17 @@ public class GPathParser {
 				//	process inner parts of predicates, etc.
 				if (openBrackets.peek().equals(token)) {
 					openBrackets.pop();
+					lastWasOperator = false;
 					canBeOperator = true;
 				}
 				else if ("(".equals(token)) {
 					openBrackets.push(")");
+					lastWasOperator = false;
 					canBeOperator = false;
 				}
 				else if ("[".equals(token)) {
 					openBrackets.push("]");
+					lastWasOperator = false;
 					canBeOperator = false;
 				}
 			}
@@ -899,6 +914,7 @@ public class GPathParser {
 			//	start of annotation test brackets
 			else if ("(".equals(token)) {
 				collector.add(token);
+				lastWasOperator = false;
 				canBeOperator = false;
 				openBrackets.push(")");
 			}
@@ -906,6 +922,7 @@ public class GPathParser {
 			//	start of predicate
 			else if ("[".equals(token)) {
 				collector.add(token);
+				lastWasOperator = false;
 				canBeOperator = false;
 				openBrackets.push("]");
 			}
@@ -1381,7 +1398,8 @@ public class GPathParser {
 	 */
 	public static String[] tokenize(String string) {
 		//	check parameter
-		if ((string == null) || (string.trim().length() == 0)) return new String[0];
+		if ((string == null) || (string.trim().length() == 0))
+			return new String[0];
 		
 		//	normalize whitespace
 		StringBuffer assembler = new StringBuffer();

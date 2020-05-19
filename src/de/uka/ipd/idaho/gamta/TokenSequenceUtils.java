@@ -10,11 +10,11 @@
  *     * Redistributions in binary form must reproduce the above copyright
  *       notice, this list of conditions and the following disclaimer in the
  *       documentation and/or other materials provided with the distribution.
- *     * Neither the name of the Universität Karlsruhe (TH) nor the
+ *     * Neither the name of the Universitaet Karlsruhe (TH) nor the
  *       names of its contributors may be used to endorse or promote products
  *       derived from this software without specific prior written permission.
  *
- * THIS SOFTWARE IS PROVIDED BY UNIVERSITÄT KARLSRUHE (TH) / KIT AND CONTRIBUTORS 
+ * THIS SOFTWARE IS PROVIDED BY UNIVERSITAET KARLSRUHE (TH) / KIT AND CONTRIBUTORS 
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
  * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
  * ARE DISCLAIMED. IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE FOR ANY
@@ -27,6 +27,12 @@
  */
 package de.uka.ipd.idaho.gamta;
 
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.TreeMap;
+import java.util.TreeSet;
+
+import de.uka.ipd.idaho.gamta.util.CountingSet;
 import de.uka.ipd.idaho.stringUtils.StringVector;
 
 /**
@@ -141,8 +147,10 @@ public class TokenSequenceUtils {
 	 */
 	public static int lastIndexOf(TokenSequence ts, CharSequence token, int to, boolean caseSensitive) {
 		for (int t = Math.min(to, (ts.size() - 1)); t > -1; t--)
-			if (CharSequenceUtils.equals(ts.tokenAt(t), token)) return t;
-			else if (!caseSensitive && CharSequenceUtils.equalsIgnoreCase(ts.tokenAt(t), token)) return t;
+			if (CharSequenceUtils.equals(ts.tokenAt(t), token))
+				return t;
+			else if (!caseSensitive && CharSequenceUtils.equalsIgnoreCase(ts.tokenAt(t), token))
+				return t;
 		return -1;
 	}
 
@@ -468,8 +476,10 @@ public class TokenSequenceUtils {
 			Token token = tokens.tokenAt(t);
 			String value = token.getValue();
 
-			if (insertLineBreak) result.append("\n");
-			else if (normalizeWhitespace ? Gamta.insertSpace(lastValue, value) : (tokens.getWhitespaceAfter(t - 1).length() != 0)) result.append(" ");
+			if (insertLineBreak)
+				result.append("\n");
+			else if (normalizeWhitespace ? Gamta.insertSpace(lastValue, value) : (tokens.getWhitespaceAfter(t - 1).length() != 0))
+				result.append(" ");
 
 			result.append(value);
 
@@ -491,7 +501,8 @@ public class TokenSequenceUtils {
 		Token token;
 		for (int t = 0; t < tokens.size(); t++) {
 			token = tokens.tokenAt(t);
-			if (Gamta.isWord(token) || Gamta.isNumber(token)) textTokens.addElement(token.getValue());
+			if (Gamta.isWord(token) || Gamta.isNumber(token))
+				textTokens.addElement(token.getValue());
 		}
 		return textTokens;
 	}
@@ -506,7 +517,8 @@ public class TokenSequenceUtils {
 	public static int getTokenIndexAtOffset(TokenSequence tokens, int offset) {
 
 		// check parameter
-		if (tokens.size() == 0) return -1;
+		if (tokens.size() == 0)
+			return -1;
 
 		// use binary search to narrow search interval
 		int left = 0;
@@ -514,18 +526,593 @@ public class TokenSequenceUtils {
 		int tIndex = 0;
 		while ((right - left) > 2) {
 			tIndex = ((left + right) / 2);
-			if (tokens.tokenAt(tIndex).getEndOffset() <= offset) left = tIndex;
-			else if (tokens.tokenAt(tIndex).getStartOffset() <= offset) return tIndex;
+			if (tokens.tokenAt(tIndex).getEndOffset() <= offset)
+				left = tIndex;
+			else if (tokens.tokenAt(tIndex).getStartOffset() <= offset)
+				return tIndex;
 			else right = tIndex;
 		}
 
 		// scan remaining interval
 		tIndex = left;
 		while (tIndex < tokens.size()) {
-			if (tokens.tokenAt(tIndex).getEndOffset() <= offset) tIndex++;
-			else if (tokens.tokenAt(tIndex).getStartOffset() <= offset) return tIndex;
+			if (tokens.tokenAt(tIndex).getEndOffset() <= offset)
+				tIndex++;
+			else if (tokens.tokenAt(tIndex).getStartOffset() <= offset)
+				return tIndex;
 			else tIndex++;
 		}
 		return -1;
+	}
+	
+	/**
+	 * A token normalizer modifies tokens to facilitate a match, e.g. by
+	 * converting them to lower case or by stripping accents.
+	 * 
+	 * @author sautter
+	 */
+	public static interface TokenNormalizer {
+		
+		/**
+		 * Normalize a token for match-up. If this method returns null, the
+		 * argument token will be ignored altogether.
+		 * @param token the token to normalize
+		 * @param forFuzzyMatch is the normalization for a fuzzy match?
+		 * @return the normalized token
+		 */
+		public abstract String normalize(String token);
+	}
+	
+	/** default token normalizer, returning tokens unchanged */
+	public static final TokenNormalizer DEFAULT_TOKEN_NORMALIZER = new TokenNormalizer() {
+		public String normalize(String token) {
+			return token;
+		}
+	};
+	
+	/**
+	 * Compare two token sequences. The argument token normalizer can modify
+	 * tokens before they are compared via <code>equals()</code> to remove
+	 * certain aspects of a comparison, e.g. case.
+	 * @param tokens the tokens to compare
+	 * @param reference the token sequence to compare to
+	 * @return true if the two token sequences are equals
+	 */
+	public static boolean sequenceEquals(TokenSequence tokens, TokenSequence reference) {
+		return sequenceEquals(tokens, reference, DEFAULT_TOKEN_NORMALIZER);
+	}
+	
+	/**
+	 * Compare two token sequences. The argument token normalizer can modify
+	 * tokens before they are compared via <code>equals()</code> to remove
+	 * certain aspects of a comparison, e.g. case.
+	 * @param tokens the tokens to compare
+	 * @param reference the token sequence to compare to
+	 * @param normalizer the token normalizer to use
+	 * @return true if the two token sequences are equals
+	 */
+	public static boolean sequenceEquals(TokenSequence tokens, TokenSequence reference, TokenNormalizer normalizer) {
+		if (tokens.size() != reference.size())
+			return false;
+		for (int t = 0; t < tokens.size(); t++) {
+			String token = normalizer.normalize(tokens.valueAt(t));
+			String rToken = normalizer.normalize(reference.valueAt(t));
+			if ((token == null) && (rToken == null))
+				continue;
+			if ((token == null) || (rToken == null))
+				return false;
+			if (!token.equals(rToken))
+				return false;
+		}
+		return true;
+	}
+	
+	/**
+	 * Compare two token sequences in an order insensitive fashion. The
+	 * argument token normalizer can modify tokens before they are compared
+	 * via <code>equals()</code> to remove certain aspects of a comparison,
+	 * e.g. case.
+	 * @param tokens the tokens to compare
+	 * @param reference the token sequence to compare to
+	 * @param normalizer the token normalizer to use
+	 * @return true if the two token sequences are equals
+	 */
+	public static boolean bagEquals(TokenSequence tokens, TokenSequence reference, TokenNormalizer normalizer) {
+		CountingSet bag = new CountingSet(new TreeMap(String.CASE_INSENSITIVE_ORDER));
+		for (int t = 0; t < reference.size(); t++) {
+			String value = normalizer.normalize(reference.valueAt(t));
+			if (value != null)
+				bag.add(value);
+		}
+		for (int t = 0; t < tokens.size(); t++) {
+			String value = normalizer.normalize(tokens.valueAt(t));
+			if (value == null)
+				continue;
+			if (bag.contains(value))
+				bag.remove(value);
+			else return false;
+		}
+		return bag.isEmpty(); // everything matched up
+	}
+	
+	/**
+	 * A token mismatch between two token sequences.
+	 * 
+	 * @author sautter
+	 */
+	public static class TokenMismatch {
+		
+		/** the mismatching token (null for deletions) */
+		public final String token;
+		
+		/** the position of the mismatching token (-1 for deletions, and in bag matches) */
+		public final int tokenPos;
+		
+		/** the mismatching reference token (null for insertions) */
+		public final String refToken;
+		
+		/** the position of the mismatching reference token (-1 for insertions, and in bag matches) */
+		public final int refTokenPos;
+		
+		TokenMismatch(String token, int tokenPos, String refToken, int refTokenPos) {
+			this.token = token;
+			this.tokenPos = tokenPos;
+			this.refToken = refToken;
+			this.refTokenPos = refTokenPos;
+		}
+	}
+	
+	/**
+	 * An overall score for the token mismatches between two token sequences.
+	 * 
+	 * @author sautter
+	 */
+	public static class TokenMismatchScore {
+		final int matchChars;
+		final int missChars;
+		final int refMissChars;
+		
+		/**
+		 * @param matchChars the number of matched characters
+		 * @param missChars the number of unmatched characters in the token sequence
+		 * @param refMissChars the number of unmatched characters in the reference token sequence
+		 */
+		public TokenMismatchScore(int matchChars, int missChars, int refMissChars) {
+			this.matchChars = matchChars;
+			this.missChars = missChars;
+			this.refMissChars = refMissChars;
+		}
+	}
+	
+	/**
+	 * An scorer for the overall token mismatches between two token sequences.
+	 * 
+	 * @author sautter
+	 */
+	public static interface TokenMismatchScorer {
+		
+		/**
+		 * Score the mismatches between two token sequences.
+		 * @param mismatches the mismatches
+		 * @param tokens the token sequence
+		 * @param reference the reference token sequence
+		 * @param isBagMatch is it a bag match (or a sequence match)?
+		 * @return the score
+		 */
+		public abstract TokenMismatchScore getScore(TokenMismatch[] mismatches, TokenSequence tokens, TokenSequence reference, boolean isBagMatch);
+	}
+	
+	/** default sequence mismatch scorer, counting all characters as missed */
+	public static final TokenMismatchScorer DEFAULT_SEQUENCE_MISMATCH_SCORER = new TokenMismatchScorer() {
+		public TokenMismatchScore getScore(TokenMismatch[] mismatches, TokenSequence tokens, TokenSequence reference, boolean isBagMatch) {
+			int tMissChars = 0;
+			int rMissChars = 0;
+			for (int m = 0; m < mismatches.length; m++) {
+				if (mismatches[m].token != null)
+					tMissChars += mismatches[m].token.length();
+				if (mismatches[m].refToken != null)
+					rMissChars += mismatches[m].refToken.length();
+			}
+			return new TokenMismatchScore(0, tMissChars, rMissChars);
+		}
+	};
+	
+	/**
+	 * Compute the similarity between two token sequences. The argument token
+	 * normalizer can modify tokens before they are compared via
+	 * <code>equals()</code> to remove certain aspects of a comparison, e.g.
+	 * case.
+	 * @param tokens the tokens to compare
+	 * @param reference the token sequence to compare to
+	 * @param minSimilarity the minimum similarity (used for cut-off)
+	 * @param normalizer the token normalizer to use
+	 * @param mismatchScorer the scorer for any mismatches
+	 * @return the similarity of the two token sequences
+	 */
+	public static float getSequenceSimilarity(TokenSequence tokens, TokenSequence reference, float minSimilarity) {
+		return getSequenceSimilarity(tokens, reference, minSimilarity, DEFAULT_TOKEN_NORMALIZER, DEFAULT_SEQUENCE_MISMATCH_SCORER);
+	}
+	
+	/**
+	 * Compute the similarity between two token sequences. The argument token
+	 * normalizer can modify tokens before they are compared via
+	 * <code>equals()</code> to remove certain aspects of a comparison, e.g.
+	 * case.
+	 * @param tokens the tokens to compare
+	 * @param reference the token sequence to compare to
+	 * @param minSimilarity the minimum similarity (used for cut-off)
+	 * @param normalizer the token normalizer to use
+	 * @param mismatchScorer the scorer for any mismatches
+	 * @return the similarity of the two token sequences
+	 */
+	public static float getSequenceSimilarity(TokenSequence tokens, TokenSequence reference, float minSimilarity, TokenNormalizer normalizer) {
+		return getSequenceSimilarity(tokens, reference, minSimilarity, normalizer, DEFAULT_SEQUENCE_MISMATCH_SCORER);
+	}
+	
+	/**
+	 * Compute the similarity between two token sequences. The argument
+	 * mismatch scorer is called upon to judge all unmatched tokens, e.g. to
+	 * determine similarity based upon edit distance.
+	 * @param tokens the tokens to compare
+	 * @param reference the token sequence to compare to
+	 * @param minSimilarity the minimum similarity (used for cut-off)
+	 * @param normalizer the token normalizer to use
+	 * @param mismatchScorer the scorer for any mismatches
+	 * @return the similarity of the two token sequences
+	 */
+	public static float getSequenceSimilarity(TokenSequence tokens, TokenSequence reference, float minSimilarity, TokenMismatchScorer mismatchScorer) {
+		return getSequenceSimilarity(tokens, reference, minSimilarity, DEFAULT_TOKEN_NORMALIZER, mismatchScorer);
+	}
+	
+	/**
+	 * Compute the similarity between two token sequences. The argument token
+	 * normalizer can modify tokens before they are compared via
+	 * <code>equals()</code> to remove certain aspects of a comparison, e.g.
+	 * case. The argument mismatch scorer is called upon to judge all unmatched
+	 * tokens, e.g. to determine similarity based upon edit distance.
+	 * @param tokens the tokens to compare
+	 * @param reference the token sequence to compare to
+	 * @param minSimilarity the minimum similarity (used for cut-off)
+	 * @param normalizer the token normalizer to use
+	 * @param mismatchScorer the scorer for any mismatches
+	 * @return the similarity of the two token sequences
+	 */
+	public static float getSequenceSimilarity(TokenSequence tokens, TokenSequence reference, float minSimilarity, TokenNormalizer normalizer, TokenMismatchScorer mismatchScorer) {
+		ArrayList rTokens = new ArrayList(reference.size());
+//		CountingSet rBag = new CountingSet(new TreeMap(String.CASE_INSENSITIVE_ORDER)); ==> token normalizer handles case !!!
+		CountingSet rBag = new CountingSet(new TreeMap());
+		int rChars = 0;
+		for (int t = 0; t < reference.size(); t++) {
+			String value = normalizer.normalize(reference.valueAt(t));
+			if (value == null)
+				continue;
+			rTokens.add(value);
+			rBag.add(value);
+			rChars += value.length();
+		}
+		
+		ArrayList tTokens = new ArrayList(tokens.size());
+//		CountingSet tBag = new CountingSet(new TreeMap(String.CASE_INSENSITIVE_ORDER)); ==> token normalizer handles case !!!
+		CountingSet tBag = new CountingSet(new TreeMap());
+		int tChars = 0;
+		for (int t = 0; t < tokens.size(); t++) {
+			String value = normalizer.normalize(tokens.valueAt(t));
+			if (value == null)
+				continue;
+			tTokens.add(value);
+			tBag.add(value);
+			tChars += value.length();
+		}
+		
+		//	check bag match against threshold (sequence match cannot be higher)
+		//	TODO use token mis-match scorer !!! (might well compensate mismatches against one another ...)
+//		TreeSet bag = new TreeSet(String.CASE_INSENSITIVE_ORDER); ==> token normalizer handles case !!!
+		TreeSet bag = new TreeSet();
+		bag.addAll(rBag);
+		bag.addAll(tBag);
+		int rBagMissChars = 0;
+		int tBagMissChars = 0;
+		for (Iterator tit = bag.iterator(); tit.hasNext();) {
+			String token = ((String) tit.next());
+			int rCount = rBag.getCount(token);
+			int tCount = tBag.getCount(token);
+			if (rCount < tCount)
+				tBagMissChars += ((tCount - rCount) * token.length());
+			else if (tCount < rCount)
+				rBagMissChars += ((rCount - tCount) * token.length());
+		}
+		float bagPrecision = (((float) (tChars - tBagMissChars)) / tChars);
+		float bagRecall = (((float) (rChars - rBagMissChars)) / rChars);
+		if ((bagPrecision * bagRecall) <= minSimilarity)
+			return 0;
+		
+		//	eliminate token sequences against one another
+//		int rMissChars = 0;
+//		int tMissChars = 0;
+		ArrayList mismatches = new ArrayList();
+		int tPos = 0;
+		int rPos = 0;
+		for (int t = 0; (t < rTokens.size()) && (t < tTokens.size()); t++) {
+			String rToken = ((String) rTokens.get(t));
+			String tToken = ((String) tTokens.get(t));
+			
+			//	we have a match, eliminate and continue
+			if (tToken.equalsIgnoreCase(rToken)) {
+				rTokens.remove(t);
+				rBag.remove(rToken);
+				tTokens.remove(t);
+				tBag.remove(tToken);
+				tPos++;
+				rPos++;
+				t--;
+				continue;
+			}
+			
+			//	check which token is yet to come in other sequence
+			int rTokenToComeR = rBag.getCount(rToken);
+			int rTokenToComeT = tBag.getCount(rToken);
+			int tTokenToComeT = tBag.getCount(tToken);
+			int tTokenToComeR = rBag.getCount(tToken);
+			
+			//	substitution (neither token to come in other sequence)
+			if ((rTokenToComeT == 0) && (tTokenToComeR == 0)) {
+				mismatches.add(new TokenMismatch(tToken, tPos, rToken, rPos));
+				rTokens.remove(t);
+				rBag.remove(rToken);
+//				rMissChars += rToken.length();
+				tTokens.remove(t);
+				tBag.remove(tToken);
+//				tMissChars += tToken.length();
+				tPos++;
+				rPos++;
+				t--;
+				continue;
+			}
+			
+			//	missing at least one instance in challenger tokens
+			else if (rTokenToComeT < rTokenToComeR) {
+				mismatches.add(new TokenMismatch(null, -1, rToken, rPos));
+				rTokens.remove(t);
+				rBag.remove(rToken);
+//				rMissChars += rToken.length();
+				rPos++;
+				t--;
+				continue;
+			}
+			
+			//	missing at least one instance in reference
+			else if (tTokenToComeR < tTokenToComeT) {
+				mismatches.add(new TokenMismatch(tToken, tPos, null, -1));
+				tTokens.remove(t);
+				tBag.remove(tToken);
+//				tMissChars += tToken.length();
+				tPos++;
+				t--;
+				continue;
+			}
+			
+			//	must be a token twiddle or shift, find which one is next to occur in other
+			//	TODO maybe depend this on characters instead ??? (two short words are better to omit than one long one)
+			int rTokenToComeIn = -1;
+			for (int lt = (t+1); lt < tTokens.size(); lt++) {
+				String ltToken = ((String) tTokens.get(lt));
+				if (rToken.equalsIgnoreCase(ltToken)) {
+					rTokenToComeIn = (lt - t);
+					break;
+				}
+			}
+			int tTokenToComeIn = -1;
+			for (int lt = (t+1); lt < rTokens.size(); lt++) {
+				String lrToken = ((String) rTokens.get(lt));
+				if (tToken.equalsIgnoreCase(lrToken)) {
+					tTokenToComeIn = (lt - t);
+					break;
+				}
+			}
+			
+			//	reference token further out in challenger tokens, remove it
+			if (rTokenToComeIn > tTokenToComeIn) {
+				mismatches.add(new TokenMismatch(null, -1, rToken, rPos));
+				rTokens.remove(t);
+				rBag.remove(rToken);
+//				rMissChars += rToken.length();
+				rPos++;
+				t--;
+				continue;
+			}
+			
+			//	challenger token further out in reference tokens, remove it
+			else if (tTokenToComeIn > rTokenToComeIn) {
+				mismatches.add(new TokenMismatch(tToken, tPos, null, -1));
+				tTokens.remove(t);
+				tBag.remove(tToken);
+//				tMissChars += tToken.length();
+				tPos++;
+				t--;
+				continue;
+			}
+			
+			//	both equally far out, omit shorter one
+			if (rToken.length() < tToken.length()) {
+				mismatches.add(new TokenMismatch(null, -1, rToken, rPos));
+				rTokens.remove(t);
+				rBag.remove(rToken);
+//				rMissChars += rToken.length();
+				rPos++;
+				t--;
+				continue;
+			}
+			else if (tToken.length() < rToken.length()) {
+				mismatches.add(new TokenMismatch(tToken, tPos, null, -1));
+				tTokens.remove(t);
+				tBag.remove(tToken);
+//				tMissChars += tToken.length();
+				tPos++;
+				t--;
+				continue;
+			}
+			
+			//	both tokens equally long, omit one in sequence with more tokens left
+			if (rTokens.size() > tTokens.size()) {
+				mismatches.add(new TokenMismatch(null, -1, rToken, rPos));
+				rTokens.remove(t);
+				rBag.remove(rToken);
+//				rMissChars += rToken.length();
+				rPos++;
+				t--;
+				continue;
+			}
+			else if (tTokens.size() > rTokens.size()) {
+				mismatches.add(new TokenMismatch(tToken, tPos, null, -1));
+				tTokens.remove(t);
+				tBag.remove(tToken);
+//				tMissChars += tToken.length();
+				tPos++;
+				t--;
+				continue;
+			}
+			
+			//	equally many tokens left in both sequences, omit in challenger sequence
+			//	TODO maybe use coin flip ???
+			else {
+				mismatches.add(new TokenMismatch(tToken, tPos, null, -1));
+				tTokens.remove(t);
+				tBag.remove(tToken);
+//				tMissChars += tToken.length();
+				tPos++;
+				t--;
+				continue;
+			}
+		}
+		
+		//	count whatever is left in either sequence
+		for (int t = 0; t < rTokens.size(); t++) {
+			String rToken = ((String) rTokens.get(t));
+//			rMissChars += rToken.length();
+			mismatches.add(new TokenMismatch(null, -1, rToken, rPos++));
+		}
+		for (int t = 0; t < tTokens.size(); t++) {
+			String tToken = ((String) tTokens.get(t));
+//			tMissChars += tToken.length();
+			mismatches.add(new TokenMismatch(tToken, tPos++, null, -1));
+		}
+		
+		//	finally ...
+//		float seqPrecision = (((float) (tChars - tMissChars)) / tChars);
+//		float seqRecall = (((float) (rChars - rMissChars)) / rChars);
+		TokenMismatchScore score = mismatchScorer.getScore(((TokenMismatch[]) mismatches.toArray(new TokenMismatch[mismatches.size()])), tokens, reference, false);
+		float seqPrecision = (((float) (tChars - score.missChars)) / tChars);
+		float seqRecall = (((float) (rChars - score.refMissChars)) / rChars);
+		return (seqPrecision * seqRecall);
+	}
+	
+	/**
+	 * Compute the similarity between two token sequences in an order
+	 * insensitive fashion.
+	 * @param tokens the tokens to compare
+	 * @param reference the token sequence to compare to
+	 * @return the order insensitive similarity of the two token sequences
+	 */
+	public static float getBagSimilarity(TokenSequence tokens, TokenSequence reference) {
+		return getBagSimilarity(tokens, reference, DEFAULT_TOKEN_NORMALIZER, DEFAULT_SEQUENCE_MISMATCH_SCORER);
+	}
+	
+	/**
+	 * Compute the similarity between two token sequences in an order
+	 * insensitive fashion. The argument token normalizer can modify tokens
+	 * before they are compared via <code>equals()</code> to remove certain
+	 * aspects of a comparison, e.g. case.
+	 * @param tokens the tokens to compare
+	 * @param reference the token sequence to compare to
+	 * @param normalizer the token normalizer to use
+	 * @return the order insensitive similarity of the two token sequences
+	 */
+	public static float getBagSimilarity(TokenSequence tokens, TokenSequence reference, TokenNormalizer normalizer) {
+		return getBagSimilarity(tokens, reference, normalizer, DEFAULT_SEQUENCE_MISMATCH_SCORER);
+	}
+	
+	/**
+	 * Compute the similarity between two token sequences in an order
+	 * insensitive fashion. The argument mismatch scorer is called upon to
+	 * judge all unmatched tokens, e.g. to determine similarity based upon
+	 * edit distance.
+	 * @param tokens the tokens to compare
+	 * @param reference the token sequence to compare to
+	 * @param mismatchScorer the scorer for any mismatches
+	 * @return the order insensitive similarity of the two token sequences
+	 */
+	public static float getBagSimilarity(TokenSequence tokens, TokenSequence reference, TokenMismatchScorer mismatchScorer) {
+		return getBagSimilarity(tokens, reference, DEFAULT_TOKEN_NORMALIZER, mismatchScorer);
+	}
+	
+	/**
+	 * Compute the similarity between two token sequences in an order
+	 * insensitive fashion. The argument token normalizer can modify tokens
+	 * before they are compared via <code>equals()</code> to remove certain
+	 * aspects of a comparison, e.g. case. The argument mismatch scorer is
+	 * called upon to judge all unmatched tokens, e.g. to determine similarity
+	 * based upon edit distance.
+	 * @param tokens the tokens to compare
+	 * @param reference the token sequence to compare to
+	 * @param normalizer the token normalizer to use
+	 * @param mismatchScorer the scorer for any mismatches
+	 * @return the order insensitive similarity of the two token sequences
+	 */
+	public static float getBagSimilarity(TokenSequence tokens, TokenSequence reference, TokenNormalizer normalizer, TokenMismatchScorer mismatchScorer) {
+//		CountingSet rBag = new CountingSet(new TreeMap(String.CASE_INSENSITIVE_ORDER)); ==> token normalizer handles case !!!
+		CountingSet rBag = new CountingSet(new TreeMap());
+		int rChars = 0;
+		for (int t = 0; t < reference.size(); t++) {
+			String value = normalizer.normalize(reference.valueAt(t));
+			if (value == null)
+				continue;
+			rBag.add(value);
+			rChars += value.length();
+		}
+		
+//		CountingSet tBag = new CountingSet(new TreeMap(String.CASE_INSENSITIVE_ORDER)); ==> token normalizer handles case !!!
+		CountingSet tBag = new CountingSet(new TreeMap());
+		int tChars = 0;
+		for (int t = 0; t < tokens.size(); t++) {
+			String value = normalizer.normalize(tokens.valueAt(t));
+			if (value == null)
+				continue;
+			if (rBag.contains(value))
+				rBag.remove(value);
+			else tBag.add(value);
+			tChars += value.length();
+		}
+		
+//		int rMissChars = 0;
+//		for (Iterator tit = rBag.iterator(); tit.hasNext();) {
+//			String token = ((String) tit.next());
+//			rMissChars += (token.length() * rBag.getCount(token));
+//		}
+//		int tMissChars = 0;
+//		for (Iterator tit = tBag.iterator(); tit.hasNext();) {
+//			String token = ((String) tit.next());
+//			tMissChars += (token.length() * tBag.getCount(token));
+//		}
+//		
+//		float precision = (((float) (tChars - tMissChars)) / tChars);
+//		float recall = (((float) (rChars - rMissChars)) / rChars);
+//		return (precision * recall);
+		
+		ArrayList mismatches = new ArrayList();
+		for (Iterator tit = rBag.iterator(); tit.hasNext();) {
+			String rToken = ((String) tit.next());
+			for (int c = 0; c < rBag.getCount(rToken); c++)
+				mismatches.add(new TokenMismatch(null, -1, rToken, -1));
+		}
+		for (Iterator tit = tBag.iterator(); tit.hasNext();) {
+			String tToken = ((String) tit.next());
+			for (int c = 0; c < tBag.getCount(tToken); c++)
+				mismatches.add(new TokenMismatch(tToken, -1, null, -1));
+		}
+		
+		TokenMismatchScore score = mismatchScorer.getScore(((TokenMismatch[]) mismatches.toArray(new TokenMismatch[mismatches.size()])), tokens, reference, true);
+		float precision = (((float) (tChars - score.missChars)) / tChars);
+		float recall = (((float) (rChars - score.refMissChars)) / rChars);
+		return (precision * recall);
 	}
 }

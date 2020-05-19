@@ -10,11 +10,11 @@
  *     * Redistributions in binary form must reproduce the above copyright
  *       notice, this list of conditions and the following disclaimer in the
  *       documentation and/or other materials provided with the distribution.
- *     * Neither the name of the Universität Karlsruhe (TH) nor the
+ *     * Neither the name of the Universitaet Karlsruhe (TH) nor the
  *       names of its contributors may be used to endorse or promote products
  *       derived from this software without specific prior written permission.
  *
- * THIS SOFTWARE IS PROVIDED BY UNIVERSITÄT KARLSRUHE (TH) / KIT AND CONTRIBUTORS 
+ * THIS SOFTWARE IS PROVIDED BY UNIVERSITAET KARLSRUHE (TH) / KIT AND CONTRIBUTORS 
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
  * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
  * ARE DISCLAIMED. IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE FOR ANY
@@ -33,7 +33,9 @@ import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
+import java.awt.GridLayout;
 import java.awt.Rectangle;
+import java.awt.Window;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
@@ -75,7 +77,6 @@ import de.uka.ipd.idaho.gamta.util.gPath.exceptions.GPathException;
 import de.uka.ipd.idaho.gamta.util.gPath.types.GPathNumber;
 import de.uka.ipd.idaho.gamta.util.gPath.types.GPathString;
 import de.uka.ipd.idaho.htmlXmlUtil.accessories.IoTools;
-import de.uka.ipd.idaho.stringUtils.StringVector;
 
 /**
  * A rule box is a rule based classifier component that uses a series of GPath
@@ -131,6 +132,8 @@ public class RuleBox implements LiteratureConstants {
 		Rule(String predicate, String category, int position) {
 			this.expressionString = predicate;
 			this.predicate = GPathParser.parseExpression(predicate);
+			System.out.println("Rule predicate created from " + this.expressionString);
+			System.out.println("  Parsed as " + this.predicate.toString());
 			this.category = category;
 			this.position = position;
 		}
@@ -387,27 +390,27 @@ public class RuleBox implements LiteratureConstants {
 		final boolean[] edited = new boolean[1];
 		
 		//	initialize main buttons
-		JButton commitButton = new JButton("OK");
-		commitButton.setBorder(BorderFactory.createRaisedBevelBorder());
-		commitButton.setPreferredSize(new Dimension(100, 21));
-		commitButton.addActionListener(new ActionListener() {
+		JButton okButton = new JButton("OK");
+		okButton.setBorder(BorderFactory.createRaisedBevelBorder());
+		okButton.setPreferredSize(new Dimension(100, 21));
+		okButton.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
 				edited[0] = rbcp.commitChanges();
 				rbcd.dispose();
 			}
 		});
-		JButton abortButton = new JButton("Cancel");
-		abortButton.setBorder(BorderFactory.createRaisedBevelBorder());
-		abortButton.setPreferredSize(new Dimension(100, 21));
-		abortButton.addActionListener(new ActionListener() {
+		JButton cancelButton = new JButton("Cancel");
+		cancelButton.setBorder(BorderFactory.createRaisedBevelBorder());
+		cancelButton.setPreferredSize(new Dimension(100, 21));
+		cancelButton.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
 				edited[0] = false;
 				rbcd.dispose();
 			}
 		});
 		JPanel buttonPanel = new JPanel(new FlowLayout());
-		buttonPanel.add(commitButton);
-		buttonPanel.add(abortButton);
+		buttonPanel.add(okButton);
+		buttonPanel.add(cancelButton);
 		
 		//	prepare dialog
 		rbcd.getContentPane().setLayout(new BorderLayout());
@@ -688,10 +691,10 @@ public class RuleBox implements LiteratureConstants {
 					red.dispose();
 				}
 			});
-			JButton abortButton = new JButton("Cancel");
-			abortButton.setBorder(BorderFactory.createRaisedBevelBorder());
-			abortButton.setPreferredSize(new Dimension(100, 21));
-			abortButton.addActionListener(new ActionListener() {
+			JButton cancelButton = new JButton("Cancel");
+			cancelButton.setBorder(BorderFactory.createRaisedBevelBorder());
+			cancelButton.setPreferredSize(new Dimension(100, 21));
+			cancelButton.addActionListener(new ActionListener() {
 				public void actionPerformed(ActionEvent e) {
 					resultRule[0] = null;
 					red.dispose();
@@ -699,7 +702,7 @@ public class RuleBox implements LiteratureConstants {
 			});
 			JPanel mainButtonPanel = new JPanel(new FlowLayout());
 			mainButtonPanel.add(commitButton);
-			mainButtonPanel.add(abortButton);
+			mainButtonPanel.add(cancelButton);
 			
 			//	put the whole stuff together
 			red.getContentPane().setLayout(new BorderLayout());
@@ -856,16 +859,16 @@ public class RuleBox implements LiteratureConstants {
 				panel.addRuleTestResultLine(annotation, true, rules, ((Rule[]) matchRules.toArray(new Rule[matchRules.size()])), categories[a]);
 			}
 			
-			//	add OK button
-			JButton continueButton = new JButton("Close");
-			continueButton.setBorder(BorderFactory.createRaisedBevelBorder());
-			continueButton.setPreferredSize(new Dimension(100, 21));
-			continueButton.addActionListener(new ActionListener() {
+			//	add close button
+			JButton closeButton = new JButton("Close");
+			closeButton.setBorder(BorderFactory.createRaisedBevelBorder());
+			closeButton.setPreferredSize(new Dimension(100, 21));
+			closeButton.addActionListener(new ActionListener() {
 				public void actionPerformed(ActionEvent ae) {
 					rrd.dispose();
 				}
 			});
-			rrd.getContentPane().add(continueButton, BorderLayout.SOUTH);
+			rrd.getContentPane().add(closeButton, BorderLayout.SOUTH);
 			
 			//	ensure dialog is closed with button
 			rrd.setDefaultCloseOperation(JDialog.DO_NOTHING_ON_CLOSE);
@@ -1193,16 +1196,16 @@ public class RuleBox implements LiteratureConstants {
 							panel.addRuleTestResultLine(annotation, false, rules, ((categories[a] == null) ? matchRules : noMatchRules), ((categories[a] == null) ? UNMATCHED : rule.category));
 						}
 						
-						//	add OK button
-						JButton continueButton = new JButton("Close");
-						continueButton.setBorder(BorderFactory.createRaisedBevelBorder());
-						continueButton.setPreferredSize(new Dimension(100, 21));
-						continueButton.addActionListener(new ActionListener() {
+						//	add close button
+						JButton closeButton = new JButton("Close");
+						closeButton.setBorder(BorderFactory.createRaisedBevelBorder());
+						closeButton.setPreferredSize(new Dimension(100, 21));
+						closeButton.addActionListener(new ActionListener() {
 							public void actionPerformed(ActionEvent ae) {
 								mrd.dispose();
 							}
 						});
-						mrd.getContentPane().add(continueButton, BorderLayout.SOUTH);
+						mrd.getContentPane().add(closeButton, BorderLayout.SOUTH);
 						
 						//	ensure dialog is closed with button
 						mrd.setDefaultCloseOperation(JDialog.DO_NOTHING_ON_CLOSE);
@@ -1300,54 +1303,77 @@ public class RuleBox implements LiteratureConstants {
 			}
 			
 			private class RuleTestResultLine extends JPanel {
-				RuleTestResultLine(Annotation annotation, boolean isMultiRuleTest, Rule[] rules, Rule[] matchRules, String category) {
+				RuleTestResultLine(Annotation annotation, boolean isMultiRuleTest, final Rule[] rules, final Rule[] matchRules, String category) {
 					super(new BorderLayout(), true);
 					this.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createEtchedBorder(), BorderFactory.createEmptyBorder(3,5,3,5)));
 					
-					//	display classfication result
+					//	display classification result
 					JLabel categoryDisplay = new JLabel(category);
 					
 					//	prepare match overview for multi rule tests only
 					if (isMultiRuleTest) {
-						
-						StringVector ruleMatchLines = new StringVector();
-						int mri = 0;
-						
-						for (int r = 0; r < rules.length; r++) {
-							String ruleString = IoTools.prepareForHtml(rules[r].toString(), new Properties() {
-								public String getProperty(String key, String defaultValue) {
-									if ("<>\"&".indexOf(key) == -1) return key;
-									else return super.getProperty(key, defaultValue);
-								}
-								public String getProperty(String key) {
-									if ("<>\"&".indexOf(key) == -1) return key;
-									else return super.getProperty(key);
-								}
-								public synchronized boolean containsKey(Object key) {
-									return ("<>\"&".indexOf(key.toString()) == -1);
-								}
-							});
-							if ((mri < matchRules.length) && rules[r].toString().equals(matchRules[mri].toString())) {
-								if (mri == 0) ruleMatchLines.addElement(" - <B>" + ruleString + "</B>");
-								else ruleMatchLines.addElement(" - <B><I>" + ruleString + "</I></B>");
-								mri++;
-							}
-							else ruleMatchLines.addElement(" - " + ruleString);
-						}
-						
-						if (mri == 0) ruleMatchLines.addElement(" - <B>==>" + RuleBoxConfigPanel.this.defaultCategory + "</B>");
-						else ruleMatchLines.addElement(" - ==>" + RuleBoxConfigPanel.this.defaultCategory);
-						
-						final String ruleMatchMessage = ("<HTML>Rule match result for this annotation (first match bold, other matches in bold italics):<BR>" + ruleMatchLines.concatStrings("<BR>") + "</HTML>");
-						
 						categoryDisplay.addMouseListener(new MouseAdapter() {
-							public void mouseClicked(MouseEvent e) {
-								JOptionPane.showMessageDialog(RuleTestResultLine.this, ruleMatchMessage, "Rule Match Overview", JOptionPane.INFORMATION_MESSAGE);
+							private JDialog ruleMatchMessageDialog;
+							public void mouseClicked(MouseEvent me) {
+								if (this.ruleMatchMessageDialog == null) {
+									int mri = 0;
+									JPanel ruleMatchMessage = new JPanel(new GridLayout(0, 1), true);
+									for (int r = 0; r < rules.length; r++) {
+										String ruleString = IoTools.prepareForHtml(rules[r].toString(), new Properties() {
+											public String getProperty(String key, String defaultValue) {
+												if ("<>\"&".indexOf(key) == -1) return key;
+												else return super.getProperty(key, defaultValue);
+											}
+											public String getProperty(String key) {
+												if ("<>\"&".indexOf(key) == -1) return key;
+												else return super.getProperty(key);
+											}
+											public synchronized boolean containsKey(Object key) {
+												return ("<>\"&".indexOf(key.toString()) == -1);
+											}
+										});
+										if ((mri < matchRules.length) && rules[r].toString().equals(matchRules[mri].toString())) {
+											if (mri == 0)
+												ruleMatchMessage.add(new JLabel(("<HTML> - <B>" + ruleString + "</B></HTML>"), JLabel.LEFT));
+											else ruleMatchMessage.add(new JLabel(("<HTML> - <B><I>" + ruleString + "</I></B></HTML>"), JLabel.LEFT));
+											mri++;
+										}
+										else ruleMatchMessage.add(new JLabel(("<HTML> - " + ruleString + "</HTML>"), JLabel.LEFT));
+									}
+									
+									if (mri == 0)
+										ruleMatchMessage.add(new JLabel(("<HTML> - <B>==> " + RuleBoxConfigPanel.this.defaultCategory + "</B></HTML>"), JLabel.LEFT));
+									else ruleMatchMessage.add(new JLabel(("<HTML> - ==> " + RuleBoxConfigPanel.this.defaultCategory), JLabel.LEFT));
+									
+									JScrollPane ruleMatchMessageBox = new JScrollPane(ruleMatchMessage);
+									ruleMatchMessageBox.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+									ruleMatchMessageBox.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+									
+									this.ruleMatchMessageDialog = DialogFactory.produceDialog("Rule Match Overview", true);
+									this.ruleMatchMessageDialog.getContentPane().setLayout(new BorderLayout());
+									
+									JButton closeButton = new JButton("Close");
+									closeButton.setBorder(BorderFactory.createRaisedBevelBorder());
+									closeButton.setPreferredSize(new Dimension(100, 21));
+									closeButton.addActionListener(new ActionListener() {
+										public void actionPerformed(ActionEvent ae) {
+											ruleMatchMessageDialog.dispose();
+										}
+									});
+									
+									this.ruleMatchMessageDialog.add(new JLabel(("<HTML><B>Rule match result for this annotation (first match bold, other matches in bold italics):</B></HTML>"), JLabel.LEFT), BorderLayout.NORTH);
+									this.ruleMatchMessageDialog.getContentPane().add(ruleMatchMessageBox, BorderLayout.CENTER);
+									this.ruleMatchMessageDialog.getContentPane().add(closeButton, BorderLayout.SOUTH);
+								}
+								
+								Window owner = DialogFactory.getTopWindow();
+								this.ruleMatchMessageDialog.setSize(owner.getSize());
+								this.ruleMatchMessageDialog.setLocationRelativeTo(owner);
+								this.ruleMatchMessageDialog.setVisible(true);
 							}
 						});
 					}
 					
-//					String pageNumber = annotation.getAttribute(PAGE_NUMBER_ATTRIBUTE, "").toString().trim();
 					Object pageNumberObject = annotation.getAttribute(PAGE_NUMBER_ATTRIBUTE);
 					String pageNumber = ((pageNumberObject == null) ? "-1" : pageNumberObject.toString().trim());
 					

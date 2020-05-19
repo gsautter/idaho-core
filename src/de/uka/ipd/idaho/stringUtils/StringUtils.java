@@ -10,11 +10,11 @@
  *     * Redistributions in binary form must reproduce the above copyright
  *       notice, this list of conditions and the following disclaimer in the
  *       documentation and/or other materials provided with the distribution.
- *     * Neither the name of the Universität Karlsruhe (TH) nor the
+ *     * Neither the name of the Universitaet Karlsruhe (TH) nor the
  *       names of its contributors may be used to endorse or promote products
  *       derived from this software without specific prior written permission.
  *
- * THIS SOFTWARE IS PROVIDED BY UNIVERSITÄT KARLSRUHE (TH) / KIT AND CONTRIBUTORS 
+ * THIS SOFTWARE IS PROVIDED BY UNIVERSITAET KARLSRUHE (TH) / KIT AND CONTRIBUTORS 
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
  * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
  * ARE DISCLAIMED. IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE FOR ANY
@@ -118,13 +118,13 @@ public class StringUtils {
 	/** string constant containing punctuation marks that may appear in numbers, namely ',' and '.' */
 	public static final String IN_NUMBER_PUNCTUATION = ",.";
 	
-	/** string constant containing all brackets, opening and closing, round,, square, angle, and curly */
+	/** string constant containing all brackets, opening and closing, round, square, angle, and curly */
 	public static final String BRACKETS	= "({[<)}]>";
 	
-	/** string constant containing all opening brackets, round,, square, angle, and curly. The index of a given type of bracket in this constant is the same as the index of the corresponding bracket in CLOSING_BRACKETS */
+	/** string constant containing all opening brackets, round, square, angle, and curly. The index of a given type of bracket in this constant is the same as the index of the corresponding bracket in CLOSING_BRACKETS */
 	public static final String OPENING_BRACKETS = "({[<";
 	
-	/** string constant containing all closing brackets, round,, square, angle, and curly. The index of a given type of bracket in this constant is the same as the index of the corresponding bracket in OPENING_BRACKETS */
+	/** string constant containing all closing brackets, round, square, angle, and curly. The index of a given type of bracket in this constant is the same as the index of the corresponding bracket in OPENING_BRACKETS */
 	public static final String CLOSING_BRACKETS = ")}]>";
 	
 	/** string constant containing all punctuation marks that structure a sentence, namely '!', '?', ',', ';', '.', ':', and '-' */
@@ -1288,6 +1288,54 @@ public class StringUtils {
 	}
 	
 	/**
+	 * Check if there is a hyphenation between two given words, judging from
+	 * morphological evidence. This method return true if (a) both words are
+	 * actual words, (b) the first one ends with a hyphen, and (c) the second
+	 * one is in lower case and is not a preposition usually found in an
+	 * enumeration.
+	 * @param firstWord the first word to check
+	 * @param secondWord the second word to check
+	 * @return true if there is a hyphenation between the two argument words
+	 */
+	public static boolean areHyphenated(String firstWord, String secondWord) {
+		return areHyphenated(((CharSequence) firstWord), ((CharSequence) secondWord));
+	}
+	
+	/**
+	 * Check if there is a hyphenation between two given words, judging from
+	 * morphological evidence. This method return true if (a) both words are
+	 * actual words, (b) the first one ends with a hyphen, and (c) the second
+	 * one is in lower case and is not a preposition usually found in an
+	 * enumeration.
+	 * @param firstWord the first word to check
+	 * @param secondWord the second word to check
+	 * @return true if there is a hyphenation between the two argument words
+	 */
+	public static boolean areHyphenated(CharSequence firstWord, CharSequence secondWord) {
+		
+		//	get and check first word string, including connected predecessors
+		if ((firstWord == null) || (firstWord.length() == 0))
+			return false;
+		if (!isWord(firstWord))
+			return false;
+		if (DASHES.indexOf(firstWord.charAt(firstWord.length()-1)) == -1)
+			return false;
+		
+		//	check second word string
+		if ((secondWord == null) || (secondWord.length() == 0))
+			return false;
+		if (!isWord(secondWord))
+			return false;
+		if (secondWord.charAt(0) == Character.toUpperCase(secondWord.charAt(0)))
+			return false; // starting with capital letter, not a word continued
+		if ("and;or;und;oder;et;ou;y;e;o;u;ed".indexOf(secondWord.toString().toLowerCase()) != -1)
+			return false; // rather looks like an enumeration continued than a word (western European languages for now)
+		
+		//	looking good ...
+		return true;
+	}
+	
+	/**
 	 * Parse a Roman number.
 	 * @param romanNumber the Roman number to parse
 	 * @return the int value of the argument Roman number
@@ -1781,7 +1829,7 @@ public class StringUtils {
 	
 	/**
 	 * Normalize a whole string. This method is essentially a shorthand for
-	 * calling <code>getBaseChar()</code> on each individual character in the
+	 * calling <code>getNormalForm()</code> on each individual character in the
 	 * argument string. On top of that, this method also normalizes any spaces.
 	 * @param str the string to normalize
 	 * @return the normalized string
@@ -1798,7 +1846,7 @@ public class StringUtils {
 				nStr.append(' ');
 			else if (SPACES.indexOf(ch) != -1)
 				nStr.append(' ');
-			else nStr.append(StringUtils.getBaseChar(ch));
+			else nStr.append(StringUtils.getNormalForm(ch));
 		}
 		return nStr.toString();
 	}
@@ -2503,25 +2551,24 @@ public class StringUtils {
 	 * @return the specified String in first-letter-up
 	 */
 	public static String capitalize(String string) {
-		int wordLen = string.length();
 		boolean upperCase = true;
-		StringBuffer assembler = new StringBuffer();
-		for (int j = 0; j < wordLen; j++) {
-			char c = string.charAt(j);
+		StringBuffer capitalized = new StringBuffer();
+		for (int c = 0; c < string.length(); c++) {
+			char ch = string.charAt(c);
 			if (upperCase) {
-				assembler.append(Character.toUpperCase(c));
+				capitalized.append(Character.toUpperCase(ch));
 				upperCase = false;
 			}
-			else if (IN_WORD_PUNCTUATION.indexOf(c) != -1) {
-				assembler.append(c);
+			else if (IN_WORD_PUNCTUATION.indexOf(ch) != -1) {
+				capitalized.append(ch);
 				upperCase = true;
 			}
-			else assembler.append(Character.toLowerCase(c));
+			else capitalized.append(Character.toLowerCase(ch));
 		}
-		return assembler.toString();
+		return capitalized.toString();
 	}
 	
-	/**	replace all occurencies of on substring with another substring
+	/**	replace all occurencies of a substring with another substring
 	 * @param	string			the String to process
 	 * @param	toReplace		the substring to replace
 	 * @param	replacement		the substring to serve as the replacement
@@ -2532,12 +2579,17 @@ public class StringUtils {
 			return string;
 		if (string.equals(toReplace))
 			return replacement;
-		
-		StringVector parser = new StringVector();
-		parser.parseAndAddElements(string, toReplace);
-		return parser.concatStrings(replacement);
+		StringBuffer replaced = new StringBuffer();
+		for (int c = 0; c < string.length();) {
+			if (string.startsWith(toReplace, c)) {
+				replaced.append(replacement);
+				c += toReplace.length();
+			}
+			else replaced.append(string.charAt(c++));
+		}
+		return replaced.toString();
 	}
-
+	
 	/**
 	 * Insert escaper characters into a string, one before every occurrence of
 	 * character toEscape.

@@ -10,11 +10,11 @@
  *     * Redistributions in binary form must reproduce the above copyright
  *       notice, this list of conditions and the following disclaimer in the
  *       documentation and/or other materials provided with the distribution.
- *     * Neither the name of the Universität Karlsruhe (TH) / KIT nor the
+ *     * Neither the name of the Universitaet Karlsruhe (TH) / KIT nor the
  *       names of its contributors may be used to endorse or promote products
  *       derived from this software without specific prior written permission.
  *
- * THIS SOFTWARE IS PROVIDED BY UNIVERSITÄT KARLSRUHE (TH) / KIT AND CONTRIBUTORS 
+ * THIS SOFTWARE IS PROVIDED BY UNIVERSITAET KARLSRUHE (TH) / KIT AND CONTRIBUTORS 
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
  * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
  * ARE DISCLAIMED. IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE FOR ANY
@@ -28,15 +28,12 @@
 package de.uka.ipd.idaho.gamta.util;
 
 import java.io.IOException;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
-import java.util.LinkedList;
 import java.util.Set;
 
-import de.uka.ipd.idaho.easyIO.util.RandomByteSource;
+import de.uka.ipd.idaho.easyIO.util.HashUtils.MD5;
 import de.uka.ipd.idaho.gamta.QueriableAnnotation;
 
 /**
@@ -45,7 +42,6 @@ import de.uka.ipd.idaho.gamta.QueriableAnnotation;
  * @author sautter
  */
 public class AnnotationChecksumDigest {
-	
 	private LinkedHashSet typeFilters = null;
 	private LinkedHashSet attributeFilters = null;
 	
@@ -211,37 +207,39 @@ public class AnnotationChecksumDigest {
 		Set aisTypeFilter = (((this.typeFilters == null) && (typeFilter == null)) ? null : new TypeFilterSet(typeFilter, this.typeFilters));
 		Set aisAttributeFilter = (((this.attributeFilters == null) && (attributeFilter == null)) ? null : new AttributeFilterSet(attributeFilter, this.attributeFilters));
 		AnnotationInputStream ais = new AnnotationInputStream(annotation, "UTF-8", aisTypeFilter, aisAttributeFilter);
-		MessageDigest checksumDigest = getChecksumDigest();
+//		MessageDigest checksumDigest = getChecksumDigest();
+		MD5 checksumDigest = new MD5();
 		byte[] buffer = new byte[1024];
 		for (int read; (read = ais.read(buffer)) != -1;)
 			checksumDigest.update(buffer, 0, read);
 		ais.close();
-		byte[] checksumBytes = checksumDigest.digest();
-		returnChecksumDigest(checksumDigest);
-		return new String(RandomByteSource.getHexCode(checksumBytes));
+//		byte[] checksumBytes = checksumDigest.digest();
+//		returnChecksumDigest(checksumDigest);
+//		return new String(RandomByteSource.getHexCode(checksumBytes));
+		return checksumDigest.digestHex();
 	}
-	
-	private static LinkedList checksumDigestPool = new LinkedList();
-	private static synchronized MessageDigest getChecksumDigest() {
-		if (checksumDigestPool.size() != 0) {
-			MessageDigest dataHash = ((MessageDigest) checksumDigestPool.removeFirst());
-			dataHash.reset();
-			return dataHash;
-		}
-		try {
-			MessageDigest dataHash = MessageDigest.getInstance("MD5");
-			dataHash.reset();
-			return dataHash;
-		}
-		catch (NoSuchAlgorithmException nsae) {
-			System.out.println(nsae.getClass().getName() + " (" + nsae.getMessage() + ") while creating checksum digester.");
-			nsae.printStackTrace(System.out); // should not happen, but Java don't know ...
-			return null;
-		}
-	}
-	private static synchronized void returnChecksumDigest(MessageDigest dataHash) {
-		checksumDigestPool.addLast(dataHash);
-	}
+//	
+//	private static LinkedList checksumDigestPool = new LinkedList();
+//	private static synchronized MessageDigest getChecksumDigest() {
+//		if (checksumDigestPool.size() != 0) {
+//			MessageDigest dataHash = ((MessageDigest) checksumDigestPool.removeFirst());
+//			dataHash.reset();
+//			return dataHash;
+//		}
+//		try {
+//			MessageDigest dataHash = MessageDigest.getInstance("MD5");
+//			dataHash.reset();
+//			return dataHash;
+//		}
+//		catch (NoSuchAlgorithmException nsae) {
+//			System.out.println(nsae.getClass().getName() + " (" + nsae.getMessage() + ") while creating checksum digester.");
+//			nsae.printStackTrace(System.out); // should not happen, but Java don't know ...
+//			return null;
+//		}
+//	}
+//	private static synchronized void returnChecksumDigest(MessageDigest dataHash) {
+//		checksumDigestPool.addLast(dataHash);
+//	}
 	
 	private static class TypeFilterSet extends HashSet {
 		private ChainTypeFilter typeFilter;
@@ -317,13 +315,5 @@ public class AnnotationChecksumDigest {
 				return (this.attributeFilter.filterAttribute(attributeName) || ((this.next != null) && this.next.filterAttribute(attributeName)));
 			}
 		}
-	}
-	
-	/**
-	 * @param args
-	 */
-	public static void main(String[] args) {
-		// TODO Auto-generated method stub
-
 	}
 }

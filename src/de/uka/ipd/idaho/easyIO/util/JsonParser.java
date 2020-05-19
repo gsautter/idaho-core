@@ -10,11 +10,11 @@
  *     * Redistributions in binary form must reproduce the above copyright
  *       notice, this list of conditions and the following disclaimer in the
  *       documentation and/or other materials provided with the distribution.
- *     * Neither the name of the Universität Karlsruhe (TH) / KIT nor the
+ *     * Neither the name of the Universitaet Karlsruhe (TH) / KIT nor the
  *       names of its contributors may be used to endorse or promote products
  *       derived from this software without specific prior written permission.
  *
- * THIS SOFTWARE IS PROVIDED BY UNIVERSITÄT KARLSRUHE (TH) / KIT AND CONTRIBUTORS 
+ * THIS SOFTWARE IS PROVIDED BY UNIVERSITAET KARLSRUHE (TH) / KIT AND CONTRIBUTORS 
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
  * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
  * ARE DISCLAIMED. IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE FOR ANY
@@ -30,10 +30,11 @@ package de.uka.ipd.idaho.easyIO.util;
 import java.io.IOException;
 import java.io.Reader;
 import java.io.StringReader;
+import java.io.StringWriter;
+import java.io.Writer;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
@@ -332,9 +333,9 @@ public class JsonParser {
 	 * Serialize a JSON object into its string representation. If the argument
 	 * object is neither of Map, List, String, Number, or Boolean, this method
 	 * returns null. Likewise, it ignores all all content objects that are of
-	 * neither of those three classes.
+	 * neither of those five classes.
 	 * @param obj the object to serialize
-	 * @param quot the quotation mark to use for strings
+	 * @param indent the indentation to use per level, for pretty printing
 	 * @return the string representation of the argument object 
 	 */
 	public static String toString(Object obj) {
@@ -345,18 +346,19 @@ public class JsonParser {
 	 * Serialize a JSON object into its string representation. If the argument
 	 * object is neither of Map, List, String, Number, or Boolean, this method
 	 * returns null. Likewise, it ignores all content objects that are of
-	 * neither of those three classes.
+	 * neither of those five classes.
 	 * @param obj the object to serialize
 	 * @param quot the quotation mark to use for strings
+	 * @param indent the indentation to use per level, for pretty printing
 	 * @return the string representation of the argument object 
 	 */
 	public static String toString(Object obj, char quot) {
 		if (obj instanceof Map)
-			return toString((Map) obj, quot);
+			return toString(((Map) obj), quot);
 		else if (obj instanceof List)
-			return toString((List) obj, quot);
+			return toString(((List) obj), quot);
 		else if (obj instanceof String)
-			return toString((String) obj, quot);
+			return toString(((String) obj), quot);
 		else if (obj instanceof Number)
 			return toString((Number) obj);
 		else if (obj instanceof Boolean)
@@ -408,15 +410,209 @@ public class JsonParser {
 	}
 	
 	/**
+	 * Serialize a JSON object into its string representation. If the argument
+	 * object is neither of Map, List, String, Number, or Boolean, this method
+	 * returns null. Likewise, it ignores all all content objects that are of
+	 * neither of those five classes.
+	 * @param obj the object to serialize
+	 * @param quot the quotation mark to use for strings
+	 * @return the string representation of the argument object 
+	 */
+	public static void writeJson(Writer out, Object obj) throws IOException {
+		writeJson(out, obj, '"', null);
+	}
+	
+	/**
+	 * Serialize a JSON object into its string representation. If the argument
+	 * object is neither of Map, List, String, Number, or Boolean, this method
+	 * returns null. Likewise, it ignores all all content objects that are of
+	 * neither of those five classes.
+	 * @param obj the object to serialize
+	 * @param indent the indentation to use per level, for pretty printing
+	 * @return the string representation of the argument object 
+	 */
+	public static void writeJson(Writer out, Object obj, String indent) throws IOException {
+		writeJson(out, obj, '"', indent);
+	}
+	
+	/**
+	 * Serialize a JSON object into its string representation. If the argument
+	 * object is neither of Map, List, String, Number, or Boolean, this method
+	 * returns null. Likewise, it ignores all content objects that are of
+	 * neither of those five classes.
+	 * @param obj the object to serialize
+	 * @param quot the quotation mark to use for strings
+	 * @return the string representation of the argument object 
+	 */
+	public static void writeJson(Writer out, Object obj, char quot) throws IOException {
+		writeJson(out, obj, quot, null);
+	}
+	
+	/**
+	 * Serialize a JSON object into its string representation. If the argument
+	 * object is neither of Map, List, String, Number, or Boolean, this method
+	 * returns null. Likewise, it ignores all content objects that are of
+	 * neither of those five classes.
+	 * @param obj the object to serialize
+	 * @param quot the quotation mark to use for strings
+	 * @param indent the indentation to use per level, for pretty printing
+	 * @return the string representation of the argument object 
+	 */
+	public static void writeJson(Writer out, Object obj, char quot, String indent) throws IOException {
+		writeValueData(out, obj, quot, indent, "");
+	}
+	
+	private static void writeValueData(Writer out, Object obj, char quot, String levelIndent, String indent) throws IOException {
+		if (obj instanceof Map)
+			writeObject(out, ((Map) obj), quot, levelIndent, indent);
+		else if (obj instanceof List)
+			writeArray(out, ((List) obj), quot, levelIndent, indent);
+		else if (obj instanceof String)
+			writeString(out, ((String) obj), quot);
+		else if (obj instanceof Number)
+			writeNumber(out, ((Number) obj));
+		else if (obj instanceof Boolean)
+			writeBoolean(out, ((Boolean) obj));
+		else if (obj == null)
+			writeNull(out);
+	}
+	
+	private static void writeObject(Writer out, Map object, char quot, String levelIndent, String indent) throws IOException {
+		String valueIndent = ((indent == null) ? null : (indent + levelIndent));
+		int outValueCount = 0;
+		out.write("{");
+		for (Iterator kit = object.keySet().iterator(); kit.hasNext();) {
+			Object key = ((String) kit.next());
+			if (!(key instanceof String))
+				continue;
+			Object value = object.get(key);
+			if (filterDataValue(value))
+				continue;
+			if (outValueCount != 0)
+				out.write(",");
+			if (indent == null)
+				out.write(" ");
+			else {
+				out.write("\r\n");
+				out.write(valueIndent);
+			}
+			out.write(toString(((String) key), quot));
+			out.append(": ");
+			writeValueData(out, value, quot, levelIndent, valueIndent);
+			outValueCount++;
+			
+		}
+		if ((outValueCount != 0) && (indent != null)) {
+			out.write("\r\n");
+			out.write(indent);
+		}
+		out.write("}");
+	}
+	
+	private static void writeArray(Writer out, List array, char quot, String levelIndent, String indent) throws IOException {
+		String valueIndent = ((indent == null) ? null : (indent + levelIndent));
+		int outValueCount = 0;
+		out.write("[");
+		for (int i = 0; i < array.size(); i++) {
+			Object value = array.get(i);
+			if (filterDataValue(value))
+				continue;
+			if (outValueCount != 0)
+				out.write(",");
+			if (indent == null)
+				out.write(" ");
+			else {
+				out.write("\r\n");
+				out.write(valueIndent);
+			}
+			writeValueData(out, value, quot, levelIndent, valueIndent);
+			outValueCount++;
+		}
+		if ((outValueCount != 0) && (indent != null)) {
+			out.write("\r\n");
+			out.write(indent);
+		}
+		out.write("]");
+	}
+	
+	private static boolean filterDataValue(Object obj) {
+		if (obj instanceof Map)
+			return false;
+		else if (obj instanceof List)
+			return false;
+		else if (obj instanceof String)
+			return false;
+		else if (obj instanceof Number)
+			return false;
+		else if (obj instanceof Boolean)
+			return false;
+		else return (obj != null);
+	}
+	
+	private static void writeString(Writer out, String string, char quot) throws IOException {
+		out.write("" + quot + escape(string, quot) + quot);
+	}
+	
+	private static void writeNumber(Writer out, Number number) throws IOException {
+		out.write(number.toString());
+	}
+	
+	private static void writeBoolean(Writer out, Boolean bool) throws IOException {
+		out.write(bool.toString());
+	}
+	
+	private static void writeNull(Writer out) throws IOException {
+		out.write("null");
+	}
+	
+	/**
+	 * Exception reporting that the parser encountered an invalid character at
+	 * some point in the stream while parsing it. The <code>getPosition()</code>
+	 * method indicates where the offending character is located.
+	 * 
+	 * @author sautter
+	 */
+	public static class UnexpectedCharacterException extends IOException {
+		private int position;
+		UnexpectedCharacterException(char ch, int position, String expected) {
+			super("Unexpected character '" + ch + "' at " + position + ", expected " + expected + ".");
+			this.position = position;
+		}
+		
+		/**
+		 * Obtain the position of the offending character causing the exception
+		 * as its offset from the start of the parsed character stream.
+		 * @return the position of the offending character
+		 */
+		public int getPosition() {
+			return this.position;
+		}
+	}
+	
+	/**
+	 * Exception reporting that the parser encountered an invalid character at
+	 * some point in the stream while parsing it. The <code>getPosition()</code>
+	 * method indicates where the offending character is located.
+	 * 
+	 * @author sautter
+	 */
+	public static class MissingCharacterException extends IOException {
+		MissingCharacterException(String expected) {
+			super("Missing character at end of input, expected " + expected + ".");
+		}
+	}
+	
+	/**
 	 * Parse JSON data from a character stream.
 	 * @param in the reader to read from
 	 * @return the de-serialized object
 	 * @throws IOException
 	 */
 	public static Object parseJson(Reader in) throws IOException {
-		if (in instanceof PeekReader)
-			return cropNext(((PeekReader) in), false, null);
-		else return cropNext(new PeekReader(in, 5), false, null);
+//		if (in instanceof PeekReader)
+//			return cropNext(((PeekReader) in), false, null);
+//		else return cropNext(new PeekReader(in, 5), false, null);
+		return cropNext(new JsonReader(in), false, null);
 	}
 	
 	/**
@@ -429,107 +625,135 @@ public class JsonParser {
 	 * @throws IOException
 	 */
 	public static void streamJson(Reader in, JsonReceiver receiver) throws IOException {
-		if (in instanceof PeekReader)
-			cropNext(((PeekReader) in), false, receiver);
-		else cropNext(new PeekReader(in, 5), false, receiver);
+//		if (in instanceof PeekReader)
+//			cropNext(((PeekReader) in), false, receiver);
+//		else cropNext(new PeekReader(in, 5), false, receiver);
+		cropNext(new JsonReader(in), false, receiver);
 	}
 	
-	private static Object cropNext(PeekReader pr, boolean inArrayOrObject, JsonReceiver receiver) throws IOException {
-		pr.skipSpace();
-		if (pr.peek() == '"')
-			return cropString(pr, '"', true, receiver);
-		else if (pr.peek() == '\'')
-			return cropString(pr, '\'', true, receiver);
-		else if (pr.peek() == '{')
-			return cropObject(pr, receiver);
-		else if (pr.peek() == '[')
-			return cropArray(pr, receiver);
-		else if ("-0123456789".indexOf(pr.peek()) != -1)
-			return cropNumber(pr, receiver);
-		else if (pr.startsWith("null", false)) {
-			pr.skip(4);
+	private static class JsonReader extends PeekReader {
+		int position = 0;
+		JsonReader(Reader in) throws IOException {
+			super(in, "false".length());
+		}
+		public int read() throws IOException {
+			int read = super.read();
+			if (read != -1)
+				this.position++;
+			return read;
+		}
+		public int read(char[] cbuf, int off, int len) throws IOException {
+			int read = super.read(cbuf, off, len);
+			if (read != -1)
+				this.position += read;
+			return read;
+		}
+		public long skip(long n) throws IOException {
+			long skipped = super.skip(n);
+			this.position += ((int) (skipped & 0x7FFFFFF));
+			return skipped;
+		}
+//		public int skipSpace() throws IOException {
+//			return super.skipSpace(); // uses read(), no need to count here
+//		}
+	}
+	
+	private static Object cropNext(JsonReader jr, boolean inArrayOrObject, JsonReceiver receiver) throws IOException {
+		jr.skipSpace();
+		if (jr.peek() == '"')
+			return cropString(jr, '"', true, receiver);
+		else if (jr.peek() == '\'')
+			return cropString(jr, '\'', true, receiver);
+		else if (jr.peek() == '{')
+			return cropObject(jr, receiver);
+		else if (jr.peek() == '[')
+			return cropArray(jr, receiver);
+		else if ("-0123456789".indexOf(jr.peek()) != -1)
+			return cropNumber(jr, receiver);
+		else if (jr.startsWith("null", false)) {
+			jr.skip(4);
 			if (receiver != null)
 				receiver.nullRead();
 			return null;
 		}
-		else if (pr.startsWith("true", false)) {
-			pr.skip(4);
+		else if (jr.startsWith("true", false)) {
+			jr.skip(4);
 			if (receiver != null)
 				receiver.booleanRead(true);
 			return Boolean.TRUE;
 		}
-		else if (pr.startsWith("false", false)) {
-			pr.skip(5);
+		else if (jr.startsWith("false", false)) {
+			jr.skip(5);
 			if (receiver != null)
 				receiver.booleanRead(false);
 			return Boolean.FALSE;
 		}
-		else if (inArrayOrObject && ((pr.peek() == ',') || (pr.peek() == '}')))
+		else if (inArrayOrObject && ((jr.peek() == ',') || (jr.peek() == '}') || (jr.peek() == ']')))
 			return null;
-		else throw new IOException("Unexpected char '" + ((char) pr.peek()) + "'");
+		else throw new UnexpectedCharacterException(((char) jr.peek()), jr.position, ("\", ', {, [, -, digits, " + (inArrayOrObject ? "comma, }, ], " : "" ) + "'true', 'false', or 'null'"));
 	}
 	
-	private static Map cropObject(PeekReader pr, JsonReceiver receiver) throws IOException {
-		pr.read(); // consume opening curly bracket
-		pr.skipSpace();
+	private static Map cropObject(JsonReader jr, JsonReceiver receiver) throws IOException {
+		jr.read(); // consume opening curly bracket
+		jr.skipSpace();
 		if (receiver != null)
 			receiver.objectStarted();
 		Map map = new LinkedHashMap();
-		while (pr.peek() != '}') {
-			if ((pr.peek() != '"') && (pr.peek() != '\''))
-				throw new IOException("Unexpected char '" + ((char) pr.peek()) + "'");
-			String key = cropString(pr, ((char) pr.peek()), false, receiver);
-			pr.skipSpace();
+		while (jr.peek() != '}') {
+			if ((jr.peek() != '"') && (jr.peek() != '\''))
+				throw new UnexpectedCharacterException(((char) jr.peek()), jr.position, "\" or '");
+			String key = cropString(jr, ((char) jr.peek()), false, receiver);
+			jr.skipSpace();
 			if (receiver != null)
 				receiver.objectPropertyRead(key);
-			if (pr.peek() != ':')
-				throw new IOException("Unexpected char '" + ((char) pr.peek()) + "'");
-			pr.read(); // consume colon
-			Object value = cropNext(pr, true, receiver);
+			if (jr.peek() != ':')
+				throw new UnexpectedCharacterException(((char) jr.peek()), jr.position, ":");
+			jr.read(); // consume colon
+			Object value = cropNext(jr, true, receiver);
 			map.put(key, value);
-			pr.skipSpace();
-			if (pr.peek() == ',') {
-				pr.read(); // consume comma (also consumes a dangling one)
-				pr.skipSpace();
+			jr.skipSpace();
+			if (jr.peek() == ',') {
+				jr.read(); // consume comma (also consumes a dangling one)
+				jr.skipSpace();
 			}
-			else if (pr.peek() != '}')
-				throw new IOException("Unexpected char '" + ((char) pr.peek()) + "'");
+			else if (jr.peek() != '}')
+				throw new UnexpectedCharacterException(((char) jr.peek()), jr.position, "comma or }");
 		}
-		pr.read(); // consume closing curly bracket
+		jr.read(); // consume closing curly bracket
 		if (receiver != null)
 			receiver.objectEnded();
 		return map;
 	}
 	
-	private static List cropArray(PeekReader pr, JsonReceiver receiver) throws IOException {
-		pr.read(); // consume opening square bracket
-		pr.skipSpace();
+	private static List cropArray(JsonReader jr, JsonReceiver receiver) throws IOException {
+		jr.read(); // consume opening square bracket
+		jr.skipSpace();
 		if (receiver != null)
 			receiver.arrayStarted();
 		List array = new ArrayList();
-		while (pr.peek() != ']') {
-			Object value = cropNext(pr, true, receiver);
+		while (jr.peek() != ']') {
+			Object value = cropNext(jr, true, receiver);
 			array.add(value);
-			pr.skipSpace();
-			if (pr.peek() == ',') {
-				pr.read(); // consume comma (also consumes a dangling one)
-				pr.skipSpace();
+			jr.skipSpace();
+			if (jr.peek() == ',') {
+				jr.read(); // consume comma (also consumes a dangling one)
+				jr.skipSpace();
 			}
-			else if (pr.peek() != ']')
-				throw new IOException("Unexpected char '" + ((char) pr.peek()) + "'");
+			else if (jr.peek() != ']')
+				throw new UnexpectedCharacterException(((char) jr.peek()), jr.position, "comma or ]");
 		}
-		pr.read(); // consume closing square bracket
+		jr.read(); // consume closing square bracket
 		if (receiver != null)
 			receiver.arrayEnded();
 		return array;
 	}
 	
-	private static String cropString(PeekReader pr, char quot, boolean isValue, JsonReceiver receiver) throws IOException {
-		pr.read(); // consume opening quotes
+	private static String cropString(JsonReader jr, char quot, boolean isValue, JsonReceiver receiver) throws IOException {
+		jr.read(); // consume opening quotes
 		boolean escaped = false;
 		StringBuffer string = new StringBuffer();
-		while (pr.peek() != -1) {
-			char ch = ((char) pr.read());
+		while (jr.peek() != -1) {
+			char ch = ((char) jr.read());
 			if (escaped) {
 				if (ch == 'b')
 					string.append("\b");
@@ -543,10 +767,10 @@ public class JsonParser {
 					string.append("\t");
 				else if (ch == 'u') {
 					StringBuffer hex = new StringBuffer();
-					hex.append((char) pr.read());
-					hex.append((char) pr.read());
-					hex.append((char) pr.read());
-					hex.append((char) pr.read());
+					hex.append((char) jr.read());
+					hex.append((char) jr.read());
+					hex.append((char) jr.read());
+					hex.append((char) jr.read());
 					string.append((char) Integer.parseInt(hex.toString(), 16));
 				}
 				else string.append(ch);
@@ -554,10 +778,14 @@ public class JsonParser {
 			}
 			else if (ch == '\\')
 				escaped = true;
-			else if (ch == quot)
+			else if (ch == quot) {
+				quot = ((char) 0); // indicate string was properly terminated
 				break;
+			}
 			else string.append(ch);
 		}
+		if (quot != 0) // check whether or not string was properly terminated
+			throw new MissingCharacterException("" + quot);
 		if (isValue && (receiver != null)) {
 			receiver.stringRead(string.toString());
 			return null;
@@ -565,43 +793,43 @@ public class JsonParser {
 		else return string.toString();
 	}
 	
-	private static Number cropNumber(PeekReader pr, JsonReceiver receiver) throws IOException {
+	private static Number cropNumber(JsonReader jr, JsonReceiver receiver) throws IOException {
 		StringBuffer numBuf = new StringBuffer();
-		if (pr.peek() == '-') {
-			numBuf.append((char) pr.peek());
-			pr.read();
-			pr.skipSpace();
+		if (jr.peek() == '-') {
+			numBuf.append((char) jr.peek());
+			jr.read();
+			jr.skipSpace();
 		}
 		StringBuffer intBuf = new StringBuffer();
-		while ("0123456789".indexOf(pr.peek()) != -1) {
-			numBuf.append((char) pr.peek());
-			intBuf.append((char) pr.read());
+		while ("0123456789".indexOf(jr.peek()) != -1) {
+			numBuf.append((char) jr.peek());
+			intBuf.append((char) jr.read());
 		}
-		pr.skipSpace();
+		jr.skipSpace();
 		StringBuffer fracBuf = new StringBuffer();
-		if (pr.peek() == '.') {
-			numBuf.append((char) pr.read());
-			while ("0123456789".indexOf(pr.peek()) != -1) {
-				numBuf.append((char) pr.peek());
-				fracBuf.append((char) pr.read());
+		if (jr.peek() == '.') {
+			numBuf.append((char) jr.read());
+			while ("0123456789".indexOf(jr.peek()) != -1) {
+				numBuf.append((char) jr.peek());
+				fracBuf.append((char) jr.read());
 			}
 		}
-		pr.skipSpace();
+		jr.skipSpace();
 		StringBuffer expBuf = new StringBuffer();
-		if ((pr.peek() == 'e') || (pr.peek() == 'E')) {
+		if ((jr.peek() == 'e') || (jr.peek() == 'E')) {
 			numBuf.append('e');
-			pr.read();
-			if (pr.peek() == '-') {
-				numBuf.append((char) pr.read());
-				pr.skipSpace();
+			jr.read();
+			if (jr.peek() == '-') {
+				numBuf.append((char) jr.read());
+				jr.skipSpace();
 			}
-			else if (pr.peek() == '+') {
-				pr.read();
-				pr.skipSpace();
+			else if (jr.peek() == '+') {
+				jr.read();
+				jr.skipSpace();
 			}
-			while ("0123456789".indexOf(pr.peek()) != -1) {
-				numBuf.append((char) pr.peek());
-				expBuf.append((char) pr.read());
+			while ("0123456789".indexOf(jr.peek()) != -1) {
+				numBuf.append((char) jr.peek());
+				expBuf.append((char) jr.read());
 			}
 		}
 		Number num;
@@ -633,98 +861,70 @@ public class JsonParser {
 					"\"gender\": \"male\"," +
 					"\"married\": false," +
 					"\"locale\": \"en\"," +
-					"\"locales\": [-3.8e7, {\"primary\": \"en\"}, \"de\", \"fr\"]" +
+					"\"locales\": [-3.8e7, {\"primary\": \"en\"}, \"de\", \"fr\"]," +
+					"\"end\": \"right here\"" +
 				"}";
 		Object obj = parseJson(new StringReader(json));
 		System.out.println(obj);
-//		streamJson(new StringReader(json), new JsonParseListener() {
+		
+		StringWriter sw = new StringWriter();
+		writeJson(sw, obj, "    ");
+		System.out.println(sw.toString());
+//		
+//		streamJson(new StringReader(json), new JsonReceiver() {
+//			LinkedList stack = new LinkedList();
 //			String indent = "";
 //			public void arrayStarted() {
 //				System.out.println(this.indent + "[");
+//				this.stack.addLast(new ArrayList());
 //				this.indent = (this.indent + "  ");
 //			}
 //			public void arrayEnded() {
 //				this.indent = this.indent.substring(2);
+//				ArrayList array = ((ArrayList) this.stack.removeLast());
 //				System.out.println(this.indent + "]");
+//				this.storeObject(array);
 //			}
 //			public void objectStarted() {
 //				System.out.println(this.indent + "{");
+//				this.stack.addLast(new LinkedHashMap());
 //				this.indent = (this.indent + "  ");
 //			}
 //			public void objectPropertyRead(String prop) {
+//				this.stack.addLast(prop);
 //				System.out.println(this.indent + "'" + prop + "':");
 //			}
 //			public void objectEnded() {
 //				this.indent = this.indent.substring(2);
+//				Map object = ((Map) this.stack.removeLast());
 //				System.out.println(this.indent + "}");
+//				this.storeObject(object);
 //			}
 //			public void stringRead(String str) {
 //				System.out.println(this.indent + "'" + str + "'");
+//				this.storeObject(str);
 //			}
 //			public void numberRead(Number num) {
 //				System.out.println(this.indent + "" + num);
+//				this.storeObject(num);
 //			}
 //			public void booleanRead(boolean bool) {
 //				System.out.println(this.indent + "" + bool);
+//				this.storeObject(Boolean.valueOf(bool));
 //			}
 //			public void nullRead() {
 //				System.out.println(this.indent + "null");
+//				this.storeObject(null);
+//			}
+//			private void storeObject(Object object) {
+//				if (this.stack.isEmpty())
+//					System.out.println("RESULT: " + object);
+//				else if (this.stack.getLast() instanceof String) {
+//					Object key = this.stack.removeLast();
+//					((Map) this.stack.getLast()).put(key, object);
+//				}
+//				else ((ArrayList) this.stack.getLast()).add(object);
 //			}
 //		});
-		streamJson(new StringReader(json), new JsonReceiver() {
-			LinkedList stack = new LinkedList();
-			String indent = "";
-			public void arrayStarted() {
-				System.out.println(this.indent + "[");
-				this.stack.addLast(new ArrayList());
-				this.indent = (this.indent + "  ");
-			}
-			public void arrayEnded() {
-				this.indent = this.indent.substring(2);
-				ArrayList array = ((ArrayList) this.stack.removeLast());
-				System.out.println(this.indent + "]");
-				this.storeObject(array);
-			}
-			public void objectStarted() {
-				System.out.println(this.indent + "{");
-				this.stack.addLast(new LinkedHashMap());
-				this.indent = (this.indent + "  ");
-			}
-			public void objectPropertyRead(String prop) {
-				this.stack.addLast(prop);
-				System.out.println(this.indent + "'" + prop + "':");
-			}
-			public void objectEnded() {
-				this.indent = this.indent.substring(2);
-				Map object = ((Map) this.stack.removeLast());
-				System.out.println(this.indent + "}");
-				this.storeObject(object);
-			}
-			public void stringRead(String str) {
-				System.out.println(this.indent + "'" + str + "'");
-				this.storeObject(str);
-			}
-			public void numberRead(Number num) {
-				System.out.println(this.indent + "" + num);
-				this.storeObject(num);
-			}
-			public void booleanRead(boolean bool) {
-				System.out.println(this.indent + "" + bool);
-				this.storeObject(Boolean.valueOf(bool));
-			}
-			public void nullRead() {
-				System.out.println(this.indent + "null");
-				this.storeObject(null);
-			}
-			private void storeObject(Object object) {
-				if (this.stack.isEmpty())
-					System.out.println("RESULT: " + object);
-				else if (this.stack.getLast() instanceof String) {
-					Object key = this.stack.removeLast();
-					((Map) this.stack.getLast()).put(key, object);
-				}
-				else ((ArrayList) this.stack.getLast()).add(object);
-			}
-		});
 	}
 }

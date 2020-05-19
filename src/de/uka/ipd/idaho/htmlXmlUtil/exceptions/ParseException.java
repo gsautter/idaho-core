@@ -10,11 +10,11 @@
  *     * Redistributions in binary form must reproduce the above copyright
  *       notice, this list of conditions and the following disclaimer in the
  *       documentation and/or other materials provided with the distribution.
- *     * Neither the name of the Universität Karlsruhe (TH) nor the
+ *     * Neither the name of the Universitaet Karlsruhe (TH) nor the
  *       names of its contributors may be used to endorse or promote products
  *       derived from this software without specific prior written permission.
  *
- * THIS SOFTWARE IS PROVIDED BY UNIVERSITÄT KARLSRUHE (TH) / KIT AND CONTRIBUTORS 
+ * THIS SOFTWARE IS PROVIDED BY UNIVERSITAET KARLSRUHE (TH) / KIT AND CONTRIBUTORS 
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
  * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
  * ARE DISCLAIMED. IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE FOR ANY
@@ -31,36 +31,25 @@ import java.io.IOException;
 
 
 /**
- * Sub class of IOException capable of handling a 'cause' Throwable
+ * Sub class of IOException specific to grammar based HTML/XML parser, with
+ * dedicated field for tracking error position.
  * 
  * @author sautter
  */
 public class ParseException extends IOException {
-
-	private Throwable cause = null;
+	private int position;
+	ParseException(String message, int position) {
+		super(message);
+		this.position = position;
+	}
 	
-	public ParseException() {
-		super();
-	}
-
-	public ParseException(String message) {
-		super(message);
-	}
-
-	public ParseException(Throwable cause) {
-		super();
-		this.cause = cause;
-	}
-
-	public ParseException(String message, Throwable cause) {
-		super(message);
-		this.cause = cause;
-	}
-
-	/* (non-Javadoc)
-	 * @see java.lang.Throwable#getCause()
+	/**
+	 * Obtain the position of the offending token or character causing the
+	 * exception as the respective offset from the start of the parsed
+	 * character stream.
+	 * @return the position of the offending token or character
 	 */
-	public Throwable getCause() {
-		return this.cause;
+	public int getPosition() {
+		return this.position;
 	}
 }

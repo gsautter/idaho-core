@@ -10,11 +10,11 @@
  *     * Redistributions in binary form must reproduce the above copyright
  *       notice, this list of conditions and the following disclaimer in the
  *       documentation and/or other materials provided with the distribution.
- *     * Neither the name of the Universität Karlsruhe (TH) nor the
+ *     * Neither the name of the Universitaet Karlsruhe (TH) nor the
  *       names of its contributors may be used to endorse or promote products
  *       derived from this software without specific prior written permission.
  *
- * THIS SOFTWARE IS PROVIDED BY UNIVERSITÄT KARLSRUHE (TH) / KIT AND CONTRIBUTORS 
+ * THIS SOFTWARE IS PROVIDED BY UNIVERSITAET KARLSRUHE (TH) / KIT AND CONTRIBUTORS 
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
  * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
  * ARE DISCLAIMED. IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE FOR ANY
@@ -39,31 +39,20 @@ package de.uka.ipd.idaho.htmlXmlUtil.exceptions;
 public class UnexpectedEndTagException extends ParseException {
 	
 	/**
-	 * 
+	 * @param endTag the unexpected end tag
+	 * @param expectedEndTag the next expected end tag
+	 * @param position the offset of the offending tag
 	 */
-	public UnexpectedEndTagException() {
-		super();
+	public UnexpectedEndTagException(String endTag, String expectedEndTag, int position) {
+		super(("Unexpected end tag '" + endTag + "' before '" + expectedEndTag + "' at " + position + "."), position);
 	}
 	
 	/**
-	 * @param message
+	 * Obtain the position of the offending tag causing the exception as its
+	 * offset from the start of the parsed character stream.
+	 * @return the position of the offending tag
 	 */
-	public UnexpectedEndTagException(String message) {
-		super(message);
-	}
-	
-	/**
-	 * @param cause
-	 */
-	public UnexpectedEndTagException(Throwable cause) {
-		super(cause);
-	}
-	
-	/**
-	 * @param message
-	 * @param cause
-	 */
-	public UnexpectedEndTagException(String message, Throwable cause) {
-		super(message, cause);
+	public int getPosition() {
+		return super.getPosition();
 	}
 }

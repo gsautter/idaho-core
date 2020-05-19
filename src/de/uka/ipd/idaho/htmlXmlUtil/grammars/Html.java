@@ -10,11 +10,11 @@
  *     * Redistributions in binary form must reproduce the above copyright
  *       notice, this list of conditions and the following disclaimer in the
  *       documentation and/or other materials provided with the distribution.
- *     * Neither the name of the Universität Karlsruhe (TH) nor the
+ *     * Neither the name of the Universitaet Karlsruhe (TH) nor the
  *       names of its contributors may be used to endorse or promote products
  *       derived from this software without specific prior written permission.
  *
- * THIS SOFTWARE IS PROVIDED BY UNIVERSITÄT KARLSRUHE (TH) / KIT AND CONTRIBUTORS 
+ * THIS SOFTWARE IS PROVIDED BY UNIVERSITAET KARLSRUHE (TH) / KIT AND CONTRIBUTORS 
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
  * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
  * ARE DISCLAIMED. IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE FOR ANY
@@ -33,6 +33,7 @@ import java.util.HashSet;
 import java.util.Properties;
 import java.util.Vector;
 
+import de.uka.ipd.idaho.htmlXmlUtil.TokenSource.Token;
 import de.uka.ipd.idaho.htmlXmlUtil.accessories.IoTools;
 
 /**
@@ -578,18 +579,23 @@ public class Html extends StandardGrammar {
 		int index = 0;
 		boolean inScript = false;
 		boolean inStyle = false;
-		String lastPreservedPart = null;
-		String currentPart;
+//		String lastPreservedPart = null;
+//		String currentPart;
+		Token lastPreservedPart = null;
+		Token currentPart;
 		StringBuffer collector = new StringBuffer();
+		int collectorStart = -1;
 		
 		while (index < ts.size()) {
-			currentPart = ((String) ts.get(index));
+//			currentPart = ((String) ts.get(index));
+			currentPart = ((Token) ts.get(index));
 			
 			//	reassemble parsed scripts
 			if (inScript) {
 				
 				//	end of script
-				if (this.isEndTag(currentPart) && this.getType(currentPart).equalsIgnoreCase("script")) {
+//				if (this.isEndTag(currentPart) && this.getType(currentPart).equalsIgnoreCase("script")) {
+				if (this.isEndTag(currentPart.value) && this.getType(currentPart.value).equalsIgnoreCase("script")) {
 					inScript = false;
 					
 					//	store script content, surround it by comment marks if no already so
@@ -602,23 +608,28 @@ public class Html extends StandardGrammar {
 //						if (!script.endsWith("-->"))
 //							script = script + "\r\n//-->";
 						
-						ts.insertElementAt(script, index);
+//						ts.insertElementAt(script, index);
+						ts.insertElementAt(new Token(script, collectorStart), index);
 						index++;
 					}
 					
 					//	clear collector and store end tag
 					collector.delete(0, collector.length());
+					collectorStart = -1;
 					lastPreservedPart = currentPart;
 					index++;
 				}
 				
 				//	there can be no script within a script
-				else if (this.isTag(currentPart) && this.getType(currentPart).equalsIgnoreCase("script"))
+//				else if (this.isTag(currentPart) && this.getType(currentPart).equalsIgnoreCase("script"))
+				else if (this.isTag(currentPart.value) && this.getType(currentPart.value).equalsIgnoreCase("script"))
 					ts.removeElementAt(index);
 				
 				//	script continues
 				else {
-					collector.append(currentPart);
+					if (collector.length() == 0)
+						collectorStart = currentPart.start;
+					collector.append(currentPart.value);
 					ts.removeElementAt(index);
 				}
 			}
@@ -627,7 +638,8 @@ public class Html extends StandardGrammar {
 			else if (inStyle) {
 				
 				//	end of style
-				if (this.isEndTag(currentPart) && this.getType(currentPart).equalsIgnoreCase("style")) {
+//				if (this.isEndTag(currentPart) && this.getType(currentPart).equalsIgnoreCase("style")) {
+				if (this.isEndTag(currentPart.value) && this.getType(currentPart.value).equalsIgnoreCase("style")) {
 					inStyle = false;
 					
 					//	store style content, surround it by comment marks if no already so
@@ -638,57 +650,77 @@ public class Html extends StandardGrammar {
 //						if (!style.endsWith("-->"))
 //							style = style + "\n//-->";
 						
-						ts.insertElementAt(style, index);
+//						ts.insertElementAt(style, index);
+						ts.insertElementAt(new Token(style, collectorStart), index);
 						index++;
 					}
 					
 					//	clear collector and store end tag
 					collector.delete(0, collector.length());
+					collectorStart = -1;
 					lastPreservedPart = currentPart;
 					index++;
 				}
 				
 				//	there can be no style within a style
-				else if (this.isTag(currentPart) && this.getType(currentPart).equalsIgnoreCase("style"))
+//				else if (this.isTag(currentPart) && this.getType(currentPart).equalsIgnoreCase("style"))
+				else if (this.isTag(currentPart.value) && this.getType(currentPart.value).equalsIgnoreCase("style"))
 					ts.removeElementAt(index);
 					
 				//	style continues
 				else {
-					collector.append(currentPart);
+					if (collector.length() == 0)
+						collectorStart = currentPart.start;
+					collector.append(currentPart.value);
 					ts.removeElementAt(index);
 				}
 			}
 			
 			//	check subsequent equal end tags
-			else if (this.isEndTag(currentPart) && currentPart.equalsIgnoreCase(lastPreservedPart) && !this.subsequentEndTagsAllowedTypes.contains(this.getType(currentPart).toLowerCase()))
+//			else if (this.isEndTag(currentPart) && currentPart.equalsIgnoreCase(lastPreservedPart) && !this.subsequentEndTagsAllowedTypes.contains(this.getType(currentPart).toLowerCase()))
+			else if ((lastPreservedPart != null) && this.isEndTag(currentPart.value) && currentPart.value.equalsIgnoreCase(lastPreservedPart.value) && !this.subsequentEndTagsAllowedTypes.contains(this.getType(currentPart.value).toLowerCase()))
 				ts.removeElementAt(index);
+//			
+//			//	repair badly marked comments
+//			else if (currentPart.startsWith("<!-") && currentPart.endsWith("->")) {
+//				if (!currentPart.startsWith("<!--"))
+//					currentPart = "<!--" + currentPart.substring("<!-".length());
+//				if (!currentPart.endsWith("-->"))
+//					currentPart = currentPart.substring(0, (currentPart.length() - "->".length())) + "-->";
+//				ts.setElementAt(currentPart, index);
+//				lastPreservedPart = currentPart;
+//				index++;
+//			}
 			
 			//	repair badly marked comments
-			else if (currentPart.startsWith("<!-") && currentPart.endsWith("->")) {
-				if (!currentPart.startsWith("<!--"))
-					currentPart = "<!--" + currentPart.substring("<!-".length());
-				if (!currentPart.endsWith("-->"))
-					currentPart = currentPart.substring(0, (currentPart.length() - "->".length())) + "-->";
-				ts.setElementAt(currentPart, index);
+			else if (currentPart.value.startsWith("<!-") && currentPart.value.endsWith("->")) {
+				String currentPartValue = currentPart.value;
+				if (!currentPartValue.startsWith("<!--"))
+					currentPartValue = "<!--" + currentPartValue.substring("<!-".length());
+				if (!currentPartValue.endsWith("-->"))
+					currentPartValue = currentPartValue.substring(0, (currentPartValue.length() - "->".length())) + "-->";
+				ts.setElementAt(new Token(currentPartValue, currentPart.start), index);
 				lastPreservedPart = currentPart;
 				index++;
 			}
 			
 			//	reassemble parsed scripts
-			else if (this.isTag(currentPart) && !this.isEndTag(currentPart) && this.getType(currentPart).equalsIgnoreCase("script")) {
+//			else if (this.isTag(currentPart) && !this.isEndTag(currentPart) && this.getType(currentPart).equalsIgnoreCase("script")) {
+			else if (this.isTag(currentPart.value) && !this.isEndTag(currentPart.value) && this.getType(currentPart.value).equalsIgnoreCase("script")) {
 				inScript = true;
 				lastPreservedPart = currentPart;
 				index++;
 			}
 			
 			//	reassemble parsed styles
-			else if (this.isTag(currentPart) && !this.isEndTag(currentPart) && this.getType(currentPart).equalsIgnoreCase("style")) {
+//			else if (this.isTag(currentPart) && !this.isEndTag(currentPart) && this.getType(currentPart).equalsIgnoreCase("style")) {
+			else if (this.isTag(currentPart.value) && !this.isEndTag(currentPart.value) && this.getType(currentPart.value).equalsIgnoreCase("style")) {
 				inStyle = true;
 				lastPreservedPart = currentPart;
 				index++;
 			}
 			
-			//	otherwise add the part
+			//	otherwise simply retain the part
 			else {
 				lastPreservedPart = currentPart;
 				index++;

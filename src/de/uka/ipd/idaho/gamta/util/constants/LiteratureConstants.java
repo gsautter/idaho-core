@@ -10,11 +10,11 @@
  *     * Redistributions in binary form must reproduce the above copyright
  *       notice, this list of conditions and the following disclaimer in the
  *       documentation and/or other materials provided with the distribution.
- *     * Neither the name of the Universität Karlsruhe (TH) nor the
+ *     * Neither the name of the Universitaet Karlsruhe (TH) nor the
  *       names of its contributors may be used to endorse or promote products
  *       derived from this software without specific prior written permission.
  *
- * THIS SOFTWARE IS PROVIDED BY UNIVERSITÄT KARLSRUHE (TH) / KIT AND CONTRIBUTORS 
+ * THIS SOFTWARE IS PROVIDED BY UNIVERSITAET KARLSRUHE (TH) / KIT AND CONTRIBUTORS 
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
  * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
  * ARE DISCLAIMED. IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE FOR ANY
@@ -125,8 +125,11 @@ public interface LiteratureConstants {
 	/**	the annotation type for marking a group of bibliographic references in a document */
 	public static final String BIBLIOGRAPHIC_REFERENCE_GROUP_TYPE = "bibRefGroup";
 	
-	/** the attribute for a citation or bib_ref holding the link to to the cited document */
+	/** the attribute for a citation or bibliographic reference holding the link to to the cited document */
 	public static final String CITED_PUBLICATION_URL_ATTRIBUTE = "publicationUrl";
+	
+	/** marker attribute for an in-line object (e.g. a caption, bibliographic reference, or table) that is embedded in the main text of a document */
+	public static final String IN_LINE_OBJECT_MARKER_ATTRIBUTE = "inLine";
 	
 	
 	/**	the annotation type for marking a page in a print layouted document */

@@ -10,11 +10,11 @@
  *     * Redistributions in binary form must reproduce the above copyright
  *       notice, this list of conditions and the following disclaimer in the
  *       documentation and/or other materials provided with the distribution.
- *     * Neither the name of the Universität Karlsruhe (TH) nor the
+ *     * Neither the name of the Universitaet Karlsruhe (TH) nor the
  *       names of its contributors may be used to endorse or promote products
  *       derived from this software without specific prior written permission.
  *
- * THIS SOFTWARE IS PROVIDED BY UNIVERSITÄT KARLSRUHE (TH) / KIT AND CONTRIBUTORS 
+ * THIS SOFTWARE IS PROVIDED BY UNIVERSITAET KARLSRUHE (TH) / KIT AND CONTRIBUTORS 
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
  * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
  * ARE DISCLAIMED. IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE FOR ANY
@@ -81,7 +81,8 @@ public class TreeWalker {
 			indent = indent + this.grammar.getStandardIndent();
 		TreeNode[] children = node.getChildNodes();
 
-		if (children.length == 0) return (indent + this.produceSingularTag(node));
+		if (children.length == 0)
+			return (indent + this.produceSingularTag(node));
 
 		StringBuffer assembler = new StringBuffer(indent + this.produceStartTag(node) + "\n");
 		for (int c = 0; c < children.length; c++)
@@ -106,7 +107,7 @@ public class TreeWalker {
 				indent = indent + this.grammar.getStandardIndent();
 			return (indent + node.getNodeValue() + "\n");
 		}
-		return this.walkTree(node, treeDepth);
+		else return this.walkTree(node, treeDepth);
 	}
 
 	/**
@@ -132,7 +133,8 @@ public class TreeWalker {
 			indent = indent + this.grammar.getStandardIndent();
 		TreeNode[] children = node.getChildNodes();
 
-		if (children.length == 0) target.storeToken((indent + this.produceSingularTag(node)), treeDepth);
+		if (children.length == 0)
+			target.storeToken((indent + this.produceSingularTag(node)), treeDepth);
 
 		else {
 			target.storeToken((indent + this.produceStartTag(node)), treeDepth);
@@ -158,7 +160,8 @@ public class TreeWalker {
 			for (int i = 0; i < treeDepth; i++)
 				indent = indent + this.grammar.getStandardIndent();
 			target.storeToken((indent + node.getNodeValue()), treeDepth);
-		} else this.walkTree(node, treeDepth, target);
+		}
+		else this.walkTree(node, treeDepth, target);
 	}
 
 	/**
@@ -168,9 +171,12 @@ public class TreeWalker {
 	 */
 	public String produceSingularTag(TreeNode node) {
 		String attributeString = this.produceAttributesForTag(node);
-		if (attributeString.length() > 0) attributeString = this.grammar.getTagAttributeSeparator() + attributeString;
-		if (grammar.isStrictXML()) return (grammar.getTagStart() + this.translateTagType(node.getNodeType()) + attributeString + this.grammar.getEndTagMarker() + "" + this.grammar.getTagEnd() + "\n");
-		else if (grammar.isSingularTagType(node.getNodeType())) return this.produceStartTag(node);
+		if (attributeString.length() > 0)
+			attributeString = this.grammar.getTagAttributeSeparator() + attributeString;
+		if (grammar.isStrictXML())
+			return (grammar.getTagStart() + this.translateTagType(node.getNodeType()) + attributeString + this.grammar.getEndTagMarker() + "" + this.grammar.getTagEnd() + "\n");
+		else if (grammar.isSingularTagType(node.getNodeType()))
+			return this.produceStartTag(node);
 		else return (this.produceStartTag(node) + this.produceEndTag(node));
 	}
 
@@ -181,7 +187,8 @@ public class TreeWalker {
 	 */
 	public String produceStartTag(TreeNode node) {
 		String attributeString = this.produceAttributesForTag(node);
-		if (attributeString.length() > 0) attributeString = this.grammar.getTagAttributeSeparator() + attributeString;
+		if (attributeString.length() > 0)
+			attributeString = this.grammar.getTagAttributeSeparator() + attributeString;
 		return (grammar.getTagStart() + this.translateTagType(node.getNodeType()) + attributeString + this.grammar.getTagEnd());
 	}
 

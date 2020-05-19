@@ -10,11 +10,11 @@
  *     * Redistributions in binary form must reproduce the above copyright
  *       notice, this list of conditions and the following disclaimer in the
  *       documentation and/or other materials provided with the distribution.
- *     * Neither the name of the Universität Karlsruhe (TH) nor the
+ *     * Neither the name of the Universitaet Karlsruhe (TH) nor the
  *       names of its contributors may be used to endorse or promote products
  *       derived from this software without specific prior written permission.
  *
- * THIS SOFTWARE IS PROVIDED BY UNIVERSITÄT KARLSRUHE (TH) / KIT AND CONTRIBUTORS 
+ * THIS SOFTWARE IS PROVIDED BY UNIVERSITAET KARLSRUHE (TH) / KIT AND CONTRIBUTORS 
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
  * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
  * ARE DISCLAIMED. IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE FOR ANY
@@ -161,6 +161,33 @@ public class MultipartFormData {
 	 * @throws IOException
 	 */
 	public InputStream postTo(URL url, String encoding) throws IOException {
+		return this.sendTo("POST", url, encoding);
+	}
+	
+	/**
+	 * Send the request to some URL using HTTP PUT. This method expends all
+	 * input streams added as parameters, so it can be used only once per
+	 * instance.
+	 * @param url the URL to send the data to
+	 * @param encoding the encoding to use for textual data
+	 * @return an input stream for reading the server response
+	 * @throws IOException
+	 */
+	public InputStream putTo(URL url, String encoding) throws IOException {
+		return this.sendTo("PUT", url, encoding);
+	}
+	
+	/**
+	 * Send the request to some URL using a given HTTP method. This method
+	 * expends all input streams added as parameters, so it can be used only
+	 * once per instance.
+	 * @param method the HTTP method to use
+	 * @param url the URL to send the data to
+	 * @param encoding the encoding to use for textual data
+	 * @return an input stream for reading the server response
+	 * @throws IOException
+	 */
+	public InputStream sendTo(String method, URL url, String encoding) throws IOException {
 		if (this.parameters == null)
 			throw new IllegalStateException("Request already sent");
 		
@@ -168,7 +195,7 @@ public class MultipartFormData {
 		final HttpURLConnection con = ((HttpURLConnection) url.openConnection());
 		con.setDoOutput(true);
 		con.setDoInput(true);
-		con.setRequestMethod("POST");
+		con.setRequestMethod(method);
 		
 		//	generate boundary
 		String boundary = ("---------------------------" + System.currentTimeMillis());

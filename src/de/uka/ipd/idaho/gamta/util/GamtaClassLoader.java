@@ -10,11 +10,11 @@
  *     * Redistributions in binary form must reproduce the above copyright
  *       notice, this list of conditions and the following disclaimer in the
  *       documentation and/or other materials provided with the distribution.
- *     * Neither the name of the Universität Karlsruhe (TH) nor the
+ *     * Neither the name of the Universitaet Karlsruhe (TH) nor the
  *       names of its contributors may be used to endorse or promote products
  *       derived from this software without specific prior written permission.
  *
- * THIS SOFTWARE IS PROVIDED BY UNIVERSITÄT KARLSRUHE (TH) / KIT AND CONTRIBUTORS 
+ * THIS SOFTWARE IS PROVIDED BY UNIVERSITAET KARLSRUHE (TH) / KIT AND CONTRIBUTORS 
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
  * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
  * ARE DISCLAIMED. IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE FOR ANY
@@ -121,7 +121,8 @@ public class GamtaClassLoader extends ClassLoader {
 	public static Object[] loadComponents(final File componentFolder, Class componentSuperClass, ComponentInitializer componentInitializer) {
 		
 		// get base directory
-		if (!componentFolder.exists()) componentFolder.mkdir();
+		if (!componentFolder.exists())
+			componentFolder.mkdir();
 		
 		// get data names
 		String[] dataNames = readFileList(componentFolder, (componentFolder.getAbsolutePath().length() + 1), 1);
@@ -236,15 +237,17 @@ public class GamtaClassLoader extends ClassLoader {
 	 *         the specified list
 	 */
 	public static Object[] loadComponents(String[] dataNames, String dataNamePrefix, InputStreamProvider isProvider, Class componentSuperClass, ComponentInitializer componentInitializer) {
-
+		
 		// normalize prefix
-		if (dataNamePrefix == null) dataNamePrefix = "";
-		else if ((dataNamePrefix.length() != 0) && !dataNamePrefix.endsWith("/")) dataNamePrefix += "/";
-
+		if (dataNamePrefix == null)
+			dataNamePrefix = "";
+		else if ((dataNamePrefix.length() != 0) && !dataNamePrefix.endsWith("/"))
+			dataNamePrefix += "/";
+		
 		System.out.println("GamtaClassLoader: loading components from data list:");
 		System.out.println("  component class: " + componentSuperClass.getName());
 		System.out.println("  path prefix: " + dataNamePrefix);
-		System.out.println("  data list names are:");
+//		System.out.println("  data list names are:");
 //		for (int d = 0; d < dataNames.length; d++)
 //			System.out.println("  - " + dataNames[d]);
 		
@@ -265,11 +268,11 @@ public class GamtaClassLoader extends ClassLoader {
 				JarEntry je;
 				while ((je = jis.getNextJarEntry()) != null) {
 					String jarEntryName = je.getName();
-
+					
 					// new class file
 					if (jarEntryName.endsWith(".class")) {
 						String className = StringUtils.replaceAll(jarEntryName.substring(0, (jarEntryName.length() - 6)), "/", ".");
-
+						
 						// collect names of all non-nested classes
 						if (className.indexOf('$') == -1) {
 							jarClassNames.addElementIgnoreDuplicates(className);
@@ -279,17 +282,17 @@ public class GamtaClassLoader extends ClassLoader {
 					}
 				}
 				jis.close();
-
+				
 				// add name of jar to list of jars to load
 				jarNameList.addElement(jarName);
-
+				
 				// check for binary folder (DEPRECATED, FOR BACKWARD COMPATIBILITY ONLY)
 				String[] jarBinJarNames = getJarNames(dataNames, (jarName.substring(0, (jarName.length() - 4)) + "Bin"));
 				for (int jbj = 0; jbj < jarBinJarNames.length; jbj++) {
 					System.out.println("    - " + jarBinJarNames[jbj]);
 					jarNameList.addElement(jarBinJarNames[jbj]);
 				}
-
+				
 				// check for library folder
 				String[] jarLibJarNames = getJarNames(dataNames, (jarName.substring(0, (jarName.length() - 4)) + "Lib"));
 				for (int jlj = 0; jlj < jarLibJarNames.length; jlj++) {
@@ -387,7 +390,8 @@ public class GamtaClassLoader extends ClassLoader {
 				}
 				catch (AccessControlException ace) {
 					Permission p = ace.getPermission();
-					if (p == null) System.out.println("  plugin violated security constraint.");
+					if (p == null)
+						System.out.println("  plugin violated security constraint.");
 					else System.out.println("  plugin violated security constraint, permission '" + p.getActions() + "' was denied for '" + p.getName() + "' by runtime environment.");
 				}
 				catch (Exception e) {
@@ -399,7 +403,7 @@ public class GamtaClassLoader extends ClassLoader {
 				}
 			}
 		}
-
+		
 		return componentList.toArray();
 	}
 	

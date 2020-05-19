@@ -10,11 +10,11 @@
  *     * Redistributions in binary form must reproduce the above copyright
  *       notice, this list of conditions and the following disclaimer in the
  *       documentation and/or other materials provided with the distribution.
- *     * Neither the name of the Universität Karlsruhe (TH) nor the
+ *     * Neither the name of the Universitaet Karlsruhe (TH) nor the
  *       names of its contributors may be used to endorse or promote products
  *       derived from this software without specific prior written permission.
  *
- * THIS SOFTWARE IS PROVIDED BY UNIVERSITÄT KARLSRUHE (TH) / KIT AND CONTRIBUTORS 
+ * THIS SOFTWARE IS PROVIDED BY UNIVERSITAET KARLSRUHE (TH) / KIT AND CONTRIBUTORS 
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
  * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
  * ARE DISCLAIMED. IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE FOR ANY
@@ -37,7 +37,7 @@ import java.io.Reader;
 import java.io.StringReader;
 import java.util.Vector;
 
-import de.uka.ipd.idaho.htmlXmlUtil.exceptions.ParseException;
+import de.uka.ipd.idaho.htmlXmlUtil.exceptions.UnexpectedCharacterException;
 import de.uka.ipd.idaho.htmlXmlUtil.grammars.Grammar;
 import de.uka.ipd.idaho.htmlXmlUtil.grammars.StandardGrammar;
 
@@ -50,6 +50,15 @@ import de.uka.ipd.idaho.htmlXmlUtil.grammars.StandardGrammar;
  * @author sautter
  */
 public class TokenSource {
+	
+	public static class Token {
+		public final String value;
+		public final int start;
+		public Token(String value, int start) {
+			this.value = value;
+			this.start = start;
+		}
+	}
 	
 	private static final boolean DEBUG = false;
 	
@@ -124,9 +133,13 @@ public class TokenSource {
 	
 	/**	@return	the first token in the queue
 	 */
-	public String retrieveToken() throws IOException {
+//	public String retrieveToken() throws IOException {
+//		this.produceTokens();
+//		return ((this.tokenBuffer.size() == 0) ? null : ((String) this.tokenBuffer.remove(0)));
+//	}
+	public Token retrieveToken() throws IOException {
 		this.produceTokens();
-		return ((this.tokenBuffer.size() == 0) ? null : ((String) this.tokenBuffer.remove(0)));
+		return ((this.tokenBuffer.size() == 0) ? null : ((Token) this.tokenBuffer.remove(0)));
 	}
 	
 	private void produceTokens() throws IOException {
@@ -134,6 +147,7 @@ public class TokenSource {
 		
 		//	refill buffer
 		while ((this.charSource.peek() != -1) && ((this.tokenBuffer.size() < this.tokenLookahead) || (awaitedEndTag != null))) {
+			int tokenStart = this.charSource.readThusFar();
 			String token = this.produceToken((awaitedEndTag == null) ? null : ("" + this.tagStart + "" + this.endTagMarker + "" + awaitedEndTag + "" + this.tagEnd));
 			if (DEBUG) System.out.println("TokenSource got token: " + token);
 			if (token.length() == 0)
@@ -148,7 +162,8 @@ public class TokenSource {
 			}
 			
 			//	store token
-			this.tokenBuffer.addElement(token);
+//			this.tokenBuffer.addElement(token);
+			this.tokenBuffer.addElement(new Token(token, tokenStart));
 		}
 		
 		//	check buffer
@@ -309,7 +324,8 @@ public class TokenSource {
 				}
 				
 				//	we're not correcting errors ...
-				else throw new ParseException("Invalid character '" + ((char) this.charSource.peek()) + "', expected name");
+//				else throw new ParseException("Invalid character '" + ((char) this.charSource.peek()) + "', expected name");
+				else throw new UnexpectedCharacterException(((char) charSource.peek()), this.charSource.readThusFar(), "attribute name");
 			}
 			
 			//	we have a value (tolerate missing separator if configured that way)
@@ -318,7 +334,8 @@ public class TokenSource {
 				if (this.charSource.peek() == this.tagAttributeValueSeparator)
 					this.charSource.read();
 				else if (!this.correctErrors)
-					throw new ParseException("Invalid character '" + ((char) this.charSource.peek()) + "', expected '" + this.tagAttributeValueSeparator + "'");
+//					throw new ParseException("Invalid character '" + ((char) this.charSource.peek()) + "', expected '" + this.tagAttributeValueSeparator + "'");
+					throw new UnexpectedCharacterException(((char) charSource.peek()), this.charSource.readThusFar(), ("" + this.tagAttributeValueSeparator));
 				this.skipWhitespace(false);
 				attribValue = LookaheadReader.cropAttributeValue(this.charSource, this.grammar, tagType, attribName, this.tagEnd, this.endTagMarker);
 				if (DEBUG) System.out.println("Attrib value: " + attribValue);
@@ -489,12 +506,14 @@ public class TokenSource {
 //		//	Tokenizes OK
 ////		TokenSource ts = getTokenSource(new StringReader("<t a=\"value with \"invalid\" chars\">text</t>"), new StandardGrammar());
 //		//	Tokenizes OK
-////		TokenSource ts = getTokenSource(new StringReader("<t a=\"Støp­Bowitz, C. (1992) Polychètes pèlagiques des Campagnes de \" L’ombango \" dans les eaux équatoriales et tropicales ouest­africaines. Editions de l’ORSTOM. Coll. Études et Thèses. Paris, 115 pp.\">text</t>"), new StandardGrammar());
+////		TokenSource ts = getTokenSource(new StringReader("<t a=\"Stop­Bowitz, C. (1992) Polychetes pelagiques des Campagnes de \" L'ombango \" dans les eaux equatoriales et tropicales ouest­africaines. Editions de l'ORSTOM. Coll. Etudes et Theses. Paris, 115 pp.\">text</t>"), new StandardGrammar());
 //		//	Tokenizes BULLSHIT ==> TODO improve it !!!
-////		TokenSource ts = getTokenSource(new StringReader("<t a=\"Støp­Bowitz, C. (1992) Polychètes pèlagiques des Campagnes de \" L'ombango \" dans les eaux équatoriales et tropicales ouest­africaines. Editions de l'ORSTOM. Coll. Études et Thèses. Paris, 115 pp.\">text</t>"), new StandardGrammar());
+////		TokenSource ts = getTokenSource(new StringReader("<t a=\"Stop­Bowitz, C. (1992) Polychetes pelagiques des Campagnes de \" L'ombango \" dans les eaux equatoriales et tropicales ouest­africaines. Editions de l'ORSTOM. Coll. Etudes et Theses. Paris, 115 pp.\">text</t>"), new StandardGrammar());
 //		while (ts.hasMoreTokens()) {
-//			String token = ts.retrieveToken();
-//			if (!DEBUG) System.out.println("Token: '" + token + "'");
+////			String token = ts.retrieveToken();
+//			Token token = ts.retrieveToken();
+////			if (!DEBUG) System.out.println("Token: '" + token + "'");
+//			if (!DEBUG) System.out.println("Token: '" + token.value + "'");
 ////			if (html.isTag(token) && !html.isEndTag(token)) {
 ////				TreeNodeAttributeSet tnas = TreeNodeAttributeSet.getTagAttributes(token, html);
 ////				String[] ans = tnas.getAttributeNames();

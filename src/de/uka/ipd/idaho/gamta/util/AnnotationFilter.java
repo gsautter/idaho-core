@@ -10,11 +10,11 @@
  *     * Redistributions in binary form must reproduce the above copyright
  *       notice, this list of conditions and the following disclaimer in the
  *       documentation and/or other materials provided with the distribution.
- *     * Neither the name of the Universität Karlsruhe (TH) nor the
+ *     * Neither the name of the Universitaet Karlsruhe (TH) nor the
  *       names of its contributors may be used to endorse or promote products
  *       derived from this software without specific prior written permission.
  *
- * THIS SOFTWARE IS PROVIDED BY UNIVERSITÄT KARLSRUHE (TH) / KIT AND CONTRIBUTORS 
+ * THIS SOFTWARE IS PROVIDED BY UNIVERSITAET KARLSRUHE (TH) / KIT AND CONTRIBUTORS 
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
  * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
  * ARE DISCLAIMED. IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE FOR ANY
@@ -37,6 +37,7 @@ import de.uka.ipd.idaho.gamta.AnnotationUtils;
 import de.uka.ipd.idaho.gamta.AttributeUtils;
 import de.uka.ipd.idaho.gamta.Gamta;
 import de.uka.ipd.idaho.gamta.MutableAnnotation;
+import de.uka.ipd.idaho.gamta.QueriableAnnotation;
 
 /**
  * Utility library for renaming, removing, and deleting annotations and
@@ -474,6 +475,85 @@ public class AnnotationFilter {
 			else annotations[a].changeTypeTo(newType);
 		
 		return (annotations.length != 0);
+	}
+	
+	/**
+	 * Rename an XML namespace present in a prefix of annotation types and/or
+	 * attribute names. The <code>oldNsPrefix</code> argument has to be an
+	 * actual namespace declaration (including the terminal colon); however,
+	 * the <code>newNsPrefix</code> argument does not have to be. The latter
+	 * is to facilitate removing namespace qualifiers or replacing them with
+	 * another prefix not validated with maximum peculiarity by XML processing
+	 * facilities like XSL transformers, e.g. one ending in an underscore
+	 * instead of a colon.
+	 * @param data the queriable annotation to rename the namespace in
+	 * @param oldNsPrefix the namespace prefix to replace
+	 * @param newNsPrefix the replacement namespace prefix
+	 * @return true if the argument annotation was modified in any kind of way
+	 */
+	public static boolean renameNamespace(QueriableAnnotation data, String oldNsPrefix, String newNsPrefix) {
+		
+		//	check and normalize old namespace prefix
+		if (oldNsPrefix == null)
+			return false;
+		oldNsPrefix = oldNsPrefix.trim();
+		if (!oldNsPrefix.matches("[A-Za-z][A-Za-z\\-\\_]*\\:"))
+			return false;
+		
+		//	check and normalize new namespace prefix (may be empty or non-namespace as well)
+		if (newNsPrefix == null)
+			newNsPrefix = "";
+		else {
+			newNsPrefix = newNsPrefix.trim();
+			if ((newNsPrefix.length() != 0) && !newNsPrefix.matches("[A-Za-z\\-\\_]+\\:?"))
+				return false;
+		}
+		
+		//	are we actually changing anything?
+		if (oldNsPrefix.equals(newNsPrefix))
+			return false;
+		
+		//	perform modifications
+		boolean modified = renameNamespace(((Annotation) data), oldNsPrefix, newNsPrefix);
+		Annotation[] annots = data.getAnnotations();
+		for (int a = 0; a < annots.length; a++)
+			modified = (renameNamespace(annots[a], oldNsPrefix, newNsPrefix) | modified);
+		
+		//	report modification (if any)
+		return modified;
+	}
+	
+	private static boolean renameNamespace(Annotation annot, String oldNsPrefix, String newNsPrefix) {
+		boolean modified = false;
+		
+		//	change or remove namespace declaration
+		String oldNs = ("xmlns:" + oldNsPrefix.substring(0, (oldNsPrefix.length() - ":".length())));
+		if (annot.hasAttribute(oldNs)) {
+			String ns = ((String) annot.removeAttribute(oldNs));
+			if (newNsPrefix.endsWith(":")) {
+				String newNs = ("xmlns:" + newNsPrefix.substring(0, (newNsPrefix.length() - ":".length())));
+				annot.setAttribute(newNs, ns);
+			}
+			modified = true;
+		}
+		
+		//	change annotation type
+		if (annot.getType().startsWith(oldNsPrefix)) {
+			annot.changeTypeTo(newNsPrefix + annot.getType().substring(oldNsPrefix.length()));
+			modified = true;
+		}
+		
+		//	change attribute names
+		String[] ans = annot.getAttributeNames();
+		for (int a = 0; a < ans.length; a++)
+			if (ans[a].startsWith(oldNsPrefix)) {
+				Object av = ((String) annot.removeAttribute(ans[a]));
+				annot.setAttribute((newNsPrefix + ans[a].substring(oldNsPrefix.length())), av);
+				modified = true;
+			}
+		
+		//	report modification (if any)
+		return modified;
 	}
 	
 	/**

@@ -10,11 +10,11 @@
  *     * Redistributions in binary form must reproduce the above copyright
  *       notice, this list of conditions and the following disclaimer in the
  *       documentation and/or other materials provided with the distribution.
- *     * Neither the name of the Universität Karlsruhe (TH) nor the
+ *     * Neither the name of the Universitaet Karlsruhe (TH) nor the
  *       names of its contributors may be used to endorse or promote products
  *       derived from this software without specific prior written permission.
  *
- * THIS SOFTWARE IS PROVIDED BY UNIVERSITÄT KARLSRUHE (TH) / KIT AND CONTRIBUTORS 
+ * THIS SOFTWARE IS PROVIDED BY UNIVERSITAET KARLSRUHE (TH) / KIT AND CONTRIBUTORS 
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
  * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
  * ARE DISCLAIMED. IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE FOR ANY
@@ -36,6 +36,7 @@ import java.nio.CharBuffer;
 import java.nio.charset.Charset;
 import java.util.Set;
 
+import de.uka.ipd.idaho.gamta.AnnotationUtils.XmlOutputOptions;
 import de.uka.ipd.idaho.gamta.QueriableAnnotation;
 
 /**
@@ -53,7 +54,7 @@ public class AnnotationInputStream extends InputStream {
 	private Reader annotationReader;
 	
 	private ByteBuffer byteBuffer;
-	int bbPosition = 0;
+	private int byteBufferPos = 0;
 	
 	/**
 	 * Constructor
@@ -62,7 +63,7 @@ public class AnnotationInputStream extends InputStream {
 	 *            bytes
 	 */
 	public AnnotationInputStream(QueriableAnnotation source, String charset) {
-		this(source, false, null, charset, null, null);
+		this(source, null, charset, AnnotationReader.wrapXmlOutputOptions(false, null, null));
 	}
 	
 	/**
@@ -73,7 +74,7 @@ public class AnnotationInputStream extends InputStream {
 	 *            bytes
 	 */
 	public AnnotationInputStream(QueriableAnnotation source, boolean outputIDs, String charset) {
-		this(source, outputIDs, null, charset, null, null);
+		this(source, null, charset, AnnotationReader.wrapXmlOutputOptions(outputIDs, null, null));
 	}
 
 	/**
@@ -82,7 +83,7 @@ public class AnnotationInputStream extends InputStream {
 	 * @param charset the charset to use for encoding the chars to bytes
 	 */
 	public AnnotationInputStream(QueriableAnnotation source, Charset charset) {
-		this(source, false, null, charset, null, null);
+		this(source, null, charset, AnnotationReader.wrapXmlOutputOptions(false, null, null));
 	}
 
 	/**
@@ -92,9 +93,9 @@ public class AnnotationInputStream extends InputStream {
 	 * @param charset the charset to use for encoding the chars to bytes
 	 */
 	public AnnotationInputStream(QueriableAnnotation source, boolean outputIDs, Charset charset) {
-		this(source, outputIDs, null, charset, null, null);
+		this(source, null, ((String) null), AnnotationReader.wrapXmlOutputOptions(outputIDs, null, null));
 	}
-
+	
 	/**
 	 * Constructor
 	 * @param source the DocumentPart to read from
@@ -104,7 +105,7 @@ public class AnnotationInputStream extends InputStream {
 	 *            bytes
 	 */
 	public AnnotationInputStream(QueriableAnnotation source, String indent, String charset) {
-		this(source, false, indent, charset, null, null);
+		this(source, indent, charset, AnnotationReader.wrapXmlOutputOptions(false, null, null));
 	}
 
 	/**
@@ -117,9 +118,9 @@ public class AnnotationInputStream extends InputStream {
 	 *            bytes
 	 */
 	public AnnotationInputStream(QueriableAnnotation source, boolean outputIDs, String indent, String charset) {
-		this(source, outputIDs, indent, charset, null, null);
+		this(source, indent, charset, AnnotationReader.wrapXmlOutputOptions(outputIDs, null, null));
 	}
-
+	
 	/**
 	 * Constructor
 	 * @param source the DocumentPart to read from
@@ -128,9 +129,9 @@ public class AnnotationInputStream extends InputStream {
 	 * @param charset the charset to use for encoding the chars to bytes
 	 */
 	public AnnotationInputStream(QueriableAnnotation source, String indent, Charset charset) {
-		this(source, false, indent, charset, null, null);
+		this(source, indent, charset, AnnotationReader.wrapXmlOutputOptions(false, null, null));
 	}
-
+	
 	/**
 	 * Constructor
 	 * @param source the DocumentPart to read from
@@ -140,7 +141,7 @@ public class AnnotationInputStream extends InputStream {
 	 * @param charset the charset to use for encoding the chars to bytes
 	 */
 	public AnnotationInputStream(QueriableAnnotation source, boolean outputIDs, String indent, Charset charset) {
-		this(source, outputIDs, indent, charset, null, null);
+		this(source, indent, charset, AnnotationReader.wrapXmlOutputOptions(outputIDs, null, null));
 	}
 
 	/**
@@ -156,7 +157,7 @@ public class AnnotationInputStream extends InputStream {
 	 *            attributes)
 	 */
 	public AnnotationInputStream(QueriableAnnotation source, String charset, Set typeFilter, Set attributeFilter) {
-		this(source, false, null, charset, typeFilter, attributeFilter);
+		this(source, null, charset, AnnotationReader.wrapXmlOutputOptions(false, typeFilter, attributeFilter));
 	}
 
 	/**
@@ -173,7 +174,7 @@ public class AnnotationInputStream extends InputStream {
 	 *            attributes)
 	 */
 	public AnnotationInputStream(QueriableAnnotation source, boolean outputIDs, String charset, Set typeFilter, Set attributeFilter) {
-		this(source, outputIDs, null, charset, typeFilter, attributeFilter);
+		this(source, null, charset, AnnotationReader.wrapXmlOutputOptions(outputIDs, typeFilter, attributeFilter));
 	}
 
 	/**
@@ -188,7 +189,7 @@ public class AnnotationInputStream extends InputStream {
 	 *            attributes)
 	 */
 	public AnnotationInputStream(QueriableAnnotation source, Charset charset, Set typeFilter, Set attributeFilter) {
-		this(source, false, null, charset, typeFilter, attributeFilter);
+		this(source, null, charset, AnnotationReader.wrapXmlOutputOptions(false, typeFilter, attributeFilter));
 	}
 
 	/**
@@ -204,7 +205,7 @@ public class AnnotationInputStream extends InputStream {
 	 *            attributes)
 	 */
 	public AnnotationInputStream(QueriableAnnotation source, boolean outputIDs, Charset charset, Set typeFilter, Set attributeFilter) {
-		this(source, outputIDs, null, charset, typeFilter, attributeFilter);
+		this(source, null, charset, AnnotationReader.wrapXmlOutputOptions(outputIDs, typeFilter, attributeFilter));
 	}
 
 	/**
@@ -222,7 +223,7 @@ public class AnnotationInputStream extends InputStream {
 	 *            attributes)
 	 */
 	public AnnotationInputStream(QueriableAnnotation source, String indent, String charset, Set typeFilter, Set attributeFilter) {
-		this(source, false, indent, ((charset == null) ? Charset.defaultCharset() : Charset.forName(charset)), typeFilter, attributeFilter);
+		this(source, indent, charset, AnnotationReader.wrapXmlOutputOptions(false, typeFilter, attributeFilter));
 	}
 
 	/**
@@ -241,7 +242,7 @@ public class AnnotationInputStream extends InputStream {
 	 *            attributes)
 	 */
 	public AnnotationInputStream(QueriableAnnotation source, boolean outputIDs, String indent, String charset, Set typeFilter, Set attributeFilter) {
-		this(source, outputIDs, indent, ((charset == null) ? Charset.defaultCharset() : Charset.forName(charset)), typeFilter, attributeFilter);
+		this(source, indent, charset, AnnotationReader.wrapXmlOutputOptions(outputIDs, typeFilter, attributeFilter));
 	}
 	
 	/**
@@ -258,7 +259,7 @@ public class AnnotationInputStream extends InputStream {
 	 *            attributes)
 	 */
 	public AnnotationInputStream(QueriableAnnotation source, String indent, Charset charset, Set typeFilter, Set attributeFilter) {
-		this(source, false, indent, charset, typeFilter, attributeFilter);
+		this(source, indent, charset, AnnotationReader.wrapXmlOutputOptions(false, typeFilter, attributeFilter));
 	}
 
 	/**
@@ -276,7 +277,31 @@ public class AnnotationInputStream extends InputStream {
 	 *            attributes)
 	 */
 	public AnnotationInputStream(QueriableAnnotation source, boolean outputIDs, String indent, Charset charset, Set typeFilter, Set attributeFilter) {
-		this.annotationReader = new AnnotationReader(source, outputIDs, indent, typeFilter, attributeFilter);
+		this(source, indent, charset, AnnotationReader.wrapXmlOutputOptions(outputIDs, typeFilter, attributeFilter));
+	}
+	
+	/**
+	 * Constructor
+	 * @param source the DocumentPart to read from
+	 * @param indent the String to insert for each level of indentation
+	 *            (specifying null will result in no indentation)
+	 * @param charset the charset to use for encoding the chars to bytes
+	 * @param options an object holding the output options.
+	 */
+	public AnnotationInputStream(QueriableAnnotation source, String indent, String charset, XmlOutputOptions options) {
+		this(source, indent, ((charset == null) ? Charset.defaultCharset() : Charset.forName(charset)), options);
+	}
+	
+	/**
+	 * Constructor
+	 * @param source the DocumentPart to read from
+	 * @param indent the String to insert for each level of indentation
+	 *            (specifying null will result in no indentation)
+	 * @param charset the charset to use for encoding the chars to bytes
+	 * @param options an object holding the output options.
+	 */
+	public AnnotationInputStream(QueriableAnnotation source, String indent, Charset charset, XmlOutputOptions options) {
+		this.annotationReader = new AnnotationReader(source, indent, options);
 		this.encoding = ((charset == null) ? Charset.defaultCharset() : charset);
 		this.byteBuffer = this.encoding.encode(CharBuffer.wrap("<?xml version=\"1.0\" encoding=\"" + this.encoding.name() + "\"?>\n"));
 	}
@@ -292,7 +317,7 @@ public class AnnotationInputStream extends InputStream {
 	 * @see java.io.InputStream#read()
 	 */
 	public int read() throws IOException {
-		if ((this.byteBuffer == null) || (this.bbPosition == this.byteBuffer.limit())) {
+		if ((this.byteBuffer == null) || (this.byteBufferPos == this.byteBuffer.limit())) {
 			char[] ch = new char[1024];
 			
 			int read = this.annotationReader.read(ch, 0, 1024);
@@ -300,10 +325,10 @@ public class AnnotationInputStream extends InputStream {
 				return -1;
 			
 			this.byteBuffer = this.encoding.encode(CharBuffer.wrap(ch, 0, read));
-			this.bbPosition = 0;
+			this.byteBufferPos = 0;
 		}
-		if ((this.byteBuffer == null) || (this.bbPosition == this.byteBuffer.limit()))
+		if ((this.byteBuffer == null) || (this.byteBufferPos == this.byteBuffer.limit()))
 			return -1;
-		else return this.byteBuffer.get(this.bbPosition++);
+		else return this.byteBuffer.get(this.byteBufferPos++);
 	}
 }

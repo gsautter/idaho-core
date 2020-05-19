@@ -10,11 +10,11 @@
  *     * Redistributions in binary form must reproduce the above copyright
  *       notice, this list of conditions and the following disclaimer in the
  *       documentation and/or other materials provided with the distribution.
- *     * Neither the name of the Universität Karlsruhe (TH) / KIT nor the
+ *     * Neither the name of the Universitaet Karlsruhe (TH) / KIT nor the
  *       names of its contributors may be used to endorse or promote products
  *       derived from this software without specific prior written permission.
  *
- * THIS SOFTWARE IS PROVIDED BY UNIVERSITÄT KARLSRUHE (TH) / KIT AND CONTRIBUTORS 
+ * THIS SOFTWARE IS PROVIDED BY UNIVERSITAET KARLSRUHE (TH) / KIT AND CONTRIBUTORS 
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
  * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
  * ARE DISCLAIMED. IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE FOR ANY
@@ -124,6 +124,8 @@ public class DocumentErrorProtocolDisplay extends JPanel {
 	private ErrorSeverityFilter showMinors = new ErrorSeverityFilter(DocumentError.SEVERITY_MINOR);
 	private JPanel showErrorsPanel = new JPanel(new GridLayout(1, 0), true);
 	private boolean severityFiltersActive = true;
+	
+	private boolean autoSelectNextError = true;
 	
 	/**
 	 * Constructor
@@ -289,6 +291,23 @@ public class DocumentErrorProtocolDisplay extends JPanel {
 			return;
 		this.severityFiltersActive = showFilters;
 		this.updateAccessories();
+	}
+	
+	/**
+	 * Check whether auto-selecting of next error on removal of selected is
+	 * switched one on or off.
+	 * @return true if auto-selecting next error is switched on
+	 */
+	public boolean isAutoSelectingNextError() {
+		return this.autoSelectNextError;
+	}
+	
+	/**
+	 * Switch auto-selecting next error on removal of selected one on or off.
+	 * @param autoSelect automatically select next error?
+	 */
+	public void setAutoSelectNextError(boolean autoSelect) {
+		this.autoSelectNextError = autoSelect;
 	}
 	
 	/**
@@ -722,7 +741,7 @@ public class DocumentErrorProtocolDisplay extends JPanel {
 			super(new BorderLayout(), true);
 			System.out.println("Initializing error display for category " + category);
 			this.category = category;
-			this.description = new JLabel(dep.getErrorCategoryDescription(this.category));
+			this.description = new JLabel("<HTML><B>" + dep.getErrorCategoryDescription(this.category) + "</B></HTML>", JLabel.CENTER);
 			DocumentError[] errors = dep.getErrors(this.category);
 			
 			//	populate error list and filters
@@ -774,7 +793,7 @@ public class DocumentErrorProtocolDisplay extends JPanel {
 				}
 			});
 			JScrollPane errorListBox = new JScrollPane(this.errorList);
-			errorListBox.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+			errorListBox.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
 			errorListBox.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
 			errorListBox.getVerticalScrollBar().setBlockIncrement(50);
 			errorListBox.getVerticalScrollBar().setUnitIncrement(50);
@@ -1005,8 +1024,11 @@ public class DocumentErrorProtocolDisplay extends JPanel {
 			}
 			
 			//	make sure selection is in range
-			if (ei == this.errorTrays.size())
-				this.errorList.setSelectedIndex(ei-1);
+			if (autoSelectNextError) {
+				if (ei == this.errorTrays.size())
+					this.errorList.setSelectedIndex(ei-1);
+			}
+			else this.errorList.clearSelection();
 			
 			//	decrement filter counters
 			String el = dep.getErrorTypeLabel(et.error.category, et.error.type);
@@ -1133,7 +1155,7 @@ public class DocumentErrorProtocolDisplay extends JPanel {
 			public Attributed findErrorSubject(Attributed doc, String[] data) {
 				return null;
 			}
-			public void addError(String source, Attributed subject, Attributed parent, String category, String type, String description, String severity) {
+			public void addError(String source, Attributed subject, Attributed parent, String category, String type, String description, String severity, boolean falsePositive) {
 				this.errors.add(new DocumentError(source, subject, category, type, description, severity) {});
 				this.errorCounts.add(category);
 				this.errorCounts.add(category + ":" + severity);
@@ -1146,6 +1168,18 @@ public class DocumentErrorProtocolDisplay extends JPanel {
 				this.errorCounts.remove(error.category + ":" + error.severity);
 				this.errorCounts.remove(error.category + "." + error.type);
 				this.errorCounts.remove(error.category + "." + error.type + ":" + error.severity);
+			}
+			public boolean isFalsePositive(DocumentError error) {
+				return false;
+			}
+			public boolean markFalsePositive(DocumentError error) {
+				return false;
+			}
+			public boolean unmarkFalsePositive(DocumentError error) {
+				return false;
+			}
+			public DocumentError[] getFalsePositives() {
+				return null;
 			}
 			public Comparator getErrorComparator() {
 				return null;

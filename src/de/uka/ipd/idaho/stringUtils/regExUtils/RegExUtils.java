@@ -10,11 +10,11 @@
  *     * Redistributions in binary form must reproduce the above copyright
  *       notice, this list of conditions and the following disclaimer in the
  *       documentation and/or other materials provided with the distribution.
- *     * Neither the name of the Universität Karlsruhe (TH) nor the
+ *     * Neither the name of the Universitaet Karlsruhe (TH) nor the
  *       names of its contributors may be used to endorse or promote products
  *       derived from this software without specific prior written permission.
  *
- * THIS SOFTWARE IS PROVIDED BY UNIVERSITÄT KARLSRUHE (TH) / KIT AND CONTRIBUTORS 
+ * THIS SOFTWARE IS PROVIDED BY UNIVERSITAET KARLSRUHE (TH) / KIT AND CONTRIBUTORS 
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
  * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
  * ARE DISCLAIMED. IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE FOR ANY
@@ -240,48 +240,56 @@ public class RegExUtils {
 	 *         java.util.regex.Pattern
 	 */
 	public static String normalizeRegEx(String regEx) {
-		if ((regEx.indexOf("\n") != -1) || (regEx.indexOf("\r") != -1) || (regEx.indexOf("\f") != -1)) {
-			int index = 0;
-			StringVector sv = new StringVector(false);
-			String temp = regEx;
-			
-			//	normalize linebreaks
-			sv.parseAndAddElements(temp, "\r");
-			temp = sv.concatStrings("\n");
-			sv.clear();
-			sv.parseAndAddElements(temp, "\f");
-			temp = sv.concatStrings("\n");
-			sv.clear();
-			sv.parseAndAddElements(temp, "\n\n");
-			temp = sv.concatStrings("\n");
-			sv.clear();
-			
-			//	remove indents (tabs and spaces after linebreaks)
-			while ((temp.indexOf("\n\t") != -1) || (temp.indexOf("\n ") != -1)) {
-				
-				//	remove tabs after linebreaks
-				sv.parseAndAddElements(temp, "\n\t");
-				temp = sv.concatStrings("\n");
-				sv.clear();
-				
-				//	remove tabs after linebreaks
-				sv.parseAndAddElements(temp, "\n ");
-				temp = sv.concatStrings("\n");
-				sv.clear();
-			}
-			
-			//	remove comments and linebreaks
-			sv.parseAndAddElements(temp, "\n");
-			while (index < sv.size()) {
-				if (sv.get(index).startsWith("//"))
-					sv.removeElementAt(index);
-				else index++;
-			}
-			return sv.concatStrings("");
-		}
 		
 		//	no line breaks or indents in regex
-		else return regEx;
+		if ((regEx.indexOf("\n") == -1) && (regEx.indexOf("\r") == -1))
+			return regEx;
+		
+//		int index = 0;
+//		StringVector sv = new StringVector(false);
+//		String temp = regEx;
+		
+		//	normalize linebreaks
+//		sv.parseAndAddElements(temp, "\r");
+//		temp = sv.concatStrings("\n");
+//		sv.clear();
+		regEx = regEx.replace('\r', '\n');
+//		sv.parseAndAddElements(temp, "\n\n");
+//		temp = sv.concatStrings("\n");
+//		sv.clear();
+		regEx = StringUtils.replaceAll(regEx, "\n\n", "\n");
+		
+		//	remove indents (tabs and spaces after linebreaks)
+//		while ((temp.indexOf("\n\t") != -1) || (temp.indexOf("\n ") != -1)) {
+//			
+//			//	remove tabs after linebreaks
+//			sv.parseAndAddElements(temp, "\n\t");
+//			temp = sv.concatStrings("\n");
+//			sv.clear();
+//			
+//			//	remove tabs after linebreaks
+//			sv.parseAndAddElements(temp, "\n ");
+//			temp = sv.concatStrings("\n");
+//			sv.clear();
+//		}
+		while (regEx.indexOf("\n\t") != -1)
+			regEx = StringUtils.replaceAll(regEx, "\n\t", "\n");
+		while (regEx.indexOf("\n ") != -1)
+			regEx = StringUtils.replaceAll(regEx, "\n ", "\n");
+		
+		//	remove comments and linebreaks
+//		sv.parseAndAddElements(temp, "\n");
+//		while (index < sv.size()) {
+//			if (sv.get(index).startsWith("//"))
+//				sv.removeElementAt(index);
+//			else index++;
+//		}
+		regEx = regEx.replaceAll("(\\n|\\A)\\/\\/[^\\n]*", "");
+		regEx = regEx.replaceAll("\\n", "");
+		
+		//	finally ...
+//		return sv.concatStrings("");
+		return regEx;
 	}
 	
 	/**
@@ -300,102 +308,106 @@ public class RegExUtils {
 	 * @return the specified regular expression in a form readable for users
 	 */
 	public static String explodeRegEx(String regEx, String indent) {
-		if ((regEx.indexOf("\n") == -1) && (regEx.indexOf("\r") == -1) && (regEx.indexOf("\f") == -1)) {
-			
-			StringVector lines = new StringVector();
-			
-			//	parse regEx
-			StringBuffer assembler = new StringBuffer();
-			char currentChar = StringUtils.NULLCHAR;
-			int escapeIndex = -1;
-			for (int charIndex = 0; charIndex < regEx.length(); charIndex++) {
-				currentChar = regEx.charAt(charIndex);
-				
-				//	actual character is escaped
-				if (charIndex == escapeIndex)
-					assembler.append(currentChar);
-					
-				//	actual character is escaper
-				else if (currentChar == '\\') {
-					escapeIndex = (charIndex + 1);
-					assembler.append(currentChar);
-				}
-				
-				//	opening bracket
-				else if (currentChar == '(') {
-					if (assembler.length() != 0) {
-						lines.addElement(assembler.toString());
-						assembler = new StringBuffer();
-					}
-					lines.addElement("(");
-				}
-				
-				//	closing bracket
-				else if (currentChar == ')') {
-					if (assembler.length() != 0) {
-						lines.addElement(assembler.toString());
-						assembler = new StringBuffer();
-					}
-					lines.addElement(")");
-				}
-				
-				//	other cheracter
-				else assembler.append(currentChar);
-			}
-			if (assembler.length() != 0)
-				lines.addElement(assembler.toString());
-			
-			//	concat short lines
-			int index = 0;
-			String line;
-			String n1Line;
-			String n2Line;
-			while ((index + 1) < lines.size()) {
-				line = lines.get(index);
-				n1Line = lines.get(index + 1);
-				n2Line = (((index + 2) < lines.size()) ? lines.get(index + 2) : "");
-				if (line.equals("(") && n2Line.equals(")")) {
-					lines.setElementAt((line + n1Line + n2Line), index);
-					lines.removeElementAt(index + 1);
-					lines.removeElementAt(index + 1);
-				}
-				else if (n1Line.equals("?") || n1Line.equals("*") || n1Line.equals("+")) {
-					lines.setElementAt((line + n1Line), index);
-					lines.removeElementAt(index + 1);
-				}
-				else if (n1Line.startsWith("?") || n1Line.startsWith("*") || n1Line.startsWith("+")) {
-					lines.setElementAt((line + n1Line.charAt(0)), index);
-					lines.setElementAt(n1Line.substring(1), (index + 1));
-				}
-				else index ++;
-			}
-			
-			//	indent lines
-			int indentDepth = 0;
-			String indentString = "";
-			for (int l = 0; l < lines.size(); l++) {
-				line = lines.get(l);
-				if (line.equals("(")) {
-					lines.setElementAt((indentString + line), l);
-					indentDepth++;
-					indentString = "";
-					for (int i = 0; i < indentDepth; i++) indentString += indent;
-				}
-				else if (line.startsWith(")")) {
-					indentDepth--;
-					indentString = "";
-					for (int i = 0; i < indentDepth; i++) indentString += indent;
-					lines.setElementAt((indentString + line), l);
-				}
-				else lines.setElementAt((indentString + line), l);
-			}
-			
-			//	concatenate and return result
-			return lines.concatStrings("\n");
-		}
 		
 		//	regex already exploded
-		else return regEx;
+		if ((regEx.indexOf("\n") != -1) || (regEx.indexOf("\r") != -1))
+			return regEx;
+		
+		//	parse regEx
+		StringVector lines = new StringVector();
+		StringBuffer assembler = new StringBuffer();
+		char currentChar = StringUtils.NULLCHAR;
+		int escapeIndex = -1;
+		for (int charIndex = 0; charIndex < regEx.length(); charIndex++) {
+			currentChar = regEx.charAt(charIndex);
+			
+			//	current character is escaped
+			if (charIndex == escapeIndex)
+				assembler.append(currentChar);
+				
+			//	current character is escaper
+			else if (currentChar == '\\') {
+				escapeIndex = (charIndex + 1);
+				assembler.append(currentChar);
+			}
+			
+			//	opening bracket
+			else if (currentChar == '(') {
+				if (assembler.length() != 0) {
+					lines.addElement(assembler.toString());
+					assembler = new StringBuffer();
+				}
+				lines.addElement("(");
+			}
+			
+			//	closing bracket
+			else if (currentChar == ')') {
+				if (assembler.length() != 0) {
+					lines.addElement(assembler.toString());
+					assembler = new StringBuffer();
+				}
+				lines.addElement(")");
+			}
+			
+			//	other cheracter
+			else assembler.append(currentChar);
+		}
+		if (assembler.length() != 0)
+			lines.addElement(assembler.toString());
+		
+		//	concatenate short lines
+		String line;
+		String n1Line;
+		String n2Line;
+		for (int index = 0; (index + 1) < lines.size();) {
+			line = lines.get(index);
+			n1Line = lines.get(index + 1);
+			n2Line = (((index + 2) < lines.size()) ? lines.get(index + 2) : "");
+			if (line.equals("(") && n2Line.equals(")")) {
+//				lines.setElementAt((line + n1Line + n2Line), index);
+//				lines.removeElementAt(index + 1);
+//				lines.removeElementAt(index + 1);
+				lines.removeElementAt(index);
+				lines.removeElementAt(index);
+				lines.setElementAt((line + n1Line + n2Line), index);
+			}
+			else if (n1Line.equals("?") || n1Line.equals("*") || n1Line.equals("+")) {
+//				lines.setElementAt((line + n1Line), index);
+//				lines.removeElementAt(index + 1);
+				lines.removeElementAt(index);
+				lines.setElementAt((line + n1Line), index);
+			}
+			else if (n1Line.startsWith("?") || n1Line.startsWith("*") || n1Line.startsWith("+")) {
+				lines.setElementAt((line + n1Line.charAt(0)), index);
+				lines.setElementAt(n1Line.substring(1), (index + 1));
+			}
+			else index ++;
+		}
+		
+		//	indent lines
+		int indentDepth = 0;
+		String indentString = "";
+		for (int l = 0; l < lines.size(); l++) {
+			line = lines.get(l);
+			if (line.equals("(")) {
+				lines.setElementAt((indentString + line), l);
+				indentDepth++;
+				indentString = "";
+				for (int i = 0; i < indentDepth; i++)
+					indentString += indent;
+			}
+			else if (line.startsWith(")")) {
+				indentDepth--;
+				indentString = "";
+				for (int i = 0; i < indentDepth; i++)
+					indentString += indent;
+				lines.setElementAt((indentString + line), l);
+			}
+			else lines.setElementAt((indentString + line), l);
+		}
+		
+		//	concatenate and return result
+		return lines.concatStrings("\n");
 	}
 	
 	/**	check if a String is a valid JAVA regular expression

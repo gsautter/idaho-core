@@ -10,11 +10,11 @@
  *     * Redistributions in binary form must reproduce the above copyright
  *       notice, this list of conditions and the following disclaimer in the
  *       documentation and/or other materials provided with the distribution.
- *     * Neither the name of the Universität Karlsruhe (TH) nor the
+ *     * Neither the name of the Universitaet Karlsruhe (TH) nor the
  *       names of its contributors may be used to endorse or promote products
  *       derived from this software without specific prior written permission.
  *
- * THIS SOFTWARE IS PROVIDED BY UNIVERSITÄT KARLSRUHE (TH) / KIT AND CONTRIBUTORS 
+ * THIS SOFTWARE IS PROVIDED BY UNIVERSITAET KARLSRUHE (TH) / KIT AND CONTRIBUTORS 
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
  * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
  * ARE DISCLAIMED. IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE FOR ANY
@@ -161,7 +161,8 @@ public class GPathEngine implements GPathConstants {
 	private GPathAnnotationSet evaluatePath(GPathDocument document, GPath path, GPathAnnotationSet startAnnotations, GPathVariableResolver variableBindings) throws GPathException {
 		
 		//	empty path
-		if (path.steps.length == 0) return startAnnotations;
+		if (path.steps.length == 0)
+			return startAnnotations;
 		
 		//	variable to resolve
 		if (path.steps[0].annotationTest.startsWith("$")) {
@@ -215,7 +216,8 @@ public class GPathEngine implements GPathConstants {
 	}
 	
 	private GPathAnnotationSet evaluateStep(GPathDocument document, GPathStep step, GPathAnnotationSet startAnnotations, GPathVariableResolver variableBindings) throws GPathException {
-		if (step.axis == null) step.axis = "child";
+		if (step.axis == null)
+			step.axis = "child";
 		GPathAnnotationSet result = new GPathAnnotationSet();
 		
 		String filterType;
@@ -1676,7 +1678,7 @@ public class GPathEngine implements GPathConstants {
 		public QueriableAnnotation[] getAnnotations(String type) {
 			QueriableAnnotation[] annotations = this.source.getAnnotations(type);
 			
-			//	add Document itself if no other root Anotation given
+			//	add Document itself if no other root Annotation given
 			if ((type == null) && ((annotations.length == 0) || (annotations[0].size() != this.size()))) {
 				ArrayList aList = new ArrayList();
 				aList.add(this);

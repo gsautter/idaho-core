@@ -10,11 +10,11 @@
  *     * Redistributions in binary form must reproduce the above copyright
  *       notice, this list of conditions and the following disclaimer in the
  *       documentation and/or other materials provided with the distribution.
- *     * Neither the name of the Universität Karlsruhe (TH) nor the
+ *     * Neither the name of the Universitaet Karlsruhe (TH) nor the
  *       names of its contributors may be used to endorse or promote products
  *       derived from this software without specific prior written permission.
  *
- * THIS SOFTWARE IS PROVIDED BY UNIVERSITÄT KARLSRUHE (TH) / KIT AND CONTRIBUTORS 
+ * THIS SOFTWARE IS PROVIDED BY UNIVERSITAET KARLSRUHE (TH) / KIT AND CONTRIBUTORS 
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
  * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
  * ARE DISCLAIMED. IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE FOR ANY
@@ -35,6 +35,7 @@ import java.util.Properties;
 
 import de.uka.ipd.idaho.gamta.util.gPath.exceptions.InvalidArgumentsException;
 import de.uka.ipd.idaho.htmlXmlUtil.exceptions.ParseException;
+import de.uka.ipd.idaho.htmlXmlUtil.exceptions.UnexpectedCharacterException;
 import de.uka.ipd.idaho.htmlXmlUtil.grammars.Grammar;
 import de.uka.ipd.idaho.htmlXmlUtil.grammars.StandardGrammar;
 
@@ -244,7 +245,8 @@ public class TreeNodeAttributeSet {
 		String tagType = LookaheadReader.cropName(charSource);
 //		System.out.println("TNAS: Got tag " + tagType);
 		if (tagType.length() == 0)
-			throw new ParseException("Invalid character '" + ((char) charSource.peek()) + "', expected name");
+//			throw new ParseException("Invalid character '" + ((char) charSource.peek()) + "', expected name");
+			throw new UnexpectedCharacterException(((char) charSource.peek()), charSource.readThusFar(), "tag type");
 		skipWhitespace(charSource, grammar);
 		
 		//	set up corrected recursion
@@ -273,7 +275,8 @@ public class TreeNodeAttributeSet {
 					fillTagAttributeSet(correctedTag, grammar, attributes, lastAttributeValueQuoter);
 					return;
 				}
-				else throw new ParseException("Invalid character '" + ((char) charSource.peek()) + "', expected name");
+//				else throw new ParseException("Invalid character '" + ((char) charSource.peek()) + "', expected name");
+				else throw new UnexpectedCharacterException(((char) charSource.peek()), charSource.readThusFar(), "attribute name");
 			}
 			skipWhitespace(charSource, grammar);
 			
@@ -283,7 +286,8 @@ public class TreeNodeAttributeSet {
 				if (charSource.peek() == tagAttributeValueSeparator)
 					charSource.read();
 				else if (!grammar.correctErrors())
-					throw new ParseException("Invalid character '" + ((char) charSource.peek()) + "', expected '" + tagAttributeValueSeparator + "'");
+//					throw new ParseException("Invalid character '" + ((char) charSource.peek()) + "', expected '" + tagAttributeValueSeparator + "'");
+					throw new UnexpectedCharacterException(((char) charSource.peek()), charSource.readThusFar(), ("" + tagAttributeValueSeparator));
 				skipWhitespace(charSource, grammar);
 				if (grammar.isTagAttributeValueQuoter((char) charSource.peek())) {
 					lastAttributeValueQuoter = charSource.readThusFar();
@@ -370,7 +374,7 @@ public class TreeNodeAttributeSet {
 //	private static final Grammar html = new Html();
 //	public static void main(String[] args) throws Exception {
 ////		String testTag = "<a title=\"FIGURE 70. Palpipalpus hesperius Beard and Seeman, adult female, legs (right side), solenidion w \" and eupathidia (pk ' - pk '') not labelled on leg I.\" href=\"#\" onclick=\"return displayFigure('https://zenodo.org/record/251405/files/figure.png');\">";
-//		String testTag = "<a title=\"View 'FIGURE 75. Pentamerismus sititoris Beard and Seeman, adult female, dorsum with details of palps and legs I – II; solenidion w \" and eupathidia (pk ' - pk '') not labelled.'\" href=\"#\" onclick=\"return displayFigure('https://zenodo.org/record/251409/files/figure.png');\">";
+//		String testTag = "<a title=\"View 'FIGURE 75. Pentamerismus sititoris Beard and Seeman, adult female, dorsum with details of palps and legs I - II; solenidion w \" and eupathidia (pk ' - pk '') not labelled.'\" href=\"#\" onclick=\"return displayFigure('https://zenodo.org/record/251409/files/figure.png');\">";
 ////		String testTag = "<a title=\"FIGURE 70. Palpipalpus hesperius Beard and Seeman, adult female, legs (right side), solenidion w \" and eupathidia (pk ' - pk '') not labelled on leg I.\" href=\"#\" onclick=\"return displayFigure('https://zenodo.org/record/251405/files/figure.png\");\">";
 //		try {
 //			TreeNodeAttributeSet tnas = getTagAttributes(testTag, html);
