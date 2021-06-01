@@ -76,15 +76,36 @@ public class GenericQueriableAnnotationWrapper extends GenericAnnotationWrapper 
 		return this.wrapAnnotation(this.annotationData.getDocument());
 	}
 	
+	public QueriableAnnotation getAnnotation(String id) {
+		QueriableAnnotation annotation = this.queriableAnnotationData.getAnnotation(id);
+		return ((annotation == null) ? null : this.wrapAnnotation(annotation));
+	}
+	
 	public QueriableAnnotation[] getAnnotations() {
-		QueriableAnnotation[] annotations = this.queriableAnnotationData.getAnnotations();
-		for (int a = 0; a < annotations.length; a++)
-			annotations[a] = this.wrapAnnotation(annotations[a]);
-		return annotations;
+		return this.wrapAnnotations(this.queriableAnnotationData.getAnnotations());
 	}
 	
 	public QueriableAnnotation[] getAnnotations(String type) {
-		QueriableAnnotation[] annotations = this.queriableAnnotationData.getAnnotations(type);
+		return this.wrapAnnotations(this.queriableAnnotationData.getAnnotations(type));
+	}
+	
+	public QueriableAnnotation[] getAnnotationsSpanning(int startIndex, int endIndex) {
+		return this.wrapAnnotations(this.queriableAnnotationData.getAnnotationsSpanning(startIndex, endIndex));
+	}
+	
+	public QueriableAnnotation[] getAnnotationsSpanning(String type, int startIndex, int endIndex) {
+		return this.wrapAnnotations(this.queriableAnnotationData.getAnnotationsSpanning(type, startIndex, endIndex));
+	}
+	
+	public QueriableAnnotation[] getAnnotationsOverlapping(int startIndex, int endIndex) {
+		return this.wrapAnnotations(this.queriableAnnotationData.getAnnotationsOverlapping(startIndex, endIndex));
+	}
+	
+	public QueriableAnnotation[] getAnnotationsOverlapping(String type, int startIndex, int endIndex) {
+		return this.wrapAnnotations(this.queriableAnnotationData.getAnnotationsOverlapping(type, startIndex, endIndex));
+	}
+	
+	private QueriableAnnotation[] wrapAnnotations(QueriableAnnotation[] annotations) {
 		for (int a = 0; a < annotations.length; a++)
 			annotations[a] = this.wrapAnnotation(annotations[a]);
 		return annotations;

@@ -131,6 +131,8 @@ public class TableDefinition {
 	public static final String SYNTAX_ADD_COLUMN_VAR_LENGTH = "ADD_COLUMN_VAR_LENGTH";
 	public static final String SYNTAX_ADD_COLUMN_FIX_LENGTH = "ADD_COLUMN_FIX_LENGTH";
 	public static final String SYNTAX_WIDEN_COLUMN = "WIDEN_COLUMN";
+//	
+//	public static final String SYNTAX_SET_NOT_NULL = "SET_NOT_NULL";
 	
 	public static final String SYNTAX_CREATE_INDEX = "CREATE_INDEX";
 	
@@ -186,7 +188,7 @@ public class TableDefinition {
 	public static boolean isDataType(String dataType) {
 		return ((dataType != null) && (ALL_DATATYPES.indexOf(";" + dataType.toUpperCase() + ";") != -1));
 	}
-
+	
 	/**
 	 * check if a String denotes a data type that has a fix length
 	 * @param dataType the String to check
@@ -196,7 +198,7 @@ public class TableDefinition {
 	public static boolean isFixLengthType(String dataType) {
 		return ((dataType != null) && (NO_LENGTH_DATATYPES.indexOf(";" + dataType.toUpperCase() + ";") != -1));
 	}
-
+	
 	/**
 	 * check if a String denotes a data type that needs to be escaped in queries
 	 * @param dataType the String to check
@@ -206,35 +208,35 @@ public class TableDefinition {
 	public static boolean isEscapedType(String dataType) {
 		return ((dataType != null) && (ESCAPED_DATATYPES.indexOf(";" + dataType.toUpperCase() + ";") != -1));
 	}
-
+	
 	protected String tableName;
-
+	
 	protected Vector columns = new Vector();
-
+	
 	protected boolean isValidationDef = false;
-
+	
 	/**
-	 * Void Constuctor for subclasses
+	 * Void Constructor for subclasses
 	 */
-	protected TableDefinition() {
-	}
+	protected TableDefinition() {}
 
 	/**
 	 * Constructor
 	 * @param data the SqlQueryResult that's meta data is used to build the
 	 *            Definition
-	 * @param tableName the name of the SQL table that's structure is to be
+	 * @param tableName the name of the SQL table whose structure is to be
 	 *            extracted from data Note: This constructor is intended to get
 	 *            the definition of an existing SQL table in order to check if
 	 *            the table is to be extended to comply with a new definition
 	 */
-	public TableDefinition(SqlQueryResult data, String tableName) {
+	public TableDefinition(SqlQueryResult data, Properties sqlSyntax, String tableName) {
 		this.tableName = tableName;
 		this.isValidationDef = true;
 		for (int i = 0; i < data.getColumnCount(); i++) {
 			String colName = data.getColumnName(i);
 			String colType = data.getColumnType(i);
-			int length = data.getColumnLength(i);
+			colType = sqlSyntax.getProperty(("DATA_TYPE." + colType), colType);
+			int length = (isFixLengthType(colType) ? 0 : data.getColumnLength(i));
 			this.addColumn(new TableColumnDefinition(colName, colType, length, true));
 		}
 	}
@@ -251,7 +253,7 @@ public class TableDefinition {
 	 *            and is assumed to simply be the table name
 	 */
 	public TableDefinition(String data) {
-
+		
 		// String representation
 		if (data.startsWith("!")) {
 			String[] parsed = data.split("\\#");
@@ -333,7 +335,7 @@ public class TableDefinition {
 	public void addColumn(String columnName, String dataType, int length) {
 		this.addColumn(new TableColumnDefinition(columnName, dataType, length));
 	}
-
+	
 	/**
 	 * add a column to the table
 	 * @param column the definition of the column to be added
@@ -341,21 +343,21 @@ public class TableDefinition {
 	public void addColumn(TableColumnDefinition column) {
 		if (column != null) this.columns.addElement(column);
 	}
-
+	
 	/**
 	 * @return the TableColumnDefinitions of this TableDefinition
 	 */
 	public TableColumnDefinition[] getColumns() {
 		return ((TableColumnDefinition[]) this.columns.toArray(new TableColumnDefinition[this.columns.size()]));
 	}
-
+	
 	/**
 	 * @return the table name
 	 */
 	public String getTableName() {
 		return this.tableName;
 	}
-
+	
 	/**
 	 * get a column definition by it's SQL column name or it's annotation
 	 * attribute name
@@ -380,7 +382,6 @@ public class TableDefinition {
 			TableColumnDefinition tcd = ((TableColumnDefinition) this.columns.get(c));
 			columnString += (((c == 0) ? "" : ", ") + tcd.getColumnName());
 		}
-//		return ((columnString.indexOf(", ") == -1) ? null : ("SELECT " + columnString + " FROM " + this.tableName + " WHERE 1=0;"));
 		return ((columnString.length() == 0) ? null : ("SELECT " + columnString + " FROM " + this.tableName + " WHERE 1=0;"));
 	}
 	
@@ -390,7 +391,7 @@ public class TableDefinition {
 	public String getValidationQuery() {
 		return ("SELECT * FROM " + this.tableName + " WHERE 1=0;");
 	}
-
+	
 	/**
 	 * Produce a CREATE TABLE query to create the SQT table. The argument
 	 * IoProvider supplies product specific database properties.
@@ -444,7 +445,7 @@ public class TableDefinition {
 	public boolean equals(Object o) {
 		return ((o != null) && (o instanceof TableDefinition) && this.equals((TableDefinition) o));
 	}
-
+	
 	/**
 	 * check if this TableDefinition is equal to the argument one, abstract from
 	 * Annotation-related data
@@ -453,7 +454,17 @@ public class TableDefinition {
 	 *         argument TableDefinition are equal, false otherwise
 	 */
 	public boolean equals(TableDefinition td) {
-		return ((td != null) && this.tableName.equalsIgnoreCase(td.tableName) && this.columnsEqual(td));
+		if (td == null) {
+			if (this.isValidationDef)
+				System.out.println("TableDefinition: null argument");
+			return false;
+		}
+		if (!this.tableName.equalsIgnoreCase(td.tableName)) {
+			if (this.isValidationDef)
+				System.out.println("TableDefinition: names different ('" + this.tableName + "' / '" + td.tableName + "')");
+			return false;
+		}
+		return this.columnsEqual(td);
 	}
 	
 	//	compare the columns
@@ -496,7 +507,7 @@ public class TableDefinition {
 			assembler.append((TableColumnDefinition) this.columns.get(i)).toString();
 		return assembler.toString();
 	}
-
+	
 	/**
 	 * @return an XML representation of this TableDefinition
 	 */

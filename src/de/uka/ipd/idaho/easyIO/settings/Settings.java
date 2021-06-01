@@ -65,7 +65,7 @@ import de.uka.ipd.idaho.stringUtils.StringUtils;
 /**
  * A Settings object is quite similar to a java.util.Properties (and can act as
  * one), except for the capability of working with hierarchical data. The
- * hierarchy is expressed with prefixes. Each Settings object can ahve an
+ * hierarchy is expressed with prefixes. Each Settings object can have an
  * arbitrary number of distinct sub sets, which are distinguished within the
  * scope of the parent object by means of prefixes: Each sub set has its own
  * prefix. Within the parent object, all settings belonging to a given sub set

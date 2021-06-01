@@ -75,19 +75,24 @@ public class StringUtils {
 	/** string constant containing all Latin letters in lower case */
 	public static final String LATIN_LOWER_CASE_LETTERS = "abcdefghijklmnopqrstuvwxyz";
 	
-	/** string constant containing all Latin letters in upper and lower case, plus derived characters with accents and the like, ligatures, etc. */
+	/** string constant containing all Latin letters in upper and lower case, plus derived characters with accents and the like, ligatures, etc.
+	 * @deprecated this covers ANSI only, use <code>Character.isLetter()</code> instead */
 	public static final String LETTERS = "abcdefghijklmnopqrstuvwxyzßàáâãäåæçèéêëìíîïñòóôõöœøùúûüıÿABCDEFGHIJKLMNOPQRSTUVWXYZÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏĞÑÒÓÔÕÖØŒÙÚÛÜİ";
 	
-	/** string constant containing all Latin vowels in upper and lower case, plus derived characters with accents and the like, ligatures, etc. */
+	/** string constant containing all Latin vowels in upper and lower case, plus derived characters with accents and the like, ligatures, etc.
+	 * @deprecated this covers ANSI only, use <code>getBaseChar()</code> before lookup */
 	public static final String VOWELS = "aeiouAEIOUàáâãäåæèéêëìíîïòóôõöøœùúûüÀÁÂÃÄÅÆÈÉÊËÌÍÎÏÒÓÔÕÖØŒÙÚÛÜ";
 	
-	/** string constant containing all Latin consonants in upper and lower case, plus derived language specifc characters like the German 'ß', the Spanish 'ñ', and the French 'ç' */
+	/** string constant containing all Latin consonants in upper and lower case, plus derived language specifc characters like the German 'ß', the Spanish 'ñ', and the French 'ç'
+	 * @deprecated this covers ANSI only, use <code>getBaseChar()</code> before lookup */
 	public static final String CONSONANTS = "bcdfghjklmnpqrstvwxyzçñßBCDFGHJKLMNPQRSTVWXYZÇÑ";
 	
-	/** string constant containing all Latin letters in upper case, plus derived characters with accents and the like, ligatures, etc. */
+	/** string constant containing all Latin letters in upper case, plus derived characters with accents and the like, ligatures, etc.
+	 * @deprecated this covers ANSI only, use <code>Character.isUpperCase()</code> instead */
 	public static final String UPPER_CASE_LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏĞÑÒÓÔÕÖØŒÙÚÛÜİ";
 	
-	/** string constant containing all Latin letters in lower case, plus derived characters with accents and the like, ligatures, etc. */
+	/** string constant containing all Latin letters in lower case, plus derived characters with accents and the like, ligatures, etc.
+	 * @deprecated this covers ANSI only, use <code>Character.isLowerCase()</code> instead */
 	public static final String LOWER_CASE_LETTERS = "abcdefghijklmnopqrstuvwxyzßàáâãäåæçèéêëìíîïñòóôõöøœùúûüıÿ";
 	
 	/** string constant containing all digits 0 through 9 */
@@ -99,21 +104,97 @@ public class StringUtils {
 	/** string constant containing all ASCII punctuation marks */
 	public static final String PUNCTUATION = "°!\"§$%&/()=¿?{[]}\\@€£+*~#'´`<>|,;.:-_^";
 	
+	/*
+\u0020 --> ASCII space
+\u0085 --> ellipsis
+\u00A0 --> non-breaking space
+\u1680 --> ogham space
+\u2000 --> en quad
+\u2001 --> em quad
+\u2002 --> en space
+\u2003 --> em space
+\u2004 --> one third space
+\u2005 --> one fourth space
+\u2006 --> one sixth space
+\u2007 --> figure space
+\u2008 --> punctuation space
+\u2009 --> thin space
+\u200A --> hair space
+\u2028 --> line separator
+\u2029 --> paragraph separator
+\u202F --> narrow non-breaking space
+\u205F --> medium match space
+\u3000 --> ideographic space
+	 */
 	/** string constant containing all Unicode spaces */
 	public static final String SPACES = "\u0020\u0085\u00A0\u1680\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200A\u2028\u2029\u202F\u205F\u3000";
 	
+	/*
+- --> ASCII dash/hyphen/minus
+\u00AD --> soft hyphen
+\u2010 --> hyphen
+\u2011 --> non-breaking hyphen
+\u2012 --> figure dash
+\u2013 --> en dash
+\u2014 --> em dash
+\u2015 --> horizontal bar
+\u2212 --> minus sign
+	 */
 	/** string constant containing all Unicode dashes */
 	public static final String DASHES = "-\u00AD\u2010\u2011\u2012\u2013\u2014\u2015\u2212";
 	
+	/** string constant containing all Unicode dashes usually used as hyphens (excludes figure dash, en dash, em dash, horizontal bar) */
+	public static final String HYPHENS = "-\u00AD\u2010\u2011\u2212";
+	
+	/*
+' --> high comma
+\u0060 --> grave accent
+\u00B4 --> acute accent
+\u02B9 --> modifier prime
+\u02BB --> modifier turned comma
+\u02BC --> modifier apostrophe
+\u02BD --> modifier inverse comma
+\u02CA --> modifier acute accent
+\u02CB --> modifier grave accent
+\u2018 --> left single quote
+\u2019 --> right single quote
+\u201A --> low-9 single quote
+\u201B --> high-reversed-9 single quote
+\u2032 --> prime
+\u2035 --> reversed prime
+	 */
 	/** string constant containing all Unicode single quotes or high commas and similar characters */
 	public static final String SINGLE_QUOTES = "'\u0060\u00B4\u02B9\u02BB\u02BC\u02BD\u02CA\u02CB\u2018\u2019\u201A\u201B\u2032\u2035";
 	
-	/** string constant containing all Unicode double quotes and similar characters */
-	public static final String DOUBLE_QUOTES = "\"\u00AB\u00BB\u02BA\u02DD\u02EE\u02F5\u02F6\u201C\u201D\u201E\u201F\u2033\u2036\u301D\u301E";
+	/** string constant containing all Unicode apostrophes or high commas */
+	public static final String APOSTROPHES = "'\u0060\u00B4\u02B9\u02BB\u02BC\u02BD\u02CA\u02CB\u2018\u2019\u201B\u2032\u2035";
 	
-	/** string constant containing punctuation marks that may appear within words, namely '-' and ''' (in their various forms) */
+	/*
+\" --> ASCII double quote
+\u00AB --> guillemot left
+\u00BB --> guillemot right
+\u02BA --> modifier double prime
+\u02DD --> double acute accent
+\u02EE --> double apostrophe
+\u02F5 --> modifier middle double grave accent
+\u02F6 --> modifier middle double acute accent
+\u201C --> left double quote
+\u201D --> right double quote
+\u201E --> low-9 double quote
+\u201F --> high-reversed-9 double quote
+\u2033 --> double prime
+\u2036 --> reversed double prime
+\u301D --> reversed double prime quote
+\u301E --> double prime quote
+\u301F --> low double prime quote
+	 */
+	/** string constant containing all Unicode double quotes and similar characters */
+	public static final String DOUBLE_QUOTES = "\"\u00AB\u00BB\u02BA\u02DD\u02EE\u02F5\u02F6\u201C\u201D\u201E\u201F\u2033\u2036\u301D\u301E\u301F";
+	
+	/** string constant containing punctuation marks that may appear within words, namely hyphens and apostrophes (in their various forms) */
 //	public static final String IN_WORD_PUNCTUATION = "-'­——’‘";
-	public static final String IN_WORD_PUNCTUATION = (DASHES + SINGLE_QUOTES);
+//	public static final String IN_WORD_PUNCTUATION = (DASHES + SINGLE_QUOTES);
+	public static final String IN_WORD_PUNCTUATION = (HYPHENS + APOSTROPHES);
 	
 	/** string constant containing punctuation marks that may appear in numbers, namely ',' and '.' */
 	public static final String IN_NUMBER_PUNCTUATION = ",.";
@@ -1359,7 +1440,7 @@ public class StringUtils {
 			else if (nRomanNumber.startsWith("d", n)) {
 				if (!isCharValid[dCharIndex])
 					throw new NumberFormatException("Invalid Roman number " + romanNumber + ": D cannot occur after " + romanNumber.substring(0, n));
-				number+= 500;
+				number += 500;
 				isCharValid[mCharIndex] = false;
 				isCharValid[dCharIndex] = false;
 			}
@@ -1368,8 +1449,8 @@ public class StringUtils {
 					throw new NumberFormatException("Invalid Roman number " + romanNumber + ": C cannot occur after " + romanNumber.substring(0, n));
 				if (!isCharValid[mCharIndex])
 					throw new NumberFormatException("Invalid Roman number " + romanNumber + ": M cannot occur after " + romanNumber.substring(0, (n+1)));
-				number+= 900;
-				n++;
+				number += 900;
+				n++; // need to move on by 2 characters, so supplement loop increment
 				isCharValid[mCharIndex] = false;
 				isCharValid[dCharIndex] = false;
 				isCharValid[cCharIndex] = false;
@@ -1379,8 +1460,8 @@ public class StringUtils {
 					throw new NumberFormatException("Invalid Roman number " + romanNumber + ": C cannot occur after " + romanNumber.substring(0, n));
 				if (!isCharValid[dCharIndex])
 					throw new NumberFormatException("Invalid Roman number " + romanNumber + ": D cannot occur after " + romanNumber.substring(0, (n+1)));
-				number+= 400;
-				n++;
+				number += 400;
+				n++; // need to move on by 2 characters, so supplement loop increment
 				isCharValid[mCharIndex] = false;
 				isCharValid[dCharIndex] = false;
 				isCharValid[cCharIndex] = false;
@@ -1395,7 +1476,7 @@ public class StringUtils {
 			else if (nRomanNumber.startsWith("l", n)) {
 				if (!isCharValid[lCharIndex])
 					throw new NumberFormatException("Invalid Roman number " + romanNumber + ": L cannot occur after " + romanNumber.substring(0, n));
-				number+= 50;
+				number += 50;
 				isCharValid[mCharIndex] = false;
 				isCharValid[dCharIndex] = false;
 				isCharValid[cCharIndex] = false;
@@ -1406,8 +1487,8 @@ public class StringUtils {
 					throw new NumberFormatException("Invalid Roman number " + romanNumber + ": X cannot occur after " + romanNumber.substring(0, n));
 				if (!isCharValid[cCharIndex])
 					throw new NumberFormatException("Invalid Roman number " + romanNumber + ": C cannot occur after " + romanNumber.substring(0, (n+1)));
-				number+= 90;
-				n++;
+				number += 90;
+				n++; // need to move on by 2 characters, so supplement loop increment
 				isCharValid[mCharIndex] = false;
 				isCharValid[dCharIndex] = false;
 				isCharValid[cCharIndex] = false;
@@ -1419,8 +1500,8 @@ public class StringUtils {
 					throw new NumberFormatException("Invalid Roman number " + romanNumber + ": X cannot occur after " + romanNumber.substring(0, n));
 				if (!isCharValid[lCharIndex])
 					throw new NumberFormatException("Invalid Roman number " + romanNumber + ": L cannot occur after " + romanNumber.substring(0, (n+1)));
-				number+= 40;
-				n++;
+				number += 40;
+				n++; // need to move on by 2 characters, so supplement loop increment
 				isCharValid[mCharIndex] = false;
 				isCharValid[dCharIndex] = false;
 				isCharValid[cCharIndex] = false;
@@ -1430,7 +1511,7 @@ public class StringUtils {
 			else if (nRomanNumber.startsWith("x", n)) {
 				if (!isCharValid[xCharIndex])
 					throw new NumberFormatException("Invalid Roman number " + romanNumber + ": X cannot occur after " + romanNumber.substring(0, n));
-				number+= 10;
+				number += 10;
 				isCharValid[mCharIndex] = false;
 				isCharValid[dCharIndex] = false;
 				isCharValid[cCharIndex] = false;
@@ -1452,8 +1533,8 @@ public class StringUtils {
 					throw new NumberFormatException("Invalid Roman number " + romanNumber + ": I cannot occur after " + romanNumber.substring(0, n));
 				if (!isCharValid[xCharIndex])
 					throw new NumberFormatException("Invalid Roman number " + romanNumber + ": X cannot occur after " + romanNumber.substring(0, (n+1)));
-				number+= 9;
-				n++;
+				number += 9;
+				n++; // need to move on by 2 characters, so supplement loop increment
 				isCharValid[mCharIndex] = false;
 				isCharValid[dCharIndex] = false;
 				isCharValid[cCharIndex] = false;
@@ -1467,8 +1548,8 @@ public class StringUtils {
 					throw new NumberFormatException("Invalid Roman number " + romanNumber + ": I cannot occur after " + romanNumber.substring(0, n));
 				if (!isCharValid[vCharIndex])
 					throw new NumberFormatException("Invalid Roman number " + romanNumber + ": V cannot occur after " + romanNumber.substring(0, (n+1)));
-				number+= 4;
-				n++;
+				number += 4;
+				n++; // need to move on by 2 characters, so supplement loop increment
 				isCharValid[mCharIndex] = false;
 				isCharValid[dCharIndex] = false;
 				isCharValid[cCharIndex] = false;
@@ -1480,7 +1561,7 @@ public class StringUtils {
 			else if (nRomanNumber.startsWith("i", n)) {
 				if (!isCharValid[iCharIndex])
 					throw new NumberFormatException("Invalid Roman number " + romanNumber + ": I cannot occur after " + romanNumber.substring(0, n));
-				number+= 1;
+				number += 1;
 				isCharValid[mCharIndex] = false;
 				isCharValid[dCharIndex] = false;
 				isCharValid[cCharIndex] = false;
@@ -2047,6 +2128,7 @@ public class StringUtils {
 		baseCharMappings.put("dotlessi", new Character('i'));
 		baseCharMappings.put("dotlessj", new Character('j'));
 		baseCharMappings.put("germandbls", new Character('s'));
+		baseCharMappings.put("longs", new Character('s'));
 		
 		//	initialize ligatures, including Roman numbers
 		mapSuffixLigatures("paren", ")");

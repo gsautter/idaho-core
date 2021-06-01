@@ -1,1 +1,6 @@
 WIDEN_COLUMN = ALTER COLUMN @colName TYPE @dataType(@length)
+
+DATA_TYPE.int4 = INT
+DATA_TYPE.int8 = BIGINT
+DATA_TYPE.float4 = REAL
+DATA_TYPE.bpchar = CHAR

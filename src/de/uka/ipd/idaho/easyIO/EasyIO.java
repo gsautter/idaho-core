@@ -55,14 +55,11 @@ import javax.mail.Address;
 import javax.mail.Authenticator;
 import javax.mail.Message;
 import javax.mail.MessagingException;
-import javax.mail.Multipart;
 import javax.mail.PasswordAuthentication;
 import javax.mail.Session;
 import javax.mail.Transport;
 import javax.mail.internet.InternetAddress;
-import javax.mail.internet.MimeBodyPart;
 import javax.mail.internet.MimeMessage;
-import javax.mail.internet.MimeMultipart;
 
 import de.uka.ipd.idaho.easyIO.settings.Settings;
 import de.uka.ipd.idaho.easyIO.sql.TableDefinition;
@@ -209,6 +206,7 @@ public class EasyIO {
 		private String jdbcDefaultDbSetting;
 		private String jdbcUrl;
 		private boolean jdbcTerminalSemicolon = true;
+		private boolean jdbcKeyConstraints = true;
 		
 		//	local objects for instant use
 		private Connection jdbcCon = null;
@@ -267,7 +265,7 @@ public class EasyIO {
 //							 (this.smtpFromAddress != null) &&
 //							 (this.smtpServerIsLocal || this.wwwValid));
 			this.smtpValid = ((this.smtpServer != null) &&
-					 (this.smtpPort != -1l) &&
+					 (this.smtpPort != -1) &&
 					 (this.smtpFromAddress != null));
 			
 			//	initialize jdbc io
@@ -281,7 +279,8 @@ public class EasyIO {
 			this.jdbcPassword = this.configuration.getSetting("JDBC.Password");
 			this.jdbcDefaultDbSetting = this.configuration.getSetting("JDBC.DefaultDB");
 			this.jdbcUrl = this.configuration.getSetting("JDBC.Url");
-			this.jdbcTerminalSemicolon = "YES".equals(this.configuration.getSetting("JDBC.TerminalSemicolon", "YES"));
+			this.jdbcTerminalSemicolon = "YES".equalsIgnoreCase(this.configuration.getSetting("JDBC.TerminalSemicolon", "YES"));
+			this.jdbcKeyConstraints = "YES".equalsIgnoreCase(this.configuration.getSetting("JDBC.KeyConstraints", "YES"));
 			this.jdbcCon = this.getJdbcConnection();
 			
 			//	check if jdbc is valid
@@ -518,28 +517,29 @@ public class EasyIO {
 				System.out.println("StandardIoProvider: ensuring table columns in " + definition.getTableName() + "\n  " + columnValidationQuery);
 				SqlQueryResult sqr = this.executeSelectQuery(columnValidationQuery, true);
 				System.out.println("StandardIoProvider: column validation query successful.");
-				TableDefinition existingDefinition = new TableDefinition(sqr, definition.getTableName());
+				TableDefinition existingDefinition = new TableDefinition(sqr, this.jdbcSyntax, definition.getTableName());
 				
-				//	check for updates
-				if (create) {
-					try {
-						
-						//	get and execute update queries
-						String[] updates = definition.getUpdateQueries(existingDefinition, this.jdbcSyntax);
-						for (int u = 0; u < updates.length; u++) {
-							System.out.println("StandardIoProvider: altering column\n  " + updates[u]);
-							this.executeUpdateQuery(updates[u]);
-						}
-						return true;
+				//	we got all we need
+				if (existingDefinition.equals(definition))
+					return true;
+				
+				//	updates not allowed
+				if (!create)
+					return false;
+				
+				//	get and execute update queries
+				try {
+					String[] updates = definition.getUpdateQueries(existingDefinition, this.jdbcSyntax);
+					for (int u = 0; u < updates.length; u++) {
+						System.out.println("StandardIoProvider: altering column\n  " + updates[u]);
+						this.executeUpdateQuery(updates[u]);
 					}
-					catch (SQLException updateSqlEx) {
-						System.out.println("StandardIoProvider: " + updateSqlEx.getMessage() + " while updating table.");
-						return false;
-					}
+					return true;
 				}
-				
-				//	check for equality if update not allowed
-				else return existingDefinition.equals(definition);
+				catch (SQLException updateSqlEx) {
+					System.out.println("StandardIoProvider: " + updateSqlEx.getMessage() + " while updating table.");
+					return false;
+				}
 			}
 			
 			//	at least one column missing
@@ -552,39 +552,40 @@ public class EasyIO {
 					System.out.println("StandardIoProvider: ensuring table " + definition.getTableName() + "\n  " + validationQuery);
 					SqlQueryResult sqr = this.executeSelectQuery(validationQuery, true);
 					System.out.println("StandardIoProvider: validation query successful.");
-					TableDefinition existingDefinition = new TableDefinition(sqr, definition.getTableName());
+					TableDefinition existingDefinition = new TableDefinition(sqr, this.jdbcSyntax, definition.getTableName());
 					
-					//	check for updates
-					if (create) {
-						String updateQuery = "";
-						try {
-							
-							//	get and execute update queries
-							String[] updates = definition.getUpdateQueries(existingDefinition, this.jdbcSyntax);
-							for (int u = 0; u < updates.length; u++) {
-								updateQuery = updates[u];
-								System.out.println("StandardIoProvider: creating or altering column\n  " + updates[u]);
-								this.executeUpdateQuery(updates[u]);
-							}
-							return true;
+					//	we got all we need
+					if (existingDefinition.equals(definition))
+						return true;
+					
+					//	updates not allowed
+					if (!create)
+						return false;
+					
+					//	get and execute update queries
+					String updateQuery = "";
+					try {
+						String[] updates = definition.getUpdateQueries(existingDefinition, this.jdbcSyntax);
+						for (int u = 0; u < updates.length; u++) {
+							updateQuery = updates[u];
+							System.out.println("StandardIoProvider: creating or altering column\n  " + updates[u]);
+							this.executeUpdateQuery(updates[u]);
 						}
-						catch (SQLException updateSqlEx) {
-							System.out.println("StandardIoProvider: " + updateSqlEx.getMessage() + " while extending / updating table.\n  Query was " + updateQuery);
-							return false;
-						}
+						return true;
 					}
-					
-					//	check for equality if update not allowed
-					else return existingDefinition.equals(definition);
+					catch (SQLException updateSqlEx) {
+						System.out.println("StandardIoProvider: " + updateSqlEx.getMessage() + " while extending / updating table.\n  Query was " + updateQuery);
+						return false;
+					}
 				}
 				
 				//	table doesn't exist at all
 				catch (SQLException tableSqlEx) {
 					System.out.println("StandardIoProvider: caught " + tableSqlEx.getMessage() + " while ensuring table, table doesn't exist.");
 					String creationQuery = "";
+					
+					//	create table if allowed
 					try {
-						
-						//	create table if allowed
 						if (create) {
 							creationQuery = definition.getCreationQuery(this.jdbcSyntax);
 							System.out.println("StandardIoProvider: creating table\n  " + creationQuery);
@@ -602,11 +603,55 @@ public class EasyIO {
 				}
 			}
 		}
+//		
+//		/* (non-Javadoc)
+//		 * @see de.uka.ipd.idaho.easyIO.IoProvider#setNotNull(java.lang.String, java.lang.String)
+//		 */
+//		public boolean setNotNull(String table, String column) {
+//			
+//			//	check if table and column exist
+//			String checkQuery = ("SELECT " + column + " FROM " + table + " WHERE 1=0;");
+//			try {
+//				System.out.println("StandardIoProvider: checking table for not null constraint creation.\n  " + checkQuery.toString());
+//				this.executeSelectQuery(checkQuery.toString());
+//			}
+//			
+//			//	exception while checking table
+//			catch (SQLException checkSqlEx) {
+//				System.out.println("StandardIoProvider: " + checkSqlEx.getMessage() + " while checking table for not null constraint creation.\n  Query was " + checkQuery);
+//				return false;
+//			}
+//			
+//			//	create primary key constraint
+//			String constraintName = (table + "_NN_" + column);
+//			String createQuery = this.jdbcSyntax.getProperty(TableDefinition.SYNTAX_SET_NOT_NULL);
+//			createQuery = TableDefinition.replaceVariable(createQuery, TableDefinition.SYNTAX_KEYED_TABLE_VARIABLE, table);
+//			createQuery = TableDefinition.replaceVariable(createQuery, TableDefinition.SYNTAX_COLUMN_NAME_VARIABLE, column);
+//			try {
+//				System.out.println("StandardIoProvider: creating not null constraint\n  " + createQuery);
+//				this.executeUpdateQuery(createQuery);
+//				return true;
+//			}
+//			
+//			//	exception while creating index
+//			catch (SQLException createSqlEx) {
+//				
+//				//	catch case of index already existing, and return true on respective exceptions
+//				if (this.isAlreadyExistsErrorMessage(createSqlEx.getMessage(), "constraint", constraintName))
+//					return true;
+//				
+//				//	other error
+//				System.out.println("StandardIoProvider: " + createSqlEx.getMessage() + " while creating not null constraint.\n  Query was " + createQuery);
+//				return false;
+//			}
+//		}
 		
 		/* (non-Javadoc)
 		 * @see de.uka.ipd.idaho.easyIO.IoProvider#setPrimaryKey(java.lang.String, java.lang.String)
 		 */
 		public boolean setPrimaryKey(String table, String column) {
+			if (!this.jdbcKeyConstraints)
+				return false;
 			
 			//	check if table and column exist
 			String checkQuery = ("SELECT " + column + " FROM " + table + " WHERE 1=0;");
@@ -650,6 +695,8 @@ public class EasyIO {
 		 * @see de.uka.ipd.idaho.easyIO.IoProvider#setForeignKey(java.lang.String, java.lang.String, java.lang.String, java.lang.String)
 		 */
 		public boolean setForeignKey(String table, String column, String refTable, String refColumn) {
+			if (!this.jdbcKeyConstraints)
+				return false;
 			
 			//	check if table and column exist
 			String checkQuery = ("SELECT " + column + " FROM " + table + " WHERE 1=0;");
@@ -1585,35 +1632,62 @@ public class EasyIO {
 		if (toAddresses.length == 0)
 			return;
 		
-        Properties props = System.getProperties();
-        if ((login != null) && (password != null))
-        	props.setProperty("mail.smtp.auth", "true");
-		
-		Authenticator auth = new Authenticator() {
-			protected PasswordAuthentication getPasswordAuthentication() {
-				return new PasswordAuthentication(login, password);
-			}
-		};
-		Session session = Session.getInstance(props, auth);
-		
+		//	addemble session properties
+        Properties smtpSessionProps = new Properties();
+        smtpSessionProps.setProperty("mail.smtp.host", server);
+        if (port != 22)
+        	smtpSessionProps.setProperty("mail.smtp.port", ("" + port));
+        Authenticator smtpSessionAuth = null;
+        if ((login != null) && (password != null)) {
+        	smtpSessionProps.setProperty("mail.smtp.auth", "true");
+        	smtpSessionProps.setProperty("mail.user", login);
+        	smtpSessionProps.setProperty("mail.password", password);
+        	smtpSessionAuth = new Authenticator() {
+    			protected PasswordAuthentication getPasswordAuthentication() {
+    				return new PasswordAuthentication(login, password);
+    			}
+    		};
+        }
+        
+//		Session session = Session.getInstance(props, auth);
+//		
+//		MimeMessage msg = new MimeMessage(session);
+//		
+//		msg.setFrom(new InternetAddress(fromAddress));
+//		Address to[] = new Address[toAddresses.length];
+//		for (int t = 0; t < to.length; t++)
+//			to[t] = new InternetAddress(toAddresses[t]);
+//		msg.setRecipients(Message.RecipientType.TO, to);
+//		
+//		msg.setSubject(subject);
+//		
+//		MimeBodyPart body = new MimeBodyPart();
+//		body.setText(message);
+//		Multipart multipart = new MimeMultipart();
+//		multipart.addBodyPart(body);
+//		msg.setContent(multipart);
+//		
+//		Transport transport = session.getTransport("smtp");
+//		transport.connect(server, port, login, password);
+//		transport.sendMessage(msg, to);
+//		transport.close();
+        
+    	//	get session
+    	Session session = ((smtpSessionAuth == null) ? Session.getInstance(smtpSessionProps) : Session.getInstance(smtpSessionProps, smtpSessionAuth));
+    	
+		//	assemble message ...
 		MimeMessage msg = new MimeMessage(session);
-		
 		msg.setFrom(new InternetAddress(fromAddress));
 		Address to[] = new Address[toAddresses.length];
 		for (int t = 0; t < to.length; t++)
 			to[t] = new InternetAddress(toAddresses[t]);
 		msg.setRecipients(Message.RecipientType.TO, to);
+   		msg.setSubject(subject);
+ 		msg.setText(message);
 		
-		msg.setSubject(subject);
-		
-		MimeBodyPart body = new MimeBodyPart();
-		body.setText(message);
-		Multipart multipart = new MimeMultipart();
-		multipart.addBodyPart(body);
-		msg.setContent(multipart);
-		
+		//	... and send it
 		Transport transport = session.getTransport("smtp");
-		transport.connect(server, port, login, password);
+		transport.connect();
 		transport.sendMessage(msg, to);
 		transport.close();
 	}
@@ -1627,7 +1701,7 @@ public class EasyIO {
 	public static String sqlEscape(String data) {
 		return StringUtils.escapeChar(data, '\'', '\'');
 	}
-
+	
 	/**
 	 * Prepare a String to be used in a LIKE clause in an SQL query (replace
 	 * spaces and other problematic characters by wildcards).
@@ -1640,7 +1714,7 @@ public class EasyIO {
 		string = string.replaceAll("\\'", "%");
 		return string;
 	}
-
+	
 	/**
 	 * Insert escaper Characters into data, one before every appearance of
 	 * Character toEscape.
@@ -1653,7 +1727,7 @@ public class EasyIO {
 	public static String escape(String data, char toEscape, char escaper) {
 		return StringUtils.escapeChar(data, toEscape, escaper);
 	}
-
+	
 	/**
 	 * Insert escaper Characters into data, one before every appearance of each
 	 * Character contained in toEscape.

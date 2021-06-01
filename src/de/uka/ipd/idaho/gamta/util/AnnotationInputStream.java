@@ -48,9 +48,7 @@ import de.uka.ipd.idaho.gamta.QueriableAnnotation;
  * @author sautter
  */
 public class AnnotationInputStream extends InputStream {
-	
 	private Charset encoding;
-	
 	private Reader annotationReader;
 	
 	private ByteBuffer byteBuffer;

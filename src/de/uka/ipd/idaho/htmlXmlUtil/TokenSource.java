@@ -133,10 +133,6 @@ public class TokenSource {
 	
 	/**	@return	the first token in the queue
 	 */
-//	public String retrieveToken() throws IOException {
-//		this.produceTokens();
-//		return ((this.tokenBuffer.size() == 0) ? null : ((String) this.tokenBuffer.remove(0)));
-//	}
 	public Token retrieveToken() throws IOException {
 		this.produceTokens();
 		return ((this.tokenBuffer.size() == 0) ? null : ((Token) this.tokenBuffer.remove(0)));
@@ -147,30 +143,36 @@ public class TokenSource {
 		
 		//	refill buffer
 		while ((this.charSource.peek() != -1) && ((this.tokenBuffer.size() < this.tokenLookahead) || (awaitedEndTag != null))) {
-			int tokenStart = this.charSource.readThusFar();
-			String token = this.produceToken((awaitedEndTag == null) ? null : ("" + this.tagStart + "" + this.endTagMarker + "" + awaitedEndTag + "" + this.tagEnd));
+//			int tokenStart = this.charSource.readThusFar();
+//			String token = this.produceToken((awaitedEndTag == null) ? null : ("" + this.tagStart + "" + this.endTagMarker + "" + awaitedEndTag + "" + this.tagEnd));
+			Token token = this.produceToken((awaitedEndTag == null) ? null : ("" + this.tagStart + "" + this.endTagMarker + "" + awaitedEndTag + "" + this.tagEnd));
 			if (DEBUG) System.out.println("TokenSource got token: " + token);
-			if (token.length() == 0)
+//			if (token.length() == 0)
+			if (token.value.length() == 0)
 				continue;
 			
 			//	tag token, might have to wait for end tag
-			if (this.grammar.isTag(token)) {
-				if ((awaitedEndTag != null) && this.grammar.isEndTag(token) && awaitedEndTag.equalsIgnoreCase(this.grammar.getType(token)))
+//			if (this.grammar.isTag(token)) {
+			if (this.grammar.isTag(token.value)) {
+//				if ((awaitedEndTag != null) && this.grammar.isEndTag(token) && awaitedEndTag.equalsIgnoreCase(this.grammar.getType(token)))
+				if ((awaitedEndTag != null) && this.grammar.isEndTag(token.value) && awaitedEndTag.equalsIgnoreCase(this.grammar.getType(token.value)))
 					awaitedEndTag = null;
-				else if (this.grammar.waitForEndTag(token))
-					awaitedEndTag = this.grammar.getType(token);
+//				else if (this.grammar.waitForEndTag(token))
+				else if (this.grammar.waitForEndTag(token.value))
+//					awaitedEndTag = this.grammar.getType(token);
+					awaitedEndTag = this.grammar.getType(token.value);
 			}
 			
 			//	store token
-//			this.tokenBuffer.addElement(token);
-			this.tokenBuffer.addElement(new Token(token, tokenStart));
+//			this.tokenBuffer.addElement(new Token(token, tokenStart));
+			this.tokenBuffer.addElement(token);
 		}
 		
 		//	check buffer
 		this.grammar.ckeckTokenSequence(this.tokenBuffer);
 	}
 	
-	private String produceToken(String stopTag) throws IOException {
+	private Token produceToken(String stopTag) throws IOException {
 		if (DEBUG) System.out.println("TokenSource: producing token" + ((stopTag == null) ? "" : (" up to '" + stopTag + "'")));
 		
 		//	end of input
@@ -195,8 +197,6 @@ public class TokenSource {
 		
 		//	tag, or data starting with tag start
 		else if (this.charSource.peek() == this.tagStart) {
-//			if (!this.correctErrors || !this.correctCharEncoding)
-//				return this.cropTag();
 			if (Character.isLetter((char) this.charSource.peek(1)))
 				return this.cropTag();
 			if ("_:".indexOf((char) this.charSource.peek(1)) != -1)
@@ -221,8 +221,22 @@ public class TokenSource {
 		this.skippedWhitespace = (buffer ? whitespace.toString() : "");
 	}
 	
-	private String cropUpTo(String stopSequence, boolean includeStopSequence) throws IOException {
+	private void storeSkippedWhitespace() {
+		if (this.skippedWhitespace.length() == 0)
+			return;
+		if (DEBUG) System.out.println("TokenSource got skipped space token: " + this.skippedWhitespace);
+		this.tokenBuffer.addElement(new Token(this.skippedWhitespace, (this.charSource.readThusFar() - this.skippedWhitespace.length())));
+		this.skippedWhitespace = "";
+	}
+	
+	private Token cropUpTo(String stopSequence, boolean includeStopSequence) throws IOException {
+		
+		//	store any pending space token first
+		this.storeSkippedWhitespace();
+		
+		//	start content
 		StringBuffer token = new StringBuffer();
+		int tokenStart = this.charSource.readThusFar();
 		char stopChar = stopSequence.charAt(0);
 		while (this.charSource.peek() != -1) {
 			
@@ -245,17 +259,24 @@ public class TokenSource {
 		}
 		
 		//	finally ...
-		return token.toString();
+//		return token.toString();
+		return new Token(token.toString(), tokenStart);
 	}
 	
-	private String cropTag() throws IOException {
+	private Token cropTag() throws IOException {
+		
+		//	store any pending space token first
+		this.storeSkippedWhitespace();
+		
+		//	start tag token
 		StringBuffer tag = new StringBuffer();
+		int tokenStart = this.charSource.readThusFar();
 		boolean gotEndTagMarker = false;
-		tag.append((char) this.charSource.read());
+		tag.append((char) this.charSource.read()); // consume tag start
 		
 		//	crop end tag marker
 		if (this.charSource.peek() == this.endTagMarker) {
-			tag.append((char) this.charSource.read());
+			tag.append((char) this.charSource.read()); // consume end tag marker
 			gotEndTagMarker = true;
 		}
 		
@@ -324,7 +345,6 @@ public class TokenSource {
 				}
 				
 				//	we're not correcting errors ...
-//				else throw new ParseException("Invalid character '" + ((char) this.charSource.peek()) + "', expected name");
 				else throw new UnexpectedCharacterException(((char) charSource.peek()), this.charSource.readThusFar(), "attribute name");
 			}
 			
@@ -334,7 +354,6 @@ public class TokenSource {
 				if (this.charSource.peek() == this.tagAttributeValueSeparator)
 					this.charSource.read();
 				else if (!this.correctErrors)
-//					throw new ParseException("Invalid character '" + ((char) this.charSource.peek()) + "', expected '" + this.tagAttributeValueSeparator + "'");
 					throw new UnexpectedCharacterException(((char) charSource.peek()), this.charSource.readThusFar(), ("" + this.tagAttributeValueSeparator));
 				this.skipWhitespace(false);
 				attribValue = LookaheadReader.cropAttributeValue(this.charSource, this.grammar, tagType, attribName, this.tagEnd, this.endTagMarker);
@@ -364,11 +383,22 @@ public class TokenSource {
 		
 		//	finally ...
 		if (DEBUG) System.out.println("Tag full: " + tag.toString());
-		return tag.toString();
+//		return tag.toString();
+		return new Token(tag.toString(), tokenStart);
 	}
 	
-	private String cropData() throws IOException {
-		StringBuffer data = new StringBuffer(this.skippedWhitespace);
+	private Token cropData() throws IOException {
+		StringBuffer data = new StringBuffer();
+		int tokenStart = this.charSource.readThusFar();
+		
+		//	add any pending whitespace
+		if (this.skippedWhitespace.length() != 0) {
+			data.append(this.skippedWhitespace);
+			tokenStart -= this.skippedWhitespace.length();
+			this.skippedWhitespace = "";
+		}
+		
+		//	add actual data
 		while (this.charSource.peek() != -1) {
 			
 			//	start of comment / end of data
@@ -385,8 +415,6 @@ public class TokenSource {
 			
 			//	start of tag, or data starting with tag start / end of data
 			else if (this.charSource.peek() == this.tagStart) {
-//				if (!this.correctErrors)
-//					break;
 				if (Character.isLetter((char) this.charSource.peek(1)))
 					break;
 				if ("_:".indexOf((char) this.charSource.peek(1)) != -1)
@@ -411,7 +439,8 @@ public class TokenSource {
 		}
 		
 		//	finally ...
-		return data.toString();
+//		return data.toString();
+		return new Token(data.toString(), tokenStart);
 	}
 	
 	/**	create a TokenSource providing tokens parsed from a String in the context of the StandardGrammar 
@@ -422,6 +451,7 @@ public class TokenSource {
 	public static TokenSource getTokenSource(String string) throws IOException {
 		return getTokenSource(string, null);
 	}
+	
 	/**	create a TokenSource providing tokens parsed from a String in the context of the specified Grammar 
 	 * @param 	string	the String to parse the tokens from
 	 * @param 	grammar	the Grammar that's context to parse the tokens in
@@ -442,6 +472,7 @@ public class TokenSource {
 	public static TokenSource getTokenSource(InputStream stream) throws IOException {
 		return getTokenSource(stream, null);
 	}
+	
 	/**	create a TokenSource providing tokens parsed from an InputStream in the context of the specified Grammar 
 	 * @param 	stream	the InputStream to parse the tokens from
 	 * @param 	grammar	the Grammar that's context to parse the tokens in
@@ -462,6 +493,7 @@ public class TokenSource {
 	public static TokenSource getTokenSource(Reader stream) throws IOException {
 		return getTokenSource(stream, null);
 	}
+	
 	/**	create a TokenSource providing tokens parsed from a Reader in the context of the specified Grammar 
 	 * @param 	stream	the Reader to parse the tokens from
 	 * @param 	grammar	the Grammar that's context to parse the tokens in
@@ -482,6 +514,7 @@ public class TokenSource {
 	public static TokenSource getTokenSource(File file) throws IOException {
 		return getTokenSource(file, null);
 	}
+	
 	/**	create a TokenSource providing tokens parsed from an InputStream in the context of the specified Grammar 
 	 * @param 	file	the File from that's content the tokens are to be parsed
 	 * @param 	grammar	the Grammar that's context to parse the tokens in

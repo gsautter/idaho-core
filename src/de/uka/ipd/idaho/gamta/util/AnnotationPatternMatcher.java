@@ -1059,6 +1059,7 @@ public class AnnotationPatternMatcher {
 	}
 	
 	private static class QueriableAnnotationWrapper extends GenericAnnotationWrapper implements QueriableAnnotation {
+		private static QueriableAnnotation[] qaDummy = new QueriableAnnotation[0];
 		QueriableAnnotationWrapper(Annotation data) {
 			super(data);
 		}
@@ -1068,11 +1069,26 @@ public class AnnotationPatternMatcher {
 		public int getAbsoluteStartOffset() {
 			return this.getStartOffset();
 		}
+		public QueriableAnnotation getAnnotation(String id) {
+			return null;
+		}
 		public QueriableAnnotation[] getAnnotations() {
-			return new QueriableAnnotation[0];
+			return qaDummy;
 		}
 		public QueriableAnnotation[] getAnnotations(String type) {
-			return new QueriableAnnotation[0];
+			return qaDummy;
+		}
+		public QueriableAnnotation[] getAnnotationsSpanning(int startIndex, int endIndex) {
+			return qaDummy;
+		}
+		public QueriableAnnotation[] getAnnotationsSpanning(String type, int startIndex, int endIndex) {
+			return qaDummy;
+		}
+		public QueriableAnnotation[] getAnnotationsOverlapping(int startIndex, int endIndex) {
+			return qaDummy;
+		}
+		public QueriableAnnotation[] getAnnotationsOverlapping(String type, int startIndex, int endIndex) {
+			return qaDummy;
 		}
 		public String[] getAnnotationTypes() {
 			return new String[0];

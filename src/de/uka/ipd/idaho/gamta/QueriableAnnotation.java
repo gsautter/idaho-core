@@ -35,33 +35,110 @@ package de.uka.ipd.idaho.gamta;
  */
 public interface QueriableAnnotation extends Annotation {
 	
-	/**	@return	the absolute index of this QueriableAnnotation first Token in the backing TokenSequence
+	/**	
+	 * Retrieve the index of this QueriableAnnotation's first Token in the
+	 * underlying TokenSequence.
+	 * @return the absolute start index of this QueriableAnnotation
 	 */
 	public abstract int getAbsoluteStartIndex();
 	
-	/**	@return	the absolute offset of this QueriableAnnotation's first character in the backing char sequence
+	/**
+	 * Retrieve the start offset of this QueriableAnnotation's first Token in
+	 * the underlying TokenSequence (in its property of a CharSequence).
+	 * @return the absolute start offset of this QueriableAnnotation
 	 */
 	public abstract int getAbsoluteStartOffset();
 	
-	/**	@return	the Annotations made to this DocumentPart
-	 * Note:	If new Annotations are created based on one of this DocumentPart's Annotations, they should be added to this DocumentPart as well, not to one above or below it.
-	 * 			This is because the start indices of the Annotations returned by this method are relative to the start index of this DocumentPart 
+	/**
+	 * Retrieve an Annotation nested in this one via its identifier.
+	 * @param id the identifier of the desired Annotation
+	 * @return the Annotation with the argument identifier
+	 */
+	public abstract QueriableAnnotation getAnnotation(String id);
+	
+	/**
+	 * Retrieve the Annotations nested in this one.
+	 * @return an array holding the nested Annotations
 	 */
 	public abstract QueriableAnnotation[] getAnnotations();
 	
-	/**	get the Annotations of a certain type
-	 * @param	type	the type of the desired Annotations (specifying null will return all Annotations, regardless of their types)
-	 * @return	the Annotations made to this DocumentPart, restricted to Annotations of the specified type
-	 * Note:	If new Annotations are created based on one of this DocumentPart's Annotations, they should be added to this DocumentPart as well, not to one above or below it.
-	 * 			This is because the start indices of the Annotations returned by this method are relative to the start index of this DocumentPart 
+	/**
+	 * Retrieve the Annotations of a given type nested in this one.
+	 * @param type the type of the Annotations to get
+	 * @return an array holding the nested Annotations
 	 */
 	public abstract QueriableAnnotation[] getAnnotations(String type);
 	
-	/**	@return	the types of all Annotation contained in this QuerieableAnnotation, packed in an array
+	/**
+	 * Retrieve the Annotations nested in this one that span a range of Tokens.
+	 * This returns all nested Annotations whose start index is less than or
+	 * equal to the argument start index and whose end index is larger than or
+	 * equal to the argument end index. Implementations must interpret the
+	 * argument start and end index relative to this QueriableAnnotation.
+	 * @param startIndex the index of the first spanned Token
+	 * @param endIndex the index after the last spanned Token
+	 * @return an array holding the spanning Annotations
+	 */
+	public abstract QueriableAnnotation[] getAnnotationsSpanning(int startIndex, int endIndex);
+	
+	/**
+	 * Retrieve the Annotations of a given type that are nested in this one
+	 * and span a range of Tokens. This returns all nested Annotations of the
+	 * argument type whose start index is less than or equal to the argument
+	 * start index and whose end index is larger than or equal to the argument
+	 * end index. Implementations must interpret the argument start and end
+	 * index relative to this QueriableAnnotation.
+	 * @param type the type of the Annotations to get
+	 * @param startIndex the index of the first spanned Token
+	 * @param endIndex the index after the last spanned Token
+	 * @return an array holding the spanning Annotations
+	 */
+	public abstract QueriableAnnotation[] getAnnotationsSpanning(String type, int startIndex, int endIndex);
+//	
+//	public abstract QueriableAnnotation[] getAnnotationsSpanning(Annotation annotation);
+//	
+//	public abstract QueriableAnnotation[] getAnnotationsSpanning(String type, Annotation annotation);
+	
+	/**
+	 * Retrieve the Annotations nested in this one that overlap with a range of
+	 * Tokens. This returns all nested Annotations whose start index is less
+	 * than to the argument end index and whose end index is larger than the
+	 * argument start index. Implementations must interpret the argument start
+	 * and end index relative to this QueriableAnnotation.
+	 * @param startIndex the index of the first Token
+	 * @param endIndex the index after the last Token
+	 * @return an array holding the overlapping Annotations
+	 */
+	public abstract QueriableAnnotation[] getAnnotationsOverlapping(int startIndex, int endIndex);
+	
+	/**
+	 * Retrieve the Annotations of a given type that are nested in this one and
+	 * overlap with a range of Tokens. This returns all nested Annotations of
+	 * the argument type whose start index is less than to the argument end
+	 * index and whose end index is larger than the argument start index.
+	 * Implementations must interpret the argument start and end index relative
+	 * to this QueriableAnnotation.
+	 * @param type the type of the Annotations to get
+	 * @param startIndex the index of the first Token
+	 * @param endIndex the index after the last Token
+	 * @return an array holding the overlapping Annotations
+	 */
+	public abstract QueriableAnnotation[] getAnnotationsOverlapping(String type, int startIndex, int endIndex);
+//	
+//	public abstract QueriableAnnotation[] getAnnotationsOverlapping(Annotation annotation);
+//	
+//	public abstract QueriableAnnotation[] getAnnotationsOverlapping(String type, Annotation annotation);
+	
+	/**
+	 * Retrieve the types of the annotations nested in this one.
+	 * @return an array holding the types of the nested annotations
 	 */
 	public abstract String[] getAnnotationTypes();
 	
-	/**	@return	obtain the type-based Annotation nesting order currently valid for this document, as a space-separated string concatenation of annotation types, outmost type first
+	/**
+	 * Retrieve the type-based Annotation nesting order currently valid in the
+	 * underlying document.
+	 * @return a string representing the type-based Annotation nesting order
 	 */
 	public abstract String getAnnotationNestingOrder();
 }

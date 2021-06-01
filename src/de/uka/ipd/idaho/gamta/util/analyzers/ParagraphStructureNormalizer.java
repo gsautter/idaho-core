@@ -168,10 +168,12 @@ public class ParagraphStructureNormalizer extends AbstractAnalyzer implements Li
 			//	normalize line end property and whitespace
 			for (t = 0; t < (paragraph.size() - 1); t++) {
 				String whitespace = paragraph.getWhitespaceAfter(t);
-				whitespace = whitespace.replaceAll("\\r\\n", " ");
-				whitespace = whitespace.replaceAll("\\r\\n", " ");
-				whitespace = whitespace.replaceAll("\\r", " ");
-				whitespace = whitespace.replaceAll("\\n", " ");
+//				whitespace = whitespace.replaceAll("\\r\\n", " ");
+//				whitespace = whitespace.replaceAll("\\r\\n", " ");
+//				whitespace = whitespace.replaceAll("\\r", " ");
+//				whitespace = whitespace.replaceAll("\\n", " ");
+//				whitespace = whitespace.replaceAll("\\n", " ");
+				whitespace = this.normalizeWhitespace(whitespace);
 				paragraph.setWhitespaceAfter(whitespace, t);
 				paragraph.tokenAt(t).removeAttribute(Token.PARAGRAPH_END_ATTRIBUTE);
 			}
@@ -179,8 +181,8 @@ public class ParagraphStructureNormalizer extends AbstractAnalyzer implements Li
 			//	set line break at end of paragraph
 			paragraph.lastToken().setAttribute(Token.PARAGRAPH_END_ATTRIBUTE, Token.PARAGRAPH_END_ATTRIBUTE);
 			String whitespace = data.getWhitespaceAfter((paragraph.getEndIndex() - 1));
-			if (whitespace.indexOf("\n") == -1)
-				data.setWhitespaceAfter("\n", (paragraph.getEndIndex() - 1));
+			if (whitespace.indexOf("\r\n") == -1)
+				data.setWhitespaceAfter("\r\n", (paragraph.getEndIndex() - 1));
 		}
 		
 		//	restore page starts
@@ -216,6 +218,40 @@ public class ParagraphStructureNormalizer extends AbstractAnalyzer implements Li
 			data.tokenAt(t).removeAttribute(PAGE_NUMBER_ATTRIBUTE);
 		}
 	}
+	
+	private String normalizeWhitespace(String whitespace) {
+		StringBuffer nWhitespace = new StringBuffer();
+		char lch = ((char) 0);
+		for (int c = 0; c < whitespace.length(); c++) {
+			char ch = whitespace.charAt(c);
+			if ((ch != '\n') || (lch != '\r'))
+				nWhitespace.append(' ');
+			lch = ch;
+		}
+		return nWhitespace.toString();
+	}
+	/*
+	\u0020 --> ASCII space
+	\u0085 --> ellipsis
+	\u00A0 --> non-breaking space
+	\u1680 --> ogham space
+	\u2000 --> en quad
+	\u2001 --> em quad
+	\u2002 --> en space
+	\u2003 --> em space
+	\u2004 --> one third space
+	\u2005 --> one fourth space
+	\u2006 --> one sixth space
+	\u2007 --> figure space
+	\u2008 --> punctuation space
+	\u2009 --> thin space
+	\u200A --> hair space
+	\u2028 --> line separator
+	\u2029 --> paragraph separator
+	\u202F --> narrow non-breaking space
+	\u205F --> medium match space
+	\u3000 --> ideographic space
+	*/
 	
 	private String getJointForm(Token token1, Token token2, StringVector tokens) {
 		if (token1 == null)
@@ -259,7 +295,7 @@ public class ParagraphStructureNormalizer extends AbstractAnalyzer implements Li
 			return jointValue;
 		
 		//	if lower case letter before hyphen (probably nothing like 'B-carotin') ==> join
-		if (Gamta.LOWER_CASE_LETTERS.indexOf(value1.charAt(value1.length() - 2)) != -1)
+		if (Character.isLowerCase(value1.charAt(value1.length() - 2)))
 			return jointValue;
 		
 		//	no indication, be conservative

@@ -89,9 +89,9 @@ public class ApplicationHttpsEnabler extends AbstractHttpsEnabler {
 		File kcFile = new File(dataPath, "knownCertificates.ks");
 		return new FileOutputStream(kcFile);
 	}
-	protected boolean askPermissionToAccept(X509Certificate[] chain) throws CertificateEncodingException {
+	protected boolean askPermissionToAccept(String hostName, X509Certificate[] chain) throws CertificateEncodingException {
 		if (this.interactive) {
-			int choice = JOptionPane.showConfirmDialog(null, new JLabel(this.buildAskPermissionMessage(chain)), ("Allow Connecting to " + chain[0].getSubjectX500Principal().getName()), JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
+			int choice = JOptionPane.showConfirmDialog(null, new JLabel(this.buildAskPermissionMessage(chain)), ("Allow Connecting to " + hostName + " with these certificates?"), JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
 			return (choice == JOptionPane.YES_OPTION);
 		}
 		else return this.acceptUnknown;

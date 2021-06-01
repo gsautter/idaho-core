@@ -510,8 +510,8 @@ public abstract class DocumentList implements LiteratureConstants {
 			docCount = Integer.parseInt(docCountString);
 		} catch (NumberFormatException nfe) {}
 		
-		//	get list fields
-		String fieldString = br.readLine();
+		//	get list fields (might be in first line even though we expected document count there, e.g. from outside serializations)
+		String fieldString = (containsSpaceOrLetter(docCountString) ? docCountString : br.readLine());
 		String[] fields = fieldString.split("\\t");
 		
 		//	parse field properties off names
@@ -544,6 +544,16 @@ public abstract class DocumentList implements LiteratureConstants {
 		
 		//	finally ...
 		return dl;
+	}
+	private static boolean containsSpaceOrLetter(String str) {
+		for (int c = 0; c < str.length(); c++) {
+			char ch = str.charAt(c);
+			if (ch <= 0x20)
+				return true;
+			if (Character.isLetter(ch))
+				return true;
+		}
+		return false;
 	}
 	
 	private static class ReaderDocumentList extends DocumentList {

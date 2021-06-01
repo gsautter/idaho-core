@@ -52,7 +52,6 @@ import de.uka.ipd.idaho.gamta.Token;
  * @author sautter
  */
 public class AnnotationReader extends Reader {
-	
 	private QueriableAnnotation source;
 	private String indent = null;
 	private XmlOutputOptions outputOptions;
@@ -63,11 +62,10 @@ public class AnnotationReader extends Reader {
 	
 	private Token token = null;
 	private Token lastToken;
-	
 	private int tokenIndex = 0;
 	
-	private boolean lastWasLineBreak = false;
-	private boolean lastWasTag = true;
+	private boolean lastWasLineBreak = true;
+//	private boolean lastWasTag = true;
 	
 	private StringBuffer lineAssembler = new StringBuffer();
 	private LinkedList lineBuffer = new LinkedList();
@@ -259,7 +257,7 @@ public class AnnotationReader extends Reader {
 		this.source = null;
 		
 		this.lineBuffer = null;
-//		this.lineAssembler = null;
+		this.lineAssembler = null;
 		this.string = null;
 		
 		this.nestedAnnotations = null;
@@ -316,37 +314,43 @@ public class AnnotationReader extends Reader {
 			this.lastToken = this.token;
 			this.token = this.source.tokenAt(this.tokenIndex);
 			
-			//	write end tags for Annotations ending before current Token
+			//	write end tags for annotations ending before current Token
 			while ((this.stack.size() > 0) && ((((Annotation) this.stack.peek()).getStartIndex() + ((Annotation) this.stack.peek()).size()) <= this.tokenIndex)) {
 				Annotation annotation = ((Annotation) this.stack.pop());
 				
-				//	line break only if nested Annotations
+				//	line break only if nested annotations
 				if (!this.lastWasLineBreak && this.lineBroken.contains(annotation.getAnnotationID())) {
-					this.lineAssembler.append("\n");
+					this.lineAssembler.append(this.outputOptions.getLineBreak());
 					this.lineBuffer.addLast(this.lineAssembler.toString());
 					newChars += this.lineAssembler.length();
 					this.lineAssembler = new StringBuffer();
+					this.lastWasLineBreak = true;
 				}
 				
-				//	add indent
-				if (this.lastWasLineBreak && (this.indent != null))
+				//	add indent (TODO maybe only for line broken annotations)
+				if (this.lastWasLineBreak && (this.indent != null)) {
 					for (int i = 0; i < this.stack.size(); i++)
 						this.lineAssembler.append(this.indent);
+				}
 				
-				//	store line
+				//	add end tag
 				this.lineAssembler.append("</" + annotation.getType() + ">");
-				this.lineAssembler.append("\n");
+				this.lastWasLineBreak = false;
+				
+				//	store line (omit if in-line)
+				if (this.outputOptions.writeInLine(annotation.getType()))
+					continue;
+				this.lineAssembler.append(this.outputOptions.getLineBreak());
 				this.lineBuffer.addLast(this.lineAssembler.toString());
 				newChars += this.lineAssembler.length();
 				this.lineAssembler = new StringBuffer();
-				
 				this.lastWasLineBreak = true;
-				this.lastWasTag = true;
+				//this.lastWasTag = true;
 			}
 			
 			//	insert line break if required
 			if (!this.lastWasLineBreak && (this.lastToken != null) && this.lastToken.hasAttribute(Token.PARAGRAPH_END_ATTRIBUTE)) {
-				this.lineAssembler.append("\n");
+				this.lineAssembler.append(this.outputOptions.getLineBreak());
 				this.lineBuffer.addLast(this.lineAssembler.toString());
 				newChars += this.lineAssembler.length();
 				this.lineAssembler = new StringBuffer();
@@ -354,52 +358,53 @@ public class AnnotationReader extends Reader {
 			}
 			
 			//	skip space character before unspaced punctuation (e.g. ','), after line breaks and tags, and if there is no whitespace in the token sequence
-			if (!this.lastWasTag && !this.lastWasLineBreak && 
-				(this.lastToken != null) && !this.lastToken.hasAttribute(Token.PARAGRAPH_END_ATTRIBUTE) && 
-				Gamta.insertSpace(this.lastToken, this.token) && 
-				(this.tokenIndex != 0) && (this.source.getWhitespaceAfter(this.tokenIndex-1).length() != 0)
-				) this.lineAssembler.append(" ");
+			if (/*!this.lastWasTag && */!this.lastWasLineBreak && 
+					(this.lastToken != null) && !this.lastToken.hasAttribute(Token.PARAGRAPH_END_ATTRIBUTE) && 
+					Gamta.insertSpace(this.lastToken, this.token) && 
+					(this.tokenIndex != 0) && (this.source.getWhitespaceAfter(this.tokenIndex-1).length() != 0)
+				) this.lineAssembler.append(this.outputOptions.getSpace());
 			
 			//	write start tags for Annotations beginning at current Token
 			while ((this.annotationPointer < this.nestedAnnotations.length) && (this.nestedAnnotations[this.annotationPointer].getStartIndex() == this.tokenIndex)) {
-				Annotation annotation = this.nestedAnnotations[this.annotationPointer];
+				Annotation annotation = this.nestedAnnotations[this.annotationPointer++];
 				
-				//	line break
-				if (!this.lastWasTag) {
-					this.lineAssembler.append("\n");
+				//	line break  (omit if in-line)
+				if (!this.lastWasLineBreak && !this.outputOptions.writeInLine(annotation.getType())) {
+					this.lineAssembler.append(this.outputOptions.getLineBreak());
 					this.lineBuffer.addLast(this.lineAssembler.toString());
 					newChars += this.lineAssembler.length();
 					this.lineAssembler = new StringBuffer();
 				}
 				
-				//	add indent
-				if (this.lastWasLineBreak && (this.indent != null))
+				//	add indent (TODO maybe only for line broken annotations)
+				if (this.lastWasLineBreak && (this.indent != null)) {
 					for (int i = 0; i < this.stack.size(); i++)
 						this.lineAssembler.append(this.indent);
+				}
 				
+				//	write start tag
 				this.lineAssembler.append(AnnotationUtils.produceStartTag(annotation, this.outputOptions));
-				
+				//this.lastWasTag = true;
 				this.stack.push(annotation);
-				this.annotationPointer++;
 				
-				//	line break only if nested Annotations
+				//	line break only if nested annotations (omit if in-line)
+				if (this.outputOptions.writeInLine(annotation.getType()))
+					continue;
 				if ((this.annotationPointer < this.nestedAnnotations.length) && AnnotationUtils.contains(annotation, this.nestedAnnotations[this.annotationPointer])) {
-					this.lineAssembler.append("\n");
+					this.lineAssembler.append(this.outputOptions.getLineBreak());
 					this.lineBuffer.addLast(this.lineAssembler.toString());
 					newChars += this.lineAssembler.length();
 					this.lineAssembler = new StringBuffer();
 					this.lineBroken.add(annotation.getAnnotationID());
+					this.lastWasLineBreak = true;
 				}
-				
-				this.lastWasLineBreak = true;
-				this.lastWasTag = true;
 			}
 			
-			//	append current Token
+			//	append current token
 			String tokenValue = this.token.getValue();
 			this.lineAssembler.append(AnnotationUtils.escapeForXml(tokenValue));
 			this.lastWasLineBreak = false;
-			this.lastWasTag = false;
+			//this.lastWasTag = false;
 			
 			//	switch to next token
 			this.tokenIndex++;
@@ -409,23 +414,24 @@ public class AnnotationReader extends Reader {
 				return newChars;
 		}
 		
-		//	write end tags for Annotations not closed so far
+		//	write end tags for annotations not closed so far
 		while (this.stack.size() > 0) {
 			Annotation annotation = ((Annotation) this.stack.pop());
 			
-			//	line break only if nested Annotations
+			//	line break only if nested annotations
 			if (!this.lastWasLineBreak && this.lineBroken.contains(annotation.getAnnotationID())) {
-				this.lineAssembler.append("\n");
+				this.lineAssembler.append(this.outputOptions.getLineBreak());
 				this.lineBuffer.addLast(this.lineAssembler.toString());
 				newChars += this.lineAssembler.length();
 				this.lineAssembler = new StringBuffer();
 				this.lastWasLineBreak = true;
 			}
 			
-			//	add indent
-			if (this.lastWasLineBreak && (this.indent != null))
+			//	add indent (TODO maybe only for line broken annotations)
+			if (this.lastWasLineBreak && (this.indent != null)) {
 				for (int i = 0; i < this.stack.size(); i++)
 					this.lineAssembler.append(this.indent);
+			}
 			
 			//	add end tag
 			this.lineAssembler.append("</" + annotation.getType() + ">");

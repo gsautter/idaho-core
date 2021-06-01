@@ -36,7 +36,6 @@ import java.io.OutputStream;
 import java.math.BigInteger;
 import java.net.InetAddress;
 import java.net.Socket;
-import java.net.UnknownHostException;
 import java.security.InvalidKeyException;
 import java.security.KeyManagementException;
 import java.security.KeyPair;
@@ -49,10 +48,14 @@ import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.SecureRandom;
 import java.security.SignatureException;
+import java.security.cert.Certificate;
 import java.security.cert.CertificateEncodingException;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
+import java.util.Enumeration;
 
 import javax.net.SocketFactory;
 import javax.net.ssl.HttpsURLConnection;
@@ -397,11 +400,12 @@ public abstract class AbstractHttpsEnabler extends SSLSocketFactory implements X
 	 * Ask the user whether or not to accept a thus far unknown certificate
 	 * chain. If this method returns true, the argument chain is added to the
 	 * underlying key store.
+	 * @param hostName the host name the certificate chain comes from
 	 * @param chain the certificate chain in question.
 	 * @return a boolean indicating whether or not to accept the chain
 	 * @throws CertificateEncodingException
 	 */
-	protected abstract boolean askPermissionToAccept(X509Certificate[] chain) throws CertificateEncodingException;
+	protected abstract boolean askPermissionToAccept(String hostName, X509Certificate[] chain) throws CertificateEncodingException;
 	
 	public String[] getDefaultCipherSuites() {
 		return this.sslSocketFactory.getDefaultCipherSuites();
@@ -415,8 +419,9 @@ public abstract class AbstractHttpsEnabler extends SSLSocketFactory implements X
 			currentHost.set(host);
 			return this.sslSocketFactory.createSocket(sock, host, port, autoClose);
 		}
-		finally {
+		catch (IOException ioe) {
 			currentHost.remove();
+			throw ioe;
 		}
 	}
 	public Socket createSocket(InetAddress address, int port, InetAddress localAddress, int localPort) throws IOException {
@@ -424,8 +429,9 @@ public abstract class AbstractHttpsEnabler extends SSLSocketFactory implements X
 			currentHost.set(address.getHostName());
 			return this.sslSocketFactory.createSocket(address, port, localAddress, localPort);
 		}
-		finally {
+		catch (IOException ioe) {
 			currentHost.remove();
+			throw ioe;
 		}
 	}
 	public Socket createSocket(InetAddress address, int port) throws IOException {
@@ -433,26 +439,29 @@ public abstract class AbstractHttpsEnabler extends SSLSocketFactory implements X
 			currentHost.set(address.getHostName());
 			return this.sslSocketFactory.createSocket(address, port);
 		}
-		finally {
+		catch (IOException ioe) {
 			currentHost.remove();
+			throw ioe;
 		}
 	}
-	public Socket createSocket(String host, int port, InetAddress localHost, int localPort) throws IOException, UnknownHostException {
+	public Socket createSocket(String host, int port, InetAddress localHost, int localPort) throws IOException {
 		try {
 			currentHost.set(host);
 			return this.sslSocketFactory.createSocket(host, port, localHost, localPort);
 		}
-		finally {
+		catch (IOException ioe) {
 			currentHost.remove();
+			throw ioe;
 		}
 	}
-	public Socket createSocket(String host, int port) throws IOException, UnknownHostException {
+	public Socket createSocket(String host, int port) throws IOException {
 		try {
 			currentHost.set(host);
 			return this.sslSocketFactory.createSocket(host, port);
 		}
-		finally {
+		catch (IOException ioe) {
 			currentHost.remove();
+			throw ioe;
 		}
 	}
 	
@@ -491,6 +500,8 @@ public abstract class AbstractHttpsEnabler extends SSLSocketFactory implements X
 	}
 	
 	public void checkServerTrusted(X509Certificate[] chain, String authType) throws CertificateException {
+		String currentHost = ((String) AbstractHttpsEnabler.currentHost.get());
+		AbstractHttpsEnabler.currentHost.remove();
 		
 		//	check with key store first
 		if (this.keyStoreTrustManager != null) try {
@@ -499,14 +510,14 @@ public abstract class AbstractHttpsEnabler extends SSLSocketFactory implements X
 		} catch (CertificateException ce) {}
 		
 		//	double-check with user
-		if (this.askPermissionToAccept(chain))
-			this.addCertificates(chain);
+		if (this.askPermissionToAccept(currentHost, chain))
+			this.addCertificates(currentHost, chain);
 		
 		//	we don't accept this certificate chain
 		else throw new CertificateException("Untrusted certificate " + chain[0].getSubjectX500Principal().getName());
 	}
 	
-	void addCertificates(X509Certificate[] chain) throws CertificateEncodingException {
+	void addCertificates(String hostName, X509Certificate[] chain) throws CertificateEncodingException {
 		
 		//	do we have anything to add them to?
 		if (this.keyStore == null)
@@ -514,7 +525,7 @@ public abstract class AbstractHttpsEnabler extends SSLSocketFactory implements X
 		
 		//	store certificates
 		for (int c = 0; c < chain.length; c++) try {
-			this.keyStore.setCertificateEntry((((String) currentHost.get()) + "-" + c), chain[c]);
+			this.keyStore.setCertificateEntry((hostName + "-" + c), chain[c]);
 		}
 		catch (KeyStoreException kse) {
 			System.out.println("Could not store certificate: " + kse.getMessage());
@@ -538,6 +549,75 @@ public abstract class AbstractHttpsEnabler extends SSLSocketFactory implements X
 			System.out.println("Could not refresh trust manager: " + kse.getMessage());
 			kse.printStackTrace(System.out);
 		}
+	}
+	
+	/**
+	 * Retrieve the aliases the keystore currently holds certificates for.
+	 * @return an array holding the aliases
+	 */
+	public String[] getAliases() throws KeyStoreException {
+		if (this.keyStore == null)
+			return null;
+		ArrayList aliases = new ArrayList();
+		for (Enumeration ae = this.keyStore.aliases(); ae.hasMoreElements();)
+			aliases.add(ae.nextElement());
+		return ((String[]) aliases.toArray(new String[aliases.size()]));
+	}
+	
+	/**
+	 * Retrieve the certificate for a given alias.
+	 * @param alias the alias to get the certificate for
+	 * @return the certificate for the argument alias
+	 */
+	public X509Certificate getCertificate(String alias) throws KeyStoreException {
+		if (this.keyStore == null)
+			return null;
+		return ((X509Certificate) this.keyStore.getCertificate(alias));
+	}
+	
+	/**
+	 * Retrieve the certificate for a given alias.
+	 * @param alias the alias to get the certificate for
+	 * @return the certificate for the argument alias
+	 */
+	public X509Certificate[] getCertificateChain(String alias) throws KeyStoreException {
+		if (this.keyStore == null)
+			return null;
+		Certificate[] rawChain = this.keyStore.getCertificateChain(alias);
+		if (rawChain == null)
+			return new X509Certificate[0];
+		X509Certificate[] chain = new X509Certificate[rawChain.length];
+		for (int c = 0; c < rawChain.length; c++)
+			chain[c] = ((X509Certificate) rawChain[c]);
+		return chain;
+	}
+	
+	/**
+	 * Retrieve the certificates currently in the keystore.
+	 * @return an array holding the certificates
+	 */
+	public X509Certificate[] getCertificates() throws KeyStoreException {
+		if (this.keyStore == null)
+			return null;
+		String[] aliases = this.getAliases();
+		X509Certificate[] certificates = new X509Certificate[aliases.length];
+		for (int a = 0; a < aliases.length; a++)
+			certificates[a] = this.getCertificate(aliases[a]);
+		return certificates;
+	}
+	
+	/**
+	 * Retrieve the certificate chains currently in the keystore.
+	 * @return an array holding the certificates
+	 */
+	public X509Certificate[][] getCertificateChains() throws KeyStoreException {
+		if (this.keyStore == null)
+			return null;
+		String[] aliases = this.getAliases();
+		X509Certificate[][] chains = new X509Certificate[aliases.length][];
+		for (int a = 0; a < aliases.length; a++)
+			chains[a] = this.getCertificateChain(aliases[a]);
+		return chains;
 	}
 	
 	/**
@@ -567,7 +647,7 @@ public abstract class AbstractHttpsEnabler extends SSLSocketFactory implements X
 			protected InputStream getKeyStoreInputStream() throws IOException {
 				return null;
 			}
-			protected boolean askPermissionToAccept(X509Certificate[] chain) throws CertificateEncodingException {
+			protected boolean askPermissionToAccept(String hostName, X509Certificate[] chain) throws CertificateEncodingException {
 				return true;
 			}
 		};
@@ -584,7 +664,7 @@ public abstract class AbstractHttpsEnabler extends SSLSocketFactory implements X
 				File ks = new File("E:/GoldenGATEv3/Temp/KeyStoreTest");
 				return new FileOutputStream(ks);
 			}
-			protected boolean askPermissionToAccept(X509Certificate[] chain) throws CertificateEncodingException {
+			protected boolean askPermissionToAccept(String hostName, X509Certificate[] chain) throws CertificateEncodingException {
 				StringBuffer message = new StringBuffer("<HTML>");
 				for (int c = 0; c < chain.length; c++) {
 					if (c != 0)
@@ -595,11 +675,12 @@ public abstract class AbstractHttpsEnabler extends SSLSocketFactory implements X
 					message.append("<BR/>");
 				}
 				message.append("</HTML>");
-				int choice = JOptionPane.showConfirmDialog(null, new JLabel(message.toString()), ("Allow Connecting to " + chain[0].getSubjectX500Principal().getName()), JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
+				int choice = JOptionPane.showConfirmDialog(null, new JLabel(message.toString()), ("Allow Connecting to " + hostName + " with these certificates?"), JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
 				return (choice == JOptionPane.YES_OPTION);
 			}
 		};
 		ahe.init();
+		System.out.println(Arrays.toString(ahe.getAliases()));
 		
 		SocketFactory factory = HttpsURLConnection.getDefaultSSLSocketFactory();
 //		SSLSocket socket = (SSLSocket) factory.createSocket("srv1.plazi.de", 443);

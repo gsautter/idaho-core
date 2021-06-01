@@ -237,7 +237,8 @@ public class GPath implements GPathConstants {
 				canBeOp = false;
 			}
 			else {
-				if ((assembler.length() != 0) && !"/".equals(token) && !"/".equals(lastToken) && !"::".equals(token) && !"::".equals(lastToken) && !"@".equals(lastToken) && (!"#".equals(lastToken) || (TOKEN_AXIS_EXTENSIONS.indexOf(" " + token + " ") == -1))) assembler.append(" ");
+				if ((assembler.length() != 0) && !"/".equals(token) && !"/".equals(lastToken) && !"::".equals(token) && !"::".equals(lastToken) && !"@".equals(lastToken) && (!"#".equals(lastToken) || (TOKEN_AXIS_EXTENSIONS.indexOf(" " + token + " ") == -1)))
+					assembler.append(" ");
 				assembler.append(token);
 				canBeOp = true;
 			}
@@ -331,13 +332,15 @@ public class GPath implements GPathConstants {
 	 */
 	public static String normalizePath(String gPath) {
 		StringVector lines = new StringVector();
-		lines.parseAndAddElements(gPath.replace('\r', '\n'), "\n+");
+		lines.parseAndAddElements(gPath.replace('\r', '\n'), "\n");
 		if (lines.isEmpty())
 			return "";
 		String lastLine = lines.get(0).trim();
 		StringBuffer nPath = new StringBuffer(lastLine);
 		for (int l = 1; l < lines.size(); l++) {
 			String line = lines.get(l).trim();
+			if (line.length() == 0)
+				continue;
 			if (true
 					&& !line.startsWith(")")
 					&& !line.startsWith("]")

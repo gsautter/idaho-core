@@ -579,22 +579,18 @@ public class Html extends StandardGrammar {
 		int index = 0;
 		boolean inScript = false;
 		boolean inStyle = false;
-//		String lastPreservedPart = null;
-//		String currentPart;
 		Token lastPreservedPart = null;
 		Token currentPart;
 		StringBuffer collector = new StringBuffer();
 		int collectorStart = -1;
 		
 		while (index < ts.size()) {
-//			currentPart = ((String) ts.get(index));
 			currentPart = ((Token) ts.get(index));
 			
 			//	reassemble parsed scripts
 			if (inScript) {
 				
 				//	end of script
-//				if (this.isEndTag(currentPart) && this.getType(currentPart).equalsIgnoreCase("script")) {
 				if (this.isEndTag(currentPart.value) && this.getType(currentPart.value).equalsIgnoreCase("script")) {
 					inScript = false;
 					
@@ -608,7 +604,6 @@ public class Html extends StandardGrammar {
 //						if (!script.endsWith("-->"))
 //							script = script + "\r\n//-->";
 						
-//						ts.insertElementAt(script, index);
 						ts.insertElementAt(new Token(script, collectorStart), index);
 						index++;
 					}
@@ -621,7 +616,6 @@ public class Html extends StandardGrammar {
 				}
 				
 				//	there can be no script within a script
-//				else if (this.isTag(currentPart) && this.getType(currentPart).equalsIgnoreCase("script"))
 				else if (this.isTag(currentPart.value) && this.getType(currentPart.value).equalsIgnoreCase("script"))
 					ts.removeElementAt(index);
 				
@@ -638,7 +632,6 @@ public class Html extends StandardGrammar {
 			else if (inStyle) {
 				
 				//	end of style
-//				if (this.isEndTag(currentPart) && this.getType(currentPart).equalsIgnoreCase("style")) {
 				if (this.isEndTag(currentPart.value) && this.getType(currentPart.value).equalsIgnoreCase("style")) {
 					inStyle = false;
 					
@@ -650,7 +643,6 @@ public class Html extends StandardGrammar {
 //						if (!style.endsWith("-->"))
 //							style = style + "\n//-->";
 						
-//						ts.insertElementAt(style, index);
 						ts.insertElementAt(new Token(style, collectorStart), index);
 						index++;
 					}
@@ -663,7 +655,6 @@ public class Html extends StandardGrammar {
 				}
 				
 				//	there can be no style within a style
-//				else if (this.isTag(currentPart) && this.getType(currentPart).equalsIgnoreCase("style"))
 				else if (this.isTag(currentPart.value) && this.getType(currentPart.value).equalsIgnoreCase("style"))
 					ts.removeElementAt(index);
 					
@@ -677,7 +668,6 @@ public class Html extends StandardGrammar {
 			}
 			
 			//	check subsequent equal end tags
-//			else if (this.isEndTag(currentPart) && currentPart.equalsIgnoreCase(lastPreservedPart) && !this.subsequentEndTagsAllowedTypes.contains(this.getType(currentPart).toLowerCase()))
 			else if ((lastPreservedPart != null) && this.isEndTag(currentPart.value) && currentPart.value.equalsIgnoreCase(lastPreservedPart.value) && !this.subsequentEndTagsAllowedTypes.contains(this.getType(currentPart.value).toLowerCase()))
 				ts.removeElementAt(index);
 //			
@@ -705,7 +695,6 @@ public class Html extends StandardGrammar {
 			}
 			
 			//	reassemble parsed scripts
-//			else if (this.isTag(currentPart) && !this.isEndTag(currentPart) && this.getType(currentPart).equalsIgnoreCase("script")) {
 			else if (this.isTag(currentPart.value) && !this.isEndTag(currentPart.value) && this.getType(currentPart.value).equalsIgnoreCase("script")) {
 				inScript = true;
 				lastPreservedPart = currentPart;
@@ -713,7 +702,6 @@ public class Html extends StandardGrammar {
 			}
 			
 			//	reassemble parsed styles
-//			else if (this.isTag(currentPart) && !this.isEndTag(currentPart) && this.getType(currentPart).equalsIgnoreCase("style")) {
 			else if (this.isTag(currentPart.value) && !this.isEndTag(currentPart.value) && this.getType(currentPart.value).equalsIgnoreCase("style")) {
 				inStyle = true;
 				lastPreservedPart = currentPart;

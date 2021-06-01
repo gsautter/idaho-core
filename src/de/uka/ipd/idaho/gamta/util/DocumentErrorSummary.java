@@ -50,6 +50,7 @@ import de.uka.ipd.idaho.gamta.Attributed;
  * @author sautter
  */
 public class DocumentErrorSummary extends DocumentErrorProtocol {
+	private static final DocumentError[] NO_ERRORS = {};
 	
 	/** the ID of the document the error summary pertains to */
 	public final String docId;
@@ -82,7 +83,7 @@ public class DocumentErrorSummary extends DocumentErrorProtocol {
 				for (int e = 0; e < des.length; e++)
 					this.addError(des[e].category, des[e].type, des[e].severity, 1, false);
 			}
-			DocumentError[] fps = dep.getErrors();
+			DocumentError[] fps = dep.getFalsePositives();
 			if (fps != null) {
 				for (int e = 0; e < fps.length; e++)
 					this.addError(fps[e].category, fps[e].type, fps[e].severity, 1, true);
@@ -115,7 +116,7 @@ public class DocumentErrorSummary extends DocumentErrorProtocol {
 	}
 	
 	public DocumentError[] getErrors() {
-		return new DocumentError[0];
+		return NO_ERRORS;
 	}
 	
 	public int getErrorCount(String category) {
@@ -135,7 +136,7 @@ public class DocumentErrorSummary extends DocumentErrorProtocol {
 	}
 	
 	public DocumentError[] getErrors(String category) {
-		return new DocumentError[0];
+		return NO_ERRORS;
 	}
 	
 	public int getErrorCount(String category, String type) {
@@ -155,18 +156,12 @@ public class DocumentErrorSummary extends DocumentErrorProtocol {
 	}
 	
 	public DocumentError[] getErrors(String category, String type) {
-		return new DocumentError[0];
+		return NO_ERRORS;
 	}
 	
 	public void addError(String source, Attributed subject, Attributed parent, String category, String type, String description, String severity, boolean falsePositive) {
 		this.errorCategories.add(category);
 		this.errorTypes.add(category + "." + type);
-//		this.errorCounts.add("");
-//		this.errorCounts.add(category);
-//		this.errorCounts.add(category + "." + type);
-//		this.errorSeverityCounts.add(severity);
-//		this.errorSeverityCounts.add(category + "." + severity);
-//		this.errorSeverityCounts.add(category + "." + type + "." + severity);
 		CountingSet counts = (falsePositive ? this.falsePositiveCounts : this.errorCounts);
 		counts.add("");
 		counts.add(category);
@@ -180,12 +175,6 @@ public class DocumentErrorSummary extends DocumentErrorProtocol {
 	void addError(String category, String type, String severity, int count, boolean falsePositive) {
 		this.errorCategories.add(category);
 		this.errorTypes.add(category + "." + type);
-//		this.errorCounts.add("", count);
-//		this.errorCounts.add(category, count);
-//		this.errorCounts.add((category + "." + type), count);
-//		this.errorSeverityCounts.add(severity, count);
-//		this.errorSeverityCounts.add((category + "." + severity), count);
-//		this.errorSeverityCounts.add((category + "." + type + "." + severity), count);
 		CountingSet counts = (falsePositive ? this.falsePositiveCounts : this.errorCounts);
 		counts.add("", count);
 		counts.add(category, count);
@@ -209,7 +198,7 @@ public class DocumentErrorSummary extends DocumentErrorProtocol {
 	}
 	
 	public DocumentError[] getFalsePositives() {
-		return new DocumentError[0];
+		return NO_ERRORS;
 	}
 	
 	public void removeError(DocumentError error) {}
@@ -237,7 +226,6 @@ public class DocumentErrorSummary extends DocumentErrorProtocol {
 	 * @throws IOException
 	 */
 	public static void storeErrorSummary(DocumentErrorSummary des, Writer out) throws IOException {
-		//	TODOnot consider zipping ==> IMF is zipped anyway, and IMD is huge, so ease of access more important
 		
 		//	persist error protocol
 		BufferedWriter epBw = ((out instanceof BufferedWriter) ? ((BufferedWriter) out) : new BufferedWriter(out));
@@ -313,7 +301,6 @@ public class DocumentErrorSummary extends DocumentErrorProtocol {
 	 * @throws IOException
 	 */
 	public static void fillErrorSummary(DocumentErrorSummary des, Reader in) throws IOException {
-		//	TODOnot consider zipping ==> IMF is zipped anyway, and IMD is huge, so ease of access more important
 		
 		//	load error protocol, scoping error categories and types
 		BufferedReader epBr = ((in instanceof BufferedReader) ? ((BufferedReader) in) : new BufferedReader(in));

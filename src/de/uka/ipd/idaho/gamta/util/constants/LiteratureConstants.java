@@ -50,6 +50,12 @@ public interface LiteratureConstants {
 	/**	the attribute or document property holding the name of a document, e.g. the name of the file it was loaded from */
 	public static final String DOCUMENT_NAME_ATTRIBUTE = "docName";
 	
+	/**	the attribute or document property holding the version number of a document */
+	public static final String DOCUMENT_VERSION_ATTRIBUTE = "docVersion";
+	
+	/**	the attribute or document property holding the last modification timestamp of a document */
+	public static final String DOCUMENT_LAST_MODIFIED_ATTRIBUTE = "docLastModified";
+	
 	/**	the attribute or document property holding the type of a document */
 	public static final String DOCUMENT_TYPE_ATTRIBUTE = "docType";
 	

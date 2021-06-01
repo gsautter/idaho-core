@@ -107,41 +107,77 @@ public class ImmutableAnnotation implements QueriableAnnotation {
 	public String getAnnotationID() {
 		return this.data.getAnnotationID();
 	}
-
+	
+	/* (non-Javadoc)
+	 * @see de.uka.ipd.idaho.gamta.QueriableAnnotation#getAnnotation(java.lang.String)
+	 */
+	public QueriableAnnotation getAnnotation(String id) {
+		QueriableAnnotation annotation = this.data.getAnnotation(id);
+		return ((annotation == null) ? null : new ImmutableAnnotation(annotation));
+	}
+	
 	/* (non-Javadoc)
 	 * @see de.gamta.defaultImplementation.GamtaDocument#getAnnotations()
 	 */
 	public QueriableAnnotation[] getAnnotations() {
-		QueriableAnnotation[] annotations = this.data.getAnnotations();
-		for (int a = 0; a < annotations.length; a++)
-			annotations[a] = new ImmutableAnnotation(annotations[a]);
-		return annotations;
+		return this.wrapAnnotations(this.data.getAnnotations());
 	}
-
+	
 	/* (non-Javadoc)
 	 * @see de.gamta.defaultImplementation.GamtaDocument#getAnnotations(java.lang.String)
 	 */
 	public QueriableAnnotation[] getAnnotations(String type) {
-		QueriableAnnotation[] annotations = this.data.getAnnotations(type);
+		return this.wrapAnnotations(this.data.getAnnotations(type));
+	}
+	
+	/* (non-Javadoc)
+	 * @see de.uka.ipd.idaho.gamta.QueriableAnnotation#getAnnotationsSpanning(int, int)
+	 */
+	public QueriableAnnotation[] getAnnotationsSpanning(int startIndex, int endIndex) {
+		return this.wrapAnnotations(this.data.getAnnotationsSpanning(startIndex, endIndex));
+	}
+	
+	/* (non-Javadoc)
+	 * @see de.uka.ipd.idaho.gamta.QueriableAnnotation#getAnnotationsSpanning(java.lang.String, int, int)
+	 */
+	public QueriableAnnotation[] getAnnotationsSpanning(String type, int startIndex, int endIndex) {
+		return this.wrapAnnotations(this.data.getAnnotationsSpanning(type, startIndex, endIndex));
+	}
+	
+	/* (non-Javadoc)
+	 * @see de.uka.ipd.idaho.gamta.QueriableAnnotation#getAnnotationsOverlapping(int, int)
+	 */
+	public QueriableAnnotation[] getAnnotationsOverlapping(int startIndex, int endIndex) {
+		return this.wrapAnnotations(this.data.getAnnotationsOverlapping(startIndex, endIndex));
+	}
+	
+	/* (non-Javadoc)
+	 * @see de.uka.ipd.idaho.gamta.QueriableAnnotation#getAnnotationsOverlapping(java.lang.String, int, int)
+	 */
+	public QueriableAnnotation[] getAnnotationsOverlapping(String type, int startIndex, int endIndex) {
+		return this.wrapAnnotations(this.data.getAnnotationsOverlapping(type, startIndex, endIndex));
+	}
+	
+	private QueriableAnnotation[] wrapAnnotations(QueriableAnnotation[] annotations) {
 		for (int a = 0; a < annotations.length; a++)
 			annotations[a] = new ImmutableAnnotation(annotations[a]);
 		return annotations;
 	}
-
+	
 	/* (non-Javadoc)
 	 * @see de.gamta.defaultImplementation.GamtaDocument#getAnnotationTypes()
 	 */
 	public String[] getAnnotationTypes() {
 		return this.data.getAnnotationTypes();
 	}
-
+	
 	/* (non-Javadoc)
 	 * @see de.gamta.defaultImplementation.GamtaDocument#getDocumentProperty(java.lang.String, java.lang.String)
 	 */
 	public String getDocumentProperty(String propertyName, String defaultValue) {
 		return this.data.getDocumentProperty(propertyName, defaultValue);
 	}
-
+	
 	/* (non-Javadoc)
 	 * @see de.gamta.defaultImplementation.GamtaDocument#getDocumentProperty(java.lang.String)
 	 */

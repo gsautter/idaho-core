@@ -372,10 +372,10 @@ public class StringVector implements MutableDictionary {
 				return ((o2 == null) ? 0 : (this.descending ? -1 : 1));
 			if (o2 == null)
 				return ((o1 == null) ? 0 : (this.descending ? 1 : -1));
-			if (!(o1 instanceof String))
-				return ((!(o2 instanceof String)) ? 0 : (this.descending ? -1 : 1));
-			if (!(o2 instanceof String))
-				return ((!(o1 instanceof String)) ? 0 : (this.descending ? 1 : -1));
+//			if (!(o1 instanceof String))
+//				return ((!(o2 instanceof String)) ? 0 : (this.descending ? -1 : 1));
+//			if (!(o2 instanceof String))
+//				return ((!(o1 instanceof String)) ? 0 : (this.descending ? 1 : -1));
 			int c;
 			if (this.caseSensitive)
 				c = ((String) o1).compareTo((String) o2);
@@ -718,19 +718,34 @@ public class StringVector implements MutableDictionary {
 			this.data = data;
 		}
 		public boolean add(Object o) {
-			if ((o == null) || !(o instanceof String)) return false;
-			if (this.data.isDefaultCaseSensitive()) {
-				if (this.data.contains(o.toString())) return false;
-				this.data.addElementIgnoreDuplicates(o.toString());
-				return true;
-			} else {
-				if (this.data.containsIgnoreCase(o.toString())) return false;
-				this.data.addElementIgnoreDuplicates(o.toString(), false);
+//			if ((o == null) || !(o instanceof String)) return false;
+//			if (this.data.isDefaultCaseSensitive()) {
+//				if (this.data.contains(o.toString())) return false;
+//				this.data.addElementIgnoreDuplicates(o.toString());
+//				return true;
+//			} else {
+//				if (this.data.containsIgnoreCase(o.toString())) return false;
+//				this.data.addElementIgnoreDuplicates(o.toString(), false);
+//				return true;
+//			}
+			if (o instanceof String) {
+				if (this.data.isDefaultCaseSensitive()) {
+					if (this.data.contains((String) o))
+						return false;
+					this.data.addElementIgnoreDuplicates((String) o);
+				}
+				else {
+					if (this.data.containsIgnoreCase((String) o))
+						return false;
+					this.data.addElementIgnoreDuplicates(((String) o), false);
+				}
 				return true;
 			}
+			else return false;
 		}
 		public boolean addAll(Collection c) {
-			if (c == null) return false;
+			if (c == null)
+				return false;
 			boolean change = false;
 			Iterator i = c.iterator();
 			while (i.hasNext()) {
@@ -743,16 +758,24 @@ public class StringVector implements MutableDictionary {
 			this.data.clear();
 		}
 		public boolean contains(Object o) {
-			if ((o == null) || !(o instanceof String)) return false;
-			if (this.data.isDefaultCaseSensitive()) return this.data.contains(o.toString());
-			else return this.data.containsIgnoreCase(o.toString());
+//			if ((o == null) || !(o instanceof String)) return false;
+//			if (this.data.isDefaultCaseSensitive()) return this.data.contains(o.toString());
+//			else return this.data.containsIgnoreCase(o.toString());
+			if (o instanceof String) {
+				if (this.data.isDefaultCaseSensitive())
+					return this.data.contains((String) o);
+				else return this.data.containsIgnoreCase((String) o);
+			}
+			else return false;
 		}
 		public boolean containsAll(Collection c) {
-			if (c == null) return true;
+			if (c == null)
+				return true;
 			Iterator i = c.iterator();
 			while (i.hasNext()) {
 				Object o = i.next();
-				if (!this.contains(o)) return false;
+				if (!this.contains(o))
+					return false;
 			}
 			return true;
 		}
@@ -760,19 +783,33 @@ public class StringVector implements MutableDictionary {
 			return (this.data.size() == 0);
 		}
 		public boolean remove(Object o) {
-			if ((o == null) || !(o instanceof String)) return false;
-			if (this.data.isDefaultCaseSensitive()) {
-				boolean change = this.data.contains(o.toString());
-				this.data.removeAll(o.toString());
-				return change;
-			} else {
-				boolean change = this.data.containsIgnoreCase(o.toString());
-				this.data.removeAll(o.toString());
+//			if ((o == null) || !(o instanceof String)) return false;
+//			if (this.data.isDefaultCaseSensitive()) {
+//				boolean change = this.data.contains(o.toString());
+//				this.data.removeAll(o.toString());
+//				return change;
+//			} else {
+//				boolean change = this.data.containsIgnoreCase(o.toString());
+//				this.data.removeAll(o.toString());
+//				return change;
+//			}
+			if (o instanceof String) {
+				boolean change;
+				if (this.data.isDefaultCaseSensitive()) {
+					change = this.data.contains((String) o);
+					this.data.removeAll((String) o);
+				}
+				else {
+					change = this.data.containsIgnoreCase((String) o);
+					this.data.removeAll((String) o);
+				}
 				return change;
 			}
+			else return false;
 		}
 		public boolean removeAll(Collection c) {
-			if (c == null) return false;
+			if (c == null)
+				return false;
 			boolean change = false;
 			Iterator i = c.iterator();
 			while (i.hasNext()) {
@@ -782,19 +819,18 @@ public class StringVector implements MutableDictionary {
 			return change;
 		}
 		public boolean retainAll(Collection c) {
-			if (c == null) return false;
-			boolean change = false;
+			if (c == null)
+				return false;
 			StringVector toRemove = new StringVector();
 			for (int s = 0; s < this.data.size(); s++) {
-				if (!c.contains(this.data.get(s))) {
+				if (!c.contains(this.data.get(s)))
 					toRemove.addElementIgnoreDuplicates(this.data.get(s));
-					change = true;
-				}
 			}
-			if (!toRemove.isEmpty())
-				for (int r = 0; r < toRemove.size(); r++)
-					this.data.removeAll(toRemove.get(r));
-			return change;
+			if (toRemove.isEmpty())
+				return false;
+			for (int r = 0; r < toRemove.size(); r++)
+				this.data.removeAll(toRemove.get(r));
+			return true;
 		}
 		public int size() {
 			return this.data.getDistinctElementCount();
@@ -803,9 +839,11 @@ public class StringVector implements MutableDictionary {
 			return this.data.union(this.data).toStringArray();
 		}
 		public Object[] toArray(Object[] o) {
-			if ((o == null) || (o.length == 0)) return o;
+			if ((o == null) || (o.length == 0))
+				return o;
 			Object[] oHelp = this.toArray();
-			for (int i = 0; (i < o.length) && (i < oHelp.length); i++) o[i] = oHelp[i];
+			for (int i = 0; (i < o.length) && (i < oHelp.length); i++)
+				o[i] = oHelp[i];
 			return o;
 		}
 		
@@ -824,11 +862,13 @@ public class StringVector implements MutableDictionary {
 				this.dataModified = true;
 			}
 			public boolean hasNext() {
-				if (this.dataModified) throw new ConcurrentModificationException();
+				if (this.dataModified)
+					throw new ConcurrentModificationException();
 				return this.index < this.setData.size();
 			}
 			public Object next() {
-				if (this.dataModified) throw new ConcurrentModificationException();
+				if (this.dataModified)
+					throw new ConcurrentModificationException();
 				Object o = this.setData.get(index);
 				this.index ++;
 				return o;
@@ -856,16 +896,24 @@ public class StringVector implements MutableDictionary {
 			this.data = data;
 		}
 		public void add(int index, Object o) {
-			if ((o == null) || !(o instanceof String)) return;
-			this.data.insertElementAt(o.toString(), index);
+//			if ((o == null) || !(o instanceof String)) return;
+//			this.data.insertElementAt(o.toString(), index);
+			if (o instanceof String)
+				this.data.insertElementAt(((String) o), index);
 		}
 		public boolean add(Object o) {
-			if ((o == null) || !(o instanceof String)) return false;
-			this.data.addElement(o.toString());
-			return true;
+//			if ((o == null) || !(o instanceof String)) return false;
+//			this.data.addElement(o.toString());
+//			return true;
+			if (o instanceof String) {
+				this.data.addElement((String) o);
+				return true;
+			}
+			else return false;
 		}
 		public boolean addAll(Collection c) {
-			if (c == null) return false;
+			if (c == null)
+				return false;
 			boolean change = false;
 			Iterator i = c.iterator();
 			while (i.hasNext()) {
@@ -875,13 +923,15 @@ public class StringVector implements MutableDictionary {
 			return change;
 		}
 		public boolean addAll(int index, Collection c) {
-			if (c == null) return false;
+			if (c == null)
+				return false;
 			Iterator i = c.iterator();
 			int offset = 0;
 			while (i.hasNext()) {
 				Object o = i.next();
-				if ((o != null) && (o instanceof String)) {
-					this.data.insertElementAt(o.toString(), (index + offset));
+//				if ((o != null) && (o instanceof String)) {
+				if (o instanceof String) {
+					this.data.insertElementAt(((String) o), (index + offset));
 					offset++;
 				}
 			}
@@ -891,16 +941,24 @@ public class StringVector implements MutableDictionary {
 			this.data.clear();
 		}
 		public boolean contains(Object o) {
-			if ((o == null) || !(o instanceof String)) return false;
-			if (this.data.isDefaultCaseSensitive()) return this.data.contains(o.toString());
-			else return this.data.containsIgnoreCase(o.toString());
+//			if ((o == null) || !(o instanceof String)) return false;
+//			if (this.data.isDefaultCaseSensitive()) return this.data.contains(o.toString());
+//			else return this.data.containsIgnoreCase(o.toString());
+			if (o instanceof String) {
+				if (this.data.isDefaultCaseSensitive())
+					return this.data.contains((String) o);
+				else return this.data.containsIgnoreCase((String) o);
+			}
+			else return false;
 		}
 		public boolean containsAll(Collection c) {
-			if (c == null) return true;
+			if (c == null)
+				return true;
 			Iterator i = c.iterator();
 			while (i.hasNext()) {
 				Object o = i.next();
-				if (!this.contains(o)) return false;
+				if (!this.contains(o))
+					return false;
 			}
 			return true;
 		}
@@ -908,29 +966,41 @@ public class StringVector implements MutableDictionary {
 			return this.data.get(index);
 		}
 		public int indexOf(Object o) {
-			if ((o == null) || !(o instanceof String)) return -1;
-			return this.data.indexOf(o.toString());
+//			if ((o == null) || !(o instanceof String)) return -1;
+//			return this.data.indexOf(o.toString());
+			return ((o instanceof String) ? this.data.indexOf((String) o) : -1);
 		}
 		public boolean isEmpty() {
 			return (this.data.size() != 0);
 		}
 		public int lastIndexOf(Object o) {
-			if ((o == null) || !(o instanceof String)) return -1;
-			return this.data.lastIndexOf(o.toString());
+//			if ((o == null) || !(o instanceof String)) return -1;
+//			return this.data.lastIndexOf(o.toString());
+			return ((o instanceof String) ? this.data.lastIndexOf((String) o) : -1);
 		}
 		public Object remove(int index) {
 			return this.data.remove(index);
 		}
 		public boolean remove(Object o) {
-			if ((o == null) || !(o instanceof String)) return false;
-			boolean change;
-			if (this.data.isDefaultCaseSensitive()) change = this.data.contains(o.toString());
-			else change = this.data.containsIgnoreCase(o.toString());
-			this.data.remove(o.toString());
-			return change;
+//			if ((o == null) || !(o instanceof String)) return false;
+//			boolean change;
+//			if (this.data.isDefaultCaseSensitive()) change = this.data.contains(o.toString());
+//			else change = this.data.containsIgnoreCase(o.toString());
+//			this.data.remove(o.toString());
+//			return change;
+			if (o instanceof String) {
+				boolean change;
+				if (this.data.isDefaultCaseSensitive())
+					change = this.data.contains((String) o);
+				else change = this.data.containsIgnoreCase((String) o);
+				this.data.remove((String) o);
+				return change;
+			}
+			return false;
 		}
 		public boolean removeAll(Collection c) {
-			if (c == null) return false;
+			if (c == null)
+				return false;
 			boolean change = false;
 			Iterator i = c.iterator();
 			while (i.hasNext()) {
@@ -940,41 +1010,49 @@ public class StringVector implements MutableDictionary {
 			return change;
 		}
 		public boolean retainAll(Collection c) {
-			if (c == null) return false;
-			boolean change = false;
+			if (c == null)
+				return false;
 			StringVector toRemove = new StringVector();
 			for (int s = 0; s < this.data.size(); s++) {
-				if (!c.contains(this.data.get(s))) {
+				if (!c.contains(this.data.get(s)))
 					toRemove.addElementIgnoreDuplicates(this.data.get(s));
-					change = true;
-				}
 			}
-			if (!toRemove.isEmpty())
-				for (int r = 0; r < toRemove.size(); r++)
-					this.data.removeAll(toRemove.get(r));
-			return change;
+			if (toRemove.isEmpty())
+				return false;
+			for (int r = 0; r < toRemove.size(); r++)
+				this.data.removeAll(toRemove.get(r));
+			return true;
 		}
 		public Object set(int index, Object o) {
-			if ((o == null) || !(o instanceof String)) return o;
-			Object old = this.data.get(index);
-			this.data.setElementAt(o.toString(), index);
-			return old;
+//			if ((o == null) || !(o instanceof String)) return o;
+//			Object old = this.data.get(index);
+//			this.data.setElementAt(o.toString(), index);
+//			return old;
+			if (o instanceof String) {
+				Object old = this.data.get(index);
+				this.data.setElementAt(((String) o), index);
+				return old;
+			}
+			else return o;
 		}
 		public int size() {
 			return this.data.size();
 		}
 		public List subList(int fromIndex, int toIndex) {
 			ArrayList list = new ArrayList(toIndex - fromIndex);
-			for (int i = fromIndex; i < toIndex; i++) list.add(this.data.get(i));
+			for (int i = fromIndex; i < toIndex; i++)
+				list.add(this.data.get(i));
 			return list;
 		}
 		public Object[] toArray() {
 			return this.data.toStringArray();
 		}
 		public Object[] toArray(Object[] o) {
-			if (o == null) return o;
+			if (o == null)
+				return o;
 			int end = ((o.length < this.data.size()) ? o.length : this.data.size());
-			for (int i = 0; i < end; i++) o[i] = this.data.get(i);
+			for (int i = 0; i < end; i++)
+				o[i] = this.data.get(i);
 			return o;
 		}
 		
@@ -1001,11 +1079,13 @@ public class StringVector implements MutableDictionary {
 				this.dataModified = true;
 			}
 			public boolean hasNext() {
-				if (this.dataModified) throw new ConcurrentModificationException();
+				if (this.dataModified)
+					throw new ConcurrentModificationException();
 				return this.index < data.size();
 			}
 			public Object next() {
-				if (this.dataModified) throw new ConcurrentModificationException();
+				if (this.dataModified)
+					throw new ConcurrentModificationException();
 				String s = data.get(index);
 				index ++;
 				return s;
@@ -1023,7 +1103,8 @@ public class StringVector implements MutableDictionary {
 				return this.index;
 			}
 			public Object previous() {
-				if (this.dataModified) throw new ConcurrentModificationException();
+				if (this.dataModified)
+					throw new ConcurrentModificationException();
 				this.index --;
 				return data.get(index);
 			}

@@ -19,7 +19,7 @@
 	
 	<target name="htmlxmlutil">
 		<delete file="${jar.htmlxmlutil}" />
-		<jar destfile="${jar.htmlxmlutil}">
+		<jar destfile="${jar.htmlxmlutil}" manifest="${data.home}/MANIFEST.xmltools.MF">
 			<fileset dir="${build.home}/classes" includes="**/htmlXmlUtil/**/**.class"/>
 			<fileset dir="${src.home}" includes="**/htmlXmlUtil/**/**.java"/>
 			<fileset dir="." includes="LICENSE.txt"/>

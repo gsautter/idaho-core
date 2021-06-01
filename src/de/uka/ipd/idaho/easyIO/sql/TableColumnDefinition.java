@@ -59,7 +59,7 @@ public class TableColumnDefinition implements Comparable {
 		}
 		else throw new IllegalArgumentException(data + " is not a valid argument to this constructor");
 	}
-
+	
 	/**
 	 * fully custom Constructor
 	 * @param columnName the column name in the SQL table
@@ -72,7 +72,7 @@ public class TableColumnDefinition implements Comparable {
 		this.dataType = dataType;
 		this.length = (TableDefinition.isFixLengthType(this.dataType) ? 0 : length);
 	}
-
+	
 	/**
 	 * fully custom Constructor
 	 * @param columnName the column name in the SQL table
@@ -102,7 +102,7 @@ public class TableColumnDefinition implements Comparable {
 	public String getDataType() {
 		return this.dataType;
 	}
-
+	
 	/**
 	 * @return the length of the column in the SQL table, or 0 if the data type
 	 *         has a predefined or arbitrary length
@@ -110,7 +110,7 @@ public class TableColumnDefinition implements Comparable {
 	public int getColumnLength() {
 		return this.length;
 	}
-
+	
 	/**
 	 * Create a part for a CREATE TABLE query that creates the column.
 	 * @param syntax a Properties object holding templates that mask product
@@ -153,7 +153,7 @@ public class TableColumnDefinition implements Comparable {
 	public boolean equals(Object o) {
 		return ((o instanceof TableColumnDefinition) && this.equals((TableColumnDefinition) o));
 	}
-
+	
 	/**
 	 * compareTo-method needed for Collections.sort, etc
 	 */
@@ -166,34 +166,43 @@ public class TableColumnDefinition implements Comparable {
 	}
 	
 	/**	check if this TableColumnDefinition is equal to the argument one
-	 * @param 	tcd	the TableColumnDefinition to ckeck for identity
+	 * @param 	tcd	the TableColumnDefinition to check for identity
 	 * @return	true if and only if the SQL structure of both this and the argument TableColumnDefinition are equal, false otherwise
 	 */
 	public boolean equals(TableColumnDefinition tcd) {
-		return (
-				(tcd != null)
-				&&
-				this.columnName.equalsIgnoreCase(tcd.columnName)
-				&&
-				this.dataType.equalsIgnoreCase(tcd.dataType)
-				&&
-				(
-					(this.length == tcd.length)
-					||
-					TableDefinition.isFixLengthType(this.dataType)
-					||
-					(this.isValidationDef && (this.length > tcd.length))
-				)
-			);
+		if (tcd == null) {
+			if (this.isValidationDef)
+				System.out.println("TableColumnDefinition: null argument");
+			return false;
+		}
+		if (!this.columnName.equalsIgnoreCase(tcd.columnName)) {
+			if (this.isValidationDef)
+				System.out.println("TableColumnDefinition: names different ('" + this.columnName + "' / '" + tcd.columnName + "')");
+			return false;
+		}
+		if (!this.dataType.equalsIgnoreCase(tcd.dataType)) {
+			if (this.isValidationDef)
+				System.out.println("TableColumnDefinition: data types different ('" + this.dataType + "' / '" + tcd.dataType + "')");
+			return false;
+		}
+		if (this.length == tcd.length)
+			return true;
+		if (TableDefinition.isFixLengthType(this.dataType))
+			return true;
+		if (this.isValidationDef && (this.length > tcd.length))
+			return true;
+		if (this.isValidationDef)
+			System.out.println("TableColumnDefinition: field lengths different ('" + this.length + "' / '" + tcd.length + "')");
+		return false;
 	}
-
+	
 	/**	@return	a String representation of this TableColumnDefinition, as accepted by the singular String constructor
 	 * The String is formated like this: #'columnName';'dataType';'length'
 	 */
 	public String toString() {
 		return "#" + this.columnName + ";" + this.dataType + ";" + this.length;
 	}
-
+	
 	/**	@return	an XML representation of this TableColumnDefinition
 	 */
 	public String toXML() {

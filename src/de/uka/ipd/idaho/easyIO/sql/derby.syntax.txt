@@ -1,1 +1,5 @@
 WIDEN_COLUMN = ALTER COLUMN @colName SET DATA TYPE @dataType(@length)
+
+CREATE_FK = ALTER TABLE @table ADD FOREIGN KEY (@column) REFERENCES @refTable (@refColumn)
+
+DATA_TYPE.INTEGER = INT

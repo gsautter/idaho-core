@@ -426,7 +426,7 @@ public abstract class DocumentErrorProtocol {
 	 * @param description the detailed error description
 	 * @param severity the severity of the error (one of 'blocker', 'critical', 'major', and 'minor')
 	 */
-	public final void addError(String source, Attributed subject, Attributed parent, String category, String type, String description, String severity) {
+	public void addError(String source, Attributed subject, Attributed parent, String category, String type, String description, String severity) {
 		this.addError(source, subject, parent, category, type, description, severity, false);
 	}
 	
@@ -660,7 +660,6 @@ public abstract class DocumentErrorProtocol {
 	 * @throws IOException
 	 */
 	public static void storeErrorProtocol(DocumentErrorProtocol dep, Writer out) throws IOException {
-		//	TODOnot consider zipping ==> IMF is zipped anyway, and IMD is huge, so ease of access more important
 		
 		//	persist error protocol
 		BufferedWriter epBw = ((out instanceof BufferedWriter) ? ((BufferedWriter) out) : new BufferedWriter(out));
@@ -702,23 +701,24 @@ public abstract class DocumentErrorProtocol {
 				//	store false positives
 				if (falsePositives == null)
 					falsePositives = dep.getFalsePositives();
-				for (int fp = 0; fp < falsePositives.length; fp++) {
-					if (falsePositives[fp] == null)
-						continue;
-					if (!categories[c].equals(falsePositives[fp].category))
-						continue;
-					if (!types[t].equals(falsePositives[fp].type))
-						continue;
-					epBw.write("ERROR");
-					epBw.write("\t" + falsePositives[fp].severity);
-					epBw.write("\t" + falsePositives[fp].description);
-					epBw.write("\t" + falsePositives[fp].source);
-					String[] sData = falsePositives[fp].getSubjectData();
-					for (int d = 0; d < sData.length; d++)
-						epBw.write("\t" + sData[d]);
-					epBw.newLine();
-					falsePositives[fp] = null;
-				}
+				if (falsePositives != null)
+					for (int fp = 0; fp < falsePositives.length; fp++) {
+						if (falsePositives[fp] == null)
+							continue;
+						if (!categories[c].equals(falsePositives[fp].category))
+							continue;
+						if (!types[t].equals(falsePositives[fp].type))
+							continue;
+						epBw.write("FALPOS");
+						epBw.write("\t" + falsePositives[fp].severity);
+						epBw.write("\t" + falsePositives[fp].description);
+						epBw.write("\t" + falsePositives[fp].source);
+						String[] sData = falsePositives[fp].getSubjectData();
+						for (int d = 0; d < sData.length; d++)
+							epBw.write("\t" + sData[d]);
+						epBw.newLine();
+						falsePositives[fp] = null;
+					}
 			}
 		}
 		epBw.flush();
@@ -743,7 +743,6 @@ public abstract class DocumentErrorProtocol {
 	 * @throws IOException
 	 */
 	public static void fillErrorProtocol(DocumentErrorProtocol dep, Attributed doc, Reader in) throws IOException {
-		//	TODOnot consider zipping ==> IMF is zipped anyway, and IMD is huge, so ease of access more important
 		
 		//	load error protocol, scoping error categories and types
 		BufferedReader epBr = ((in instanceof BufferedReader) ? ((BufferedReader) in) : new BufferedReader(in));
@@ -778,8 +777,6 @@ public abstract class DocumentErrorProtocol {
 			}
 			
 			//	do we have an actual error or false positive?
-//			if (!"ERROR".equals(data[0]))
-//				continue; // something weird, ignore it
 			if (!"ERROR".equals(data[0]) && !"FALPOS".equals(data[0]))
 				continue; // something weird, ignore it
 			if (data.length < (isSeverity(data[1]) ? 4 : 3))
@@ -797,7 +794,6 @@ public abstract class DocumentErrorProtocol {
 				System.arraycopy(data, i, sData, 0, sData.length);
 				subject = dep.findErrorSubject(doc, sData);
 			}
-//			dep.addError(source, subject, doc, category, type, description, severity);
 			dep.addError(source, subject, doc, category, type, description, severity, "FALPOS".equals(data[0]));
 		}
 		epBr.close();

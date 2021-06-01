@@ -114,7 +114,7 @@ public class GPathEngine implements GPathConstants {
 		if (variableBindings == null)
 			variableBindings = GPath.getDummyVariableResolver();
 		
-		//	wrap query context DocumentPart
+		//	wrap query context
 		GPathDocument wrappedContext = new GPathDocument(context);
 		
 		//	execute query
@@ -137,14 +137,15 @@ public class GPathEngine implements GPathConstants {
 			else resultIDs.add(resultAnnotation.getAnnotationID());
 		}
 		
-		//	collect result annotations by ID
+		//	collect result annotations by ID (relative to argument context !!!)
 		ArrayList resultList = new ArrayList();
 		if (resultIDs.remove(context.getAnnotationID())) // use remove() to avoid duplicates
 			resultList.add(context);
 		QueriableAnnotation[] contextAnnotations = context.getAnnotations();
-		for (int c = 0; c < contextAnnotations.length; c++)
+		for (int c = 0; c < contextAnnotations.length; c++) {
 			if (resultIDs.remove(contextAnnotations[c].getAnnotationID()))
 				resultList.add(contextAnnotations[c]);
+		}
 		resultList.addAll(nonTextResultAnnotations);
 		Collections.sort(resultList, AnnotationUtils.getComparator(context.getAnnotationNestingOrder()));
 		
@@ -167,7 +168,8 @@ public class GPathEngine implements GPathConstants {
 		//	variable to resolve
 		if (path.steps[0].annotationTest.startsWith("$")) {
 			GPathObject vv = variableBindings.getVariable(path.steps[0].annotationTest);
-			if (vv == null) throw new VariableNotBoundException("The variable '" + path.steps[0].annotationTest + "' has been referenced, but is not bound to a value.");
+			if (vv == null)
+				throw new VariableNotBoundException("The variable '" + path.steps[0].annotationTest + "' has been referenced, but is not bound to a value.");
 			else if (vv instanceof GPathAnnotationSet) {
 				
 				//	make sure all the annotations are properly wrapped
@@ -189,7 +191,7 @@ public class GPathEngine implements GPathConstants {
 			else throw new InvalidArgumentsException("The variable '" + path.steps[0].annotationTest + "' has been referenced as the start of a path expression, but is not bound to an annotation set.");
 		}
 		
-		//	document reference (path starts with a slash)
+		//	document reference (path starts with a slash, or with 'document')
 		else if (("descendant-or-self".equals(path.steps[0].axis) && ("annotation()".equals(path.steps[0].annotationTest) || "*".equals(path.steps[0].annotationTest))) || ("child".equals(path.steps[0].axis) && DocumentRoot.DOCUMENT_TYPE.equals(path.steps[0].annotationTest))) {
 			GPathAnnotationSet result = document.getPathResult(path.toString());
 			if (result == null) {
@@ -242,10 +244,10 @@ public class GPathEngine implements GPathConstants {
 			
 			else if (step.axis.startsWith("following-sibling"))
 				annotationResult = getFollowingSibling(document, annotation, filterType);
-				
+			
 			else if (step.axis.startsWith("interleaving-"))
 				annotationResult = getInterleavingSibling(document, annotation, filterType, !step.axis.endsWith("right"), !step.axis.endsWith("left"));
-				
+			
 			else if ("child".equals(step.axis)) {
 				QueriableAnnotation[] annotations = annotation.getAnnotations(filterType);
 				for (int an = 0; an < annotations.length; an++)
@@ -328,10 +330,28 @@ public class GPathEngine implements GPathConstants {
 			
 			if (step.axis.endsWith("self"))
 				annotationResult.add(annotation);
-			else if ("parent".equals(step.axis)) {
-				GPathAnnotation parent = ((GPathAnnotation) annotation).getParent();
-				if (parent != null)
-					annotationResult.add(parent);
+			else if ("parent".equals(step.axis) || "ancestor".equals(step.axis)) {
+				if (filterType == null) {
+					GPathAnnotation parent = ((GPathAnnotation) annotation).getParent();
+					if (parent != null)
+						annotationResult.add(parent);
+				}
+				else {
+					GPathDocument parentDocument = ((document.source.getDocument() == document.source) ? document : new GPathDocument(document.source.getDocument()));
+					if (filterType.equals(parentDocument.getType()))
+						annotationResult.add(parentDocument);
+					QueriableAnnotation[] parentTypeAnnotations = parentDocument.getAnnotations(filterType);
+					int annotationStart = (((annotation instanceof GPathAnnotation) && (document.source.getDocument() != document.source)) ? ((GPathAnnotation) annotation).source.getAbsoluteStartIndex() : annotation.getAbsoluteStartIndex());
+					int annotationEnd = (annotationStart + annotation.size());
+					for (int an = 0; an < parentTypeAnnotations.length; an++) {
+						if (parentTypeAnnotations[an].getEndIndex() <= annotationStart)
+							continue;
+						if (annotationEnd <= parentTypeAnnotations[an].getStartIndex())
+							break;
+						if ((parentTypeAnnotations[an].getStartIndex() <= annotationStart) && (annotationEnd <= parentTypeAnnotations[an].getEndIndex()))
+							annotationResult.add(parentTypeAnnotations[an]);
+					}
+				}
 			}
 			
 			//	don't filter by type on Token axis
@@ -436,7 +456,7 @@ public class GPathEngine implements GPathConstants {
 		if (variableBindings == null)
 			variableBindings = GPath.getDummyVariableResolver();
 		
-		//	wrap query context DocumentPart
+		//	wrap query context
 		GPathDocument wrappedContext = new GPathDocument(context);
 		
 		//	execute query
@@ -452,11 +472,14 @@ public class GPathEngine implements GPathConstants {
 	}
 	
 	private GPathObject evaluateUnaryExpression(GPathDocument document, GPathUnaryExpression expression, GPathAnnotation contextAnnotation, int contextPosition, int contextSize, GPathVariableResolver variableBindings) throws GPathException {
-		if (expression.literal != null) return expression.literal;
-		if (expression.number != null) return (expression.isNegative ? new GPathNumber(-expression.number.value) : expression.number);
+		if (expression.literal != null)
+			return expression.literal;
+		if (expression.number != null)
+			return (expression.isNegative ? new GPathNumber(-expression.number.value) : expression.number);
 		if (expression.variableName != null) {
 			GPathObject vv = variableBindings.getVariable(expression.variableName);
-			if (vv == null) throw new VariableNotBoundException("The variable '" + expression.variableName + "' has been referenced, but is not bound to a value.");
+			if (vv == null)
+				throw new VariableNotBoundException("The variable '" + expression.variableName + "' has been referenced, but is not bound to a value.");
 			else return vv;
 		}
 		if (expression.enclosedExpression != null) {
@@ -476,7 +499,8 @@ public class GPathEngine implements GPathConstants {
 				return (expression.isNegative ? new GPathNumber(-xpo.asNumber().value) : xpo);
 			
 			if ((expression.predicates != null) && (expression.predicates.length != 0)) {
-				if (!(xpo instanceof GPathAnnotationSet)) throw new InvalidArgumentsException("Predicates are applicable only for annotationSets.");
+				if (!(xpo instanceof GPathAnnotationSet))
+					throw new InvalidArgumentsException("Predicates are applicable only for annotationSets.");
 				GPathAnnotationSet annotationSet = ((GPathAnnotationSet) xpo);
 				for (int p = 0; p < expression.predicates.length; p++)
 					annotationSet = this.applyPredicate(document, expression.predicates[p], annotationSet, variableBindings);
@@ -484,19 +508,22 @@ public class GPathEngine implements GPathConstants {
 			}
 			
 			if ((expression.pathExpression != null) && (expression.pathExpression.steps != null) && (expression.pathExpression.steps.length != 0)) {
-				if (!(xpo instanceof GPathAnnotationSet)) throw new InvalidArgumentsException("Path expressions are applicable only for annotationSets.");
+				if (!(xpo instanceof GPathAnnotationSet))
+					throw new InvalidArgumentsException("Path expressions are applicable only for annotationSets.");
 				GPathAnnotationSet annotationSet = ((GPathAnnotationSet) xpo);
 				return this.evaluatePath(document, expression.pathExpression, annotationSet, variableBindings);
 			}
 			
 			return xpo;
 		}
-		if (expression.pathExpression != null) return this.evaluatePath(document, expression.pathExpression, contextAnnotation, variableBindings);
+		if (expression.pathExpression != null)
+			return this.evaluatePath(document, expression.pathExpression, contextAnnotation, variableBindings);
 		if ((expression.partExpressions != null) && (expression.partExpressions.length != 0)) {
 			GPathAnnotationSet result = new GPathAnnotationSet();
 			for (int p = 1; p < expression.partExpressions.length; p++) {
 				GPathObject xpo = this.evaluateExpression(document, expression.partExpressions[p], contextAnnotation, contextPosition, contextSize, variableBindings);
-				if (!(xpo instanceof GPathAnnotationSet)) throw new InvalidArgumentsException("Union expressions are applicable only for annotationSets.");
+				if (!(xpo instanceof GPathAnnotationSet))
+					throw new InvalidArgumentsException("Union expressions are applicable only for annotationSets.");
 				GPathAnnotationSet annotationSet = ((GPathAnnotationSet) xpo);
 				for (int n = 0; n < expression.predicates.length; n++)
 					result.add(annotationSet.get(n));
@@ -507,22 +534,26 @@ public class GPathEngine implements GPathConstants {
 	}
 	
 	private GPathObject evaluateBinaryExpression(GPathDocument document, GPathBinaryExpression expression, GPathAnnotation contextAnnotation, int contextPosition, int contextSize, GPathVariableResolver variableBindings) throws GPathException {
-		if (expression.leftExpression == null) return new GPathBoolean(true);
+		if (expression.leftExpression == null)
+			return new GPathBoolean(true);
 		
 		//	get left result
 		GPathObject left = this.evaluateExpression(document, expression.leftExpression, contextAnnotation, contextPosition, contextSize, variableBindings);
-		if (expression.rightExpression == null) return left;
+		if (expression.rightExpression == null)
+			return left;
 		
 		//	evaluate OR and AND operator
 		if ("or".equals(expression.operator)) {
 			boolean res = left.asBoolean().value;
-			if (res) return new GPathBoolean(true);
+			if (res)
+				return new GPathBoolean(true);
 			GPathObject right = this.evaluateExpression(document, expression.rightExpression, contextAnnotation, contextPosition, contextSize, variableBindings);
 			return new GPathBoolean(right.asBoolean().value);
 		}
 		else if ("and".equals(expression.operator)) {
 			boolean res = left.asBoolean().value;
-			if (!res) return new GPathBoolean(false);
+			if (!res)
+				return new GPathBoolean(false);
 			GPathObject right = this.evaluateExpression(document, expression.rightExpression, contextAnnotation, contextPosition, contextSize, variableBindings);
 			return new GPathBoolean(right.asBoolean().value);
 		}
@@ -557,7 +588,8 @@ public class GPathEngine implements GPathConstants {
 						);
 			}
 			else if (leftIsSet) {
-				if (right instanceof GPathBoolean) return new GPathBoolean(right.asBoolean().value != left.asBoolean().value);
+				if (right instanceof GPathBoolean)
+					return new GPathBoolean(right.asBoolean().value != left.asBoolean().value);
 				GPathString[] leftStrings = stringValues((GPathAnnotationSet) left);
 				if (right instanceof GPathNumber) {
 					for (int l = 0; l < leftStrings.length; l++)
@@ -573,7 +605,8 @@ public class GPathEngine implements GPathConstants {
 				}
 			}
 			else if (rightIsSet) {
-				if (left instanceof GPathBoolean) return new GPathBoolean(left.asBoolean().value != right.asBoolean().value);
+				if (left instanceof GPathBoolean)
+					return new GPathBoolean(left.asBoolean().value != right.asBoolean().value);
 				GPathString[] rightStrings = stringValues((GPathAnnotationSet) right);
 				if (left instanceof GPathNumber) {
 					for (int r = 0; r < rightStrings.length; r++)
@@ -613,7 +646,8 @@ public class GPathEngine implements GPathConstants {
 				return new GPathBoolean(false);
 			}
 			else if (leftIsSet) {
-				if (right instanceof GPathBoolean) return new GPathBoolean(right.asBoolean().value == left.asBoolean().value);
+				if (right instanceof GPathBoolean)
+					return new GPathBoolean(right.asBoolean().value == left.asBoolean().value);
 				GPathString[] leftStrings = stringValues((GPathAnnotationSet) left);
 				if (right instanceof GPathNumber) {
 					for (int l = 0; l < leftStrings.length; l++)
@@ -629,7 +663,8 @@ public class GPathEngine implements GPathConstants {
 				}
 			}
 			else if (rightIsSet) {
-				if (left instanceof GPathBoolean) return new GPathBoolean(left.asBoolean().value == right.asBoolean().value);
+				if (left instanceof GPathBoolean)
+					return new GPathBoolean(left.asBoolean().value == right.asBoolean().value);
 				GPathString[] rightStrings = stringValues((GPathAnnotationSet) right);
 				if (left instanceof GPathNumber) {
 					for (int r = 0; r < rightStrings.length; r++)
@@ -822,7 +857,10 @@ public class GPathEngine implements GPathConstants {
 		if (this.customFunctions.containsKey(functionName)) try {
 			GPathFunction function = ((GPathFunction) this.customFunctions.get(functionName));
 			return function.execute(contextAnnotation, contextPosition, contextSize, args);
-		} catch (Exception e) {}
+		}
+		catch (Exception e) {
+			e.printStackTrace(System.out);
+		}
 		
 		//	boolean functions
 		if ("boolean".equalsIgnoreCase(functionName)) {
@@ -999,7 +1037,7 @@ public class GPathEngine implements GPathConstants {
 		else if ("max".equalsIgnoreCase(functionName)) {
 			if ((args.length == 1) && (args[0] instanceof GPathAnnotationSet)) {}
 			else if (args.length == 2) {}
-			else new InvalidArgumentsException("The function 'max' requires 1 argument(s) of type(s) GPathAnnotationSet, or two argument(s).");
+			else throw new InvalidArgumentsException("The function 'max' requires 1 argument(s) of type(s) GPathAnnotationSet, or two argument(s).");
 			if (args.length == 1) {
 				GPathAnnotationSet annotationSet = ((GPathAnnotationSet) args[0]);
 				double maxNum = Double.NEGATIVE_INFINITY;
@@ -1082,11 +1120,16 @@ public class GPathEngine implements GPathConstants {
 			else return new GPathString(attributeValue.toString());
 		}
 		
-		//	defaulting function
+		//	defaulting and choosing functions
 		else if ("default".equalsIgnoreCase(functionName)) {
 			if (args.length != 2)
 				throw new InvalidArgumentsException("The function 'default' requires 2 arguments.");
 			return (args[0].asBoolean().value ? args[0] : args[1]);
+		}
+		else if ("choose".equalsIgnoreCase(functionName)) {
+			if (args.length != 3)
+				throw new InvalidArgumentsException("The function 'default' requires 3 arguments.");
+			return (args[0].asBoolean().value ? args[1] : args[2]);
 		}
 		
 		//	string functions
@@ -1282,8 +1325,18 @@ public class GPathEngine implements GPathConstants {
 		else if ("substring-after".equalsIgnoreCase(functionName)) {
 			if (args.length != 2)
 				throw new InvalidArgumentsException("The function 'substring-after' requires 2 argument(s) of type(s) GPathString.");
-			
 			int s = args[0].asString().value.indexOf(args[1].asString().value);
+			if (s == -1)
+				return new GPathString("");
+			s += args[1].asString().value.length();
+			if (s >= args[0].asString().value.length())
+				return new GPathString("");
+			return new GPathString(args[0].asString().value.substring(s));
+		}
+		else if ("substring-after-last".equalsIgnoreCase(functionName)) {
+			if (args.length != 2)
+				throw new InvalidArgumentsException("The function 'substring-after-last' requires 2 argument(s) of type(s) GPathString.");
+			int s = args[0].asString().value.lastIndexOf(args[1].asString().value);
 			if (s == -1)
 				return new GPathString("");
 			s += args[1].asString().value.length();
@@ -1294,8 +1347,15 @@ public class GPathEngine implements GPathConstants {
 		else if ("substring-before".equalsIgnoreCase(functionName)) {
 			if (args.length != 2)
 				throw new InvalidArgumentsException("The function 'substring-before' requires 2 argument(s) of type(s) GPathString.");
-			
 			int l = args[0].asString().value.indexOf(args[1].asString().value);
+			if (l == -1)
+				return new GPathString("");
+			return new GPathString(args[0].asString().value.substring(0, l));
+		}
+		else if ("substring-before-last".equalsIgnoreCase(functionName)) {
+			if (args.length != 2)
+				throw new InvalidArgumentsException("The function 'substring-before-last' requires 2 argument(s) of type(s) GPathString.");
+			int l = args[0].asString().value.lastIndexOf(args[1].asString().value);
 			if (l == -1)
 				return new GPathString("");
 			return new GPathString(args[0].asString().value.substring(0, l));
@@ -1389,7 +1449,9 @@ public class GPathEngine implements GPathConstants {
 			else return new GPathBoolean(false);
 		}
 		
-		if (this.isDefaultEngine) throw new UndefinedFunctionException("The function '" + functionName + "' is not defined.");
+		if (this.isDefaultEngine)
+			throw new UndefinedFunctionException("The function '" + functionName + "' is not defined.");
+		//	TODO figure out why TreatmentCitationTagger GScript doesn't work (error) on mammalianSpecies.52.997.125-142.pdf.imd
 		
 		return GPath.DEFAULT_ENGINE.executeFunction(functionName, contextAnnotation, contextPosition, contextSize, args);
 	}
@@ -1462,13 +1524,8 @@ public class GPathEngine implements GPathConstants {
 //	}
 //	
 	private static abstract class GPathAnnotation implements QueriableAnnotation {
+		QueriableAnnotation source;
 		
-		protected QueriableAnnotation source;
-		
-		/**	Constructor
-		 * @param	source			the Tokens of this Document's text
-		 * @param	docOrderPos		the position in document order
-		 */
 		GPathAnnotation(QueriableAnnotation source) {
 			this.source = source;
 		}
@@ -1481,254 +1538,206 @@ public class GPathEngine implements GPathConstants {
 		 */
 		abstract void cleanup();
 		
-		/** @see java.lang.Object#finalize()
-		 */
 		protected void finalize() throws Throwable {
 			super.finalize();
 			this.cleanup();
 			this.source = null;
 		}
-		
-		/** @see java.lang.Object#hashCode()
-		 */
 		public int hashCode() {
 			return this.getAnnotationID().hashCode();
 		}
-
 		public Token firstToken() {
 			return this.source.firstToken();
 		}
-
 		public String firstValue() {
 			return this.source.firstValue();
 		}
-
 		public String getLeadingWhitespace() {
 			return this.source.getLeadingWhitespace();
 		}
-
 		public TokenSequence getSubsequence(int start, int size) {
 			return this.source.getSubsequence(start, size);
 		}
-
 		public Tokenizer getTokenizer() {
 			return this.source.getTokenizer();
 		}
-
 		public String getWhitespaceAfter(int index) {
 			return this.source.getWhitespaceAfter(index);
 		}
-
 		public Token lastToken() {
 			return this.source.lastToken();
 		}
-
 		public String lastValue() {
 			return this.source.lastValue();
 		}
-
 		public int size() {
 			return this.source.size();
 		}
-
 		public Token tokenAt(int index) {
 			return this.source.tokenAt(index);
 		}
-
 		public String valueAt(int index) {
 			return this.source.valueAt(index);
 		}
-
 		public void clearAttributes() {
 			this.source.clearAttributes();
 		}
-
 		public void copyAttributes(Attributed source) {
 			this.source.copyAttributes(source);
 		}
-
 		public String[] getAttributeNames() {
 			return this.source.getAttributeNames();
 		}
-
 		public Object removeAttribute(String name) {
 			return this.source.removeAttribute(name);
 		}
-
 		public void setAttribute(String name) {
 			this.source.setAttribute(name);
 		}
-
 		public Object setAttribute(String name, Object value) {
 			return this.source.setAttribute(name, value);
 		}
-
 		public char charAt(int index) {
 			return this.source.charAt(index);
 		}
-
 		public int length() {
 			return this.source.length();
 		}
-
 		public CharSequence subSequence(int start, int end) {
 			return this.source.subSequence(start, end);
 		}
-
 		public String[] getAnnotationTypes() {
 			return this.source.getAnnotationTypes();
 		}
-
 		public String changeTypeTo(String newType) {
 			return this.source.changeTypeTo(newType);
 		}
-
 		public String getAnnotationID() {
 			return this.source.getAnnotationID();
 		}
-
 		public String getDocumentProperty(String propertyName) {
 			return this.source.getDocumentProperty(propertyName);
 		}
-
 		public String getDocumentProperty(String propertyName, String defaultValue) {
 			return this.source.getDocumentProperty(propertyName, defaultValue);
 		}
-
 		public String[] getDocumentPropertyNames() {
 			return this.source.getDocumentPropertyNames();
 		}
-
 		public String getAnnotationNestingOrder() {
 			return this.source.getAnnotationNestingOrder();
 		}
-
 		public int getEndIndex() {
 			return this.source.getEndIndex();
 		}
-
 		public int getStartIndex() {
 			return this.source.getStartIndex();
 		}
-
 		public String getType() {
 			return this.source.getType();
 		}
-
 		public String getValue() {
 			return this.source.getValue();
 		}
-
 		public String toXML() {
 			return this.source.toXML();
 		}
-
 		public int getEndOffset() {
 			return this.source.getEndOffset();
 		}
-
 		public int getStartOffset() {
 			return this.source.getStartOffset();
 		}
 	}
 	
 	private static class GPathDocument extends GPathAnnotation {
-		
+		private HashMap pathResultCache = new HashMap();
 		void cachePathResult(String path, GPathAnnotationSet pathResult) {
 			this.pathResultCache.put(path, pathResult);
 		}
-		
 		GPathAnnotationSet getPathResult(String path) {
 			return ((GPathAnnotationSet) this.pathResultCache.get(path));
 		}
 		
-		private HashMap pathResultCache = new HashMap();
+		private HashMap annotationViewsById = new HashMap();
+		GPathAnnotationView getViewOf(QueriableAnnotation data) {
+			GPathAnnotationView view = ((GPathAnnotationView) this.annotationViewsById.get(data.getAnnotationID()));
+			if (view == null) {
+				view = new GPathAnnotationView(data, this, this);
+				this.annotationViewsById.put(data.getAnnotationID(), view);
+			}
+			return view;
+		}
 		
-		/**	Constructor
-		 * @param	source	the Tokens of this Document's text
-		 */
 		GPathDocument(QueriableAnnotation source) {
 			super(source);
 		}
 		
-		/** @see de.uka.ipd.idaho.gamta.util.gPath.GPathEngine.GPathAnnotation#cleanup()
-		 */
-		void cleanup() {}
-		
-		/** @see de.uka.ipd.idaho.gamta.util.gPath.GPathEngine.GPathAnnotation#getParent()
-		 */
+		void cleanup() {
+			this.annotationViewsById.clear();
+			this.annotationViewsById = null;
+		}
 		GPathAnnotation getParent() {
 			return this;
 		}
-		
-		/** @see de.uka.ipd.idaho.gamta.Annotation#getDocument()
-		 */
 		public QueriableAnnotation getDocument() {
 			return this;
 		}
-
-		/** @see de.uka.ipd.idaho.gamta.MutableAnnotation#getAnnotations()
-		 */
+		public QueriableAnnotation getAnnotation(String id) {
+			QueriableAnnotation annotation = this.source.getAnnotation(id);
+			return ((annotation== null) ? null : this.getViewOf(annotation));
+		}
 		public QueriableAnnotation[] getAnnotations() {
 			return this.getAnnotations(null);
 		}
-		
-		/** @see de.uka.ipd.idaho.gamta.MutableAnnotation#getAnnotations(java.lang.String)
-		 */
 		public QueriableAnnotation[] getAnnotations(String type) {
 			QueriableAnnotation[] annotations = this.source.getAnnotations(type);
 			
-			//	add Document itself if no other root Annotation given
+			//	add Document proper if no other root Annotation given
 			if ((type == null) && ((annotations.length == 0) || (annotations[0].size() != this.size()))) {
-				ArrayList aList = new ArrayList();
-				aList.add(this);
-				for (int p = 0; p < annotations.length; p++) aList.add(annotations[p]);
-				annotations = ((QueriableAnnotation[]) aList.toArray(new QueriableAnnotation[aList.size()]));
+				QueriableAnnotation[] xAnnotations = new QueriableAnnotation[1 + annotations.length];
+				xAnnotations[0] = this;
+				System.arraycopy(annotations, 0, xAnnotations, 1, annotations.length);
+				annotations = xAnnotations;
 			}
 			
+			return this.wrapAnnotations(annotations);
+		}
+		public QueriableAnnotation[] getAnnotationsSpanning(int startIndex, int endIndex) {
+			return this.getAnnotationsSpanning(null, startIndex, endIndex);
+		}
+		public QueriableAnnotation[] getAnnotationsSpanning(String type, int startIndex, int endIndex) {
+			return this.wrapAnnotations(this.source.getAnnotationsSpanning(type, startIndex, endIndex));
+		}
+		public QueriableAnnotation[] getAnnotationsOverlapping(int startIndex, int endIndex) {
+			return this.getAnnotationsOverlapping(null, startIndex, endIndex);
+		}
+		public QueriableAnnotation[] getAnnotationsOverlapping(String type, int startIndex, int endIndex) {
+			return this.wrapAnnotations(this.source.getAnnotationsOverlapping(type, startIndex, endIndex));
+		}
+		private QueriableAnnotation[] wrapAnnotations(QueriableAnnotation[] annotations) {
 			for (int a = 0; a < annotations.length; a++)
-				annotations[a] = new GPathAnnotationView(annotations[a], this, this);
+				annotations[a] = this.getViewOf(annotations[a]);
 			return annotations;
 		}
-		
-		/** @see de.uka.ipd.idaho.gamta.QueriableAnnotation#getAbsoluteStartOffset()
-		 */
 		public int getAbsoluteStartOffset() {
 			return 0;
 		}
-
-		/** @see de.uka.ipd.idaho.gamta.Annotation#getStartIndex()
-		 */
 		public int getStartIndex() {
 			return 0; // this needs to return 0 so the document has a root, no matter to what hierarchy the source belongs
 		}
-		
-		/** @see de.uka.ipd.idaho.gamta.MutableAnnotation#getAbsoluteStartIndex()
-		 */
 		public int getAbsoluteStartIndex() {
 			return 0;
 		}
-		
-		/** @see de.uka.ipd.idaho.gamta.TokenSequence#size()
-		 */
 		public int size() {
 			return this.source.size();
 		}
-		
-		/** @see de.uka.ipd.idaho.gamta.Annotation#getEndIndex()
-		 */
 		public int getEndIndex() {
 			return this.size();
 		}
-		
-		/** @see de.uka.ipd.idaho.gamta.Annotation#getAttribute(java.lang.String)
-		 */
 		public Object getAttribute(String name) {
 			return this.getAttribute(name, null);
 		}
-		
-		/** @see de.uka.ipd.idaho.gamta.Annotation#getAttribute(java.lang.String, java.lang.String)
-		 */
 		public Object getAttribute(String name, Object def) {
 			if (Annotation.START_INDEX_ATTRIBUTE.equals(name)) return ("" + this.getStartIndex());
 			else if (GPath.ABSOLUTE_START_INDEX_ATTRIBUTE.equals(name)) return ("" + this.getAbsoluteStartIndex());
@@ -1738,9 +1747,6 @@ public class GPathEngine implements GPathConstants {
 			else if (Annotation.ANNOTATION_ID_ATTRIBUTE.equals(name)) return this.getAnnotationID();
 			else return this.source.getAttribute(name, def);
 		}
-		
-		/** @see de.uka.ipd.idaho.gamta.Annotation#hasAttribute(java.lang.String)
-		 */
 		public boolean hasAttribute(String name) {
 			return (this.source.hasAttribute(name) 
 					|| Annotation.START_INDEX_ATTRIBUTE.equals(name) 
@@ -1751,9 +1757,6 @@ public class GPathEngine implements GPathConstants {
 					|| Annotation.ANNOTATION_ID_ATTRIBUTE.equals(name)
 					);
 		}
-		
-		/** @see java.lang.Comparable#compareTo(java.lang.Object)
-		 */
 		public int compareTo(Object o) {
 			if (o == null) return -1;
 			else if (o == this) return 0;
@@ -1767,9 +1770,6 @@ public class GPathEngine implements GPathConstants {
 			//	the document is always the outmost tag in the XML representation and thus has to be first in any sequence
 			else return -1;
 		}
-		
-		/** @see java.lang.Object#equals(java.lang.Object)
-		 */
 		public boolean equals(Object o) {
 			return (this.compareTo(o) == 0);
 		}
@@ -1778,81 +1778,81 @@ public class GPathEngine implements GPathConstants {
 	/**	private implementation of the Annotation interface
 	 */
 	private static class GPathAnnotationView extends GPathAnnotation {
+		private HashMap annotationViewsById = null;
+		GPathAnnotationView getViewOf(QueriableAnnotation data) {
+			if (this.annotationViewsById == null)
+				this.annotationViewsById = new HashMap();
+			GPathAnnotationView view = ((GPathAnnotationView) this.annotationViewsById.get(data.getAnnotationID()));
+			if (view == null) {
+				view = new GPathAnnotationView(data, this, this.doc);
+				this.annotationViewsById.put(data.getAnnotationID(), view);
+			}
+			return view;
+		}
 		
 		private GPathAnnotation parent;
 		private GPathDocument doc;
 		
-		/**	Constructor
-		 * @param	data	the Annotation this Annotation is a view for
-		 * @param	parent	the Annotation this Annotation was retrieved from
-		 */
 		GPathAnnotationView(QueriableAnnotation data, GPathAnnotation parent, GPathDocument doc) {
 			super(data);
 			this.parent = parent;
 			this.doc = doc;
 		}
 		
-		/** @see de.uka.ipd.idaho.gamta.util.gPath.GPathEngine.GPathAnnotation#cleanup()
-		 */
 		void cleanup() {
 			this.source = null;
 			this.parent = null;
 			this.doc = null;
+			if (this.annotationViewsById != null) {
+				this.annotationViewsById.clear();
+				this.annotationViewsById = null;
+			}
 		}
-		
-		/** @see de.uka.ipd.idaho.gamta.util.gPath.GPathEngine.GPathAnnotation#getParent()
-		 */
 		GPathAnnotation getParent() {
 			return this.parent;
 		}
-		
-		/** @see de.uka.ipd.idaho.gamta.Annotation#getStartIndex()
-		 */
 		public int getAbsoluteStartIndex() {
 			return this.source.getAbsoluteStartIndex() - ((this.doc == null) ? 0 : this.doc.source.getAbsoluteStartIndex());
 		}
-		
-		/** @see de.uka.ipd.idaho.gamta.Annotation#getEndIndex()
-		 */
 		public int getEndIndex() {
 			return (this.getStartIndex() + this.size());
 		}
-		
-		/** @see de.uka.ipd.idaho.gamta.QueriableAnnotation#getAbsoluteStartOffset()
-		 */
 		public int getAbsoluteStartOffset() {
 			return this.source.getAbsoluteStartOffset() - ((this.doc == null) ? 0 : this.doc.source.getAbsoluteStartOffset());
 		}
-		
-		/** @see de.uka.ipd.idaho.gamta.Annotation#getDocument()
-		 */
 		public QueriableAnnotation getDocument() {
 			return this.doc;
 		}
-		
-		/** @see de.uka.ipd.idaho.gamta.MutableAnnotation#getAnnotations()
-		 */
+		public QueriableAnnotation getAnnotation(String id) {
+			QueriableAnnotation annotation = this.source.getAnnotation(id);
+			return ((annotation== null) ? null : this.getViewOf(annotation));
+		}
 		public QueriableAnnotation[] getAnnotations() {
 			return this.getAnnotations(null);
 		}
-		
-		/** @see de.uka.ipd.idaho.gamta.MutableAnnotation#getAnnotations(java.lang.String)
-		 */
 		public QueriableAnnotation[] getAnnotations(String type) {
-			QueriableAnnotation[] annotations = this.source.getAnnotations(type);
+			return this.wrapAnnotations(this.source.getAnnotations(type));
+		}
+		public QueriableAnnotation[] getAnnotationsSpanning(int startIndex, int endIndex) {
+			return this.getAnnotationsOverlapping(null, startIndex, endIndex);
+		}
+		public QueriableAnnotation[] getAnnotationsSpanning(String type, int startIndex, int endIndex) {
+			return this.wrapAnnotations(this.source.getAnnotationsSpanning(type, startIndex, endIndex));
+		}
+		public QueriableAnnotation[] getAnnotationsOverlapping(int startIndex, int endIndex) {
+			return this.getAnnotationsOverlapping(null, startIndex, endIndex);
+		}
+		public QueriableAnnotation[] getAnnotationsOverlapping(String type, int startIndex, int endIndex) {
+			return this.wrapAnnotations(this.source.getAnnotationsOverlapping(type, startIndex, endIndex));
+		}
+		private QueriableAnnotation[] wrapAnnotations(QueriableAnnotation[] annotations) {
 			for (int a = 0; a < annotations.length; a++)
-				annotations[a] = new GPathAnnotationView(annotations[a], this, this.doc);
+				annotations[a] = this.getViewOf(annotations[a]);
 			return annotations;
 		}
-		
-		/** @see de.uka.ipd.idaho.gamta.Annotation#getAttribute(java.lang.String)
-		 */
 		public Object getAttribute(String name) {
 			return this.getAttribute(name, null);
 		}
-		
-		/** @see de.uka.ipd.idaho.gamta.Annotation#getAttribute(java.lang.String, java.lang.String)
-		 */
 		public Object getAttribute(String name, Object def) {
 			if (Annotation.START_INDEX_ATTRIBUTE.equals(name)) return ("" + this.getStartIndex());
 			else if (Annotation.SIZE_ATTRIBUTE.equals(name)) return ("" + this.size());
@@ -1861,255 +1861,150 @@ public class GPathEngine implements GPathConstants {
 			else if (Annotation.ANNOTATION_ID_ATTRIBUTE.equals(name)) return this.getAnnotationID();
 			else return this.source.getAttribute(name, def);
 		}
-		
-		/** @see de.uka.ipd.idaho.gamta.Annotation#hasAttribute(java.lang.String)
-		 */
 		public boolean hasAttribute(String name) {
 			return this.source.hasAttribute(name);
 		}
-		
-		/** @see java.lang.Comparable#compareTo(java.lang.Object)
-		 */
 		public int compareTo(Object o) {
 			if (o == null) return -1;
 			if (o instanceof GPathAttributeAnnotation) return -1;
 			return this.source.compareTo(o);
 		}
-		
-		/** @see java.lang.Object#equals(java.lang.Object)
-		 */
 		public boolean equals(Object o) {
 			return (this.compareTo(o) == 0);
 		}
 	}
 	
+	private static final QueriableAnnotation[] emptyLookupResult = {};
+	
 	private static class GPathAttributeAnnotation extends GPathAnnotation {
-		
 		private String type;
 		private TokenSequence value;
 		
-		/**	Constructor
-		 * @param	source		the Annotation this Annotation is an attribute of
-		 * @param	type		the name of the Annotation attribute
-		 * @param	value		the attribute value
-		 */
 		GPathAttributeAnnotation(QueriableAnnotation source, String type, TokenSequence value) {
 			super(source);
 			this.type = type;
 			this.value = value;
 		}
 		
-		/** @see de.uka.ipd.idaho.gamta.util.gPath.GPathEngine.GPathAnnotation#cleanup()
-		 */
 		void cleanup() {}
-		
-		/** @see de.uka.ipd.idaho.gamta.util.gPath.GPathEngine.GPathAnnotation#getParent()
-		 */
 		GPathAnnotation getParent() {
 			return ((GPathAnnotation) this.source);
 		}
-		
-		/** @see de.uka.ipd.idaho.gamta.Annotation#getStartIndex()
-		 */
 		public int getStartIndex() {
 			return 0;
 		}
-		
-		/** @see de.uka.ipd.idaho.gamta.MutableAnnotation#getAbsoluteStartIndex()
-		 */
 		public int getAbsoluteStartIndex() {
 			return 0;
 		}
-		
-		/** @see de.uka.ipd.idaho.gamta.TokenSequence#size()
-		 */
 		public int size() {
 			return this.value.size();
 		}
-		
-		/** @see de.uka.ipd.idaho.gamta.Annotation#getEndIndex()
-		 */
 		public int getEndIndex() {
 			return this.value.size();
 		}
-		
-		/** @see de.uka.ipd.idaho.gamta.CharSpan#getStartOffset()
-		 */
 		public int getStartOffset() {
 			return 0;
 		}
-
-		 /** @see de.uka.ipd.idaho.gamta.QueriableAnnotation#getAbsoluteStartOffset()
-		 */
 		public int getAbsoluteStartOffset() {
 			return 0;
 		}
-
-		/** @see de.uka.ipd.idaho.gamta.CharSpan#getEndOffset()
-		 */
 		public int getEndOffset() {
 			return this.value.length();
 		}
-
-		/** @see java.lang.CharSequence#charAt(int)
-		 */
 		public char charAt(int index) {
 			return this.value.charAt(index);
 		}
-
-		/** @see java.lang.CharSequence#subSequence(int, int)
-		 */
 		public CharSequence subSequence(int start, int end) {
 			return this.value.subSequence(start, end);
 		}
-
-		/** @see de.uka.ipd.idaho.gamta.Annotation#getType()
-		 */
 		public String getType() {
 			return this.type;
 		}
-		
-		/** @see de.uka.ipd.idaho.gamta.Annotation#changeTypeTo(java.lang.String)
-		 */
 		public String changeTypeTo(String newType) {
 			return this.type;
 		}
-		
-		/** @see de.uka.ipd.idaho.gamta.Annotation#getAnnotationID()
-		 */
 		public String getAnnotationID() {
 			return (this.source.getAnnotationID() + "." + this.type);
 		}
-		
-		/** @see de.uka.ipd.idaho.gamta.Annotation#getValue()
-		 */
 		public String getValue() {
 			return this.value.toString();
 		}
-		
-		/** @see de.uka.ipd.idaho.gamta.Annotation#toXML()
-		 */
 		public String toXML() {
 			String type = (this.source.getType() + "." + this.type);
 			return ("<" + type + ">" + AnnotationUtils.escapeForXml(this.getValue()) + "</" + type + ">");
 		}
-		
-		/** @see de.uka.ipd.idaho.gamta.Annotation#getDocument()
-		 */
 		public QueriableAnnotation getDocument() {
 			return this.source.getDocument();
 		}
-		
-		/** @see de.uka.ipd.idaho.gamta.MutableAnnotation#getAnnotations()
-		 */
+		public QueriableAnnotation getAnnotation(String id) {
+			return null;
+		}
 		public QueriableAnnotation[] getAnnotations() {
-			return new QueriableAnnotation[0];
+			return emptyLookupResult;
 		}
-		
-		/** @see de.uka.ipd.idaho.gamta.MutableAnnotation#getAnnotations(java.lang.String)
-		 */
 		public QueriableAnnotation[] getAnnotations(String type) {
-			return new QueriableAnnotation[0];
+			return emptyLookupResult;
 		}
-		
-		/** @see de.uka.ipd.idaho.gamta.MutableAnnotation#getAnnotationTypes()
-		 */
+		public QueriableAnnotation[] getAnnotationsSpanning(int startIndex, int endIndex) {
+			return emptyLookupResult;
+		}
+		public QueriableAnnotation[] getAnnotationsSpanning(String type, int startIndex, int endIndex) {
+			return emptyLookupResult;
+		}
+		public QueriableAnnotation[] getAnnotationsOverlapping(int startIndex, int endIndex) {
+			return emptyLookupResult;
+		}
+		public QueriableAnnotation[] getAnnotationsOverlapping(String type, int startIndex, int endIndex) {
+			return emptyLookupResult;
+		}
 		public String[] getAnnotationTypes() {
 			return new String[0];
 		}
-		
-		/** @see de.uka.ipd.idaho.gamta.Annotation#getAttribute(java.lang.String)
-		 */
 		public Object getAttribute(String name) {
 			return null;
 		}
-		
-		/** @see de.uka.ipd.idaho.gamta.Annotation#getAttribute(java.lang.String, java.lang.String)
-		 */
 		public Object getAttribute(String name, Object def) {
 			return def;
 		}
-			
-		/** @see de.uka.ipd.idaho.gamta.Annotation#hasAttribute(java.lang.String)
-		 */
 		public boolean hasAttribute(String name) {
 			return false;
 		}
-		
-		/** @see de.uka.ipd.idaho.gamta.Annotation#getAttributeNames()
-		 */
 		public String[] getAttributeNames() {
 			return new String[0];
 		}
-		
-		/** @see de.uka.ipd.idaho.gamta.TokenSequence#tokenAt(int)
-		 */
 		public Token tokenAt(int index) {
 			return this.value.tokenAt(index);
 		}
-		
-		/** @see de.uka.ipd.idaho.gamta.TokenSequence#firstToken()
-		 */
 		public Token firstToken() {
 			return this.value.firstToken();
 		}
-		
-		/** @see de.uka.ipd.idaho.gamta.TokenSequence#lastToken()
-		 */
 		public Token lastToken() {
 			return this.value.lastToken();
 		}
-		
-		/** @see de.uka.ipd.idaho.gamta.TokenSequence#valueAt(int)
-		 */
 		public String valueAt(int index) {
 			return this.value.valueAt(index);
 		}
-		
-		/** @see de.uka.ipd.idaho.gamta.TokenSequence#getWhitespaceAfter(int)
-		 */
 		public String getWhitespaceAfter(int index) {
 			return this.value.getWhitespaceAfter(index);
 		}
-
-		/** @see de.uka.ipd.idaho.gamta.TokenSequence#firstValue()
-		 */
 		public String firstValue() {
 			return this.value.firstValue();
 		}
-		
-		/** @see de.uka.ipd.idaho.gamta.TokenSequence#lastValue()
-		 */
 		public String lastValue() {
 			return this.value.lastValue();
 		}
-		
-		/** @see de.uka.ipd.idaho.gamta.TokenSequence#getLeadingWhitespace()
-		 */
 		public String getLeadingWhitespace() {
 			return this.value.getLeadingWhitespace();
 		}
-		
-		/** @see de.uka.ipd.idaho.gamta.TokenSequence#length()
-		 */
 		public int length() {
 			return this.value.length();
 		}
-		
-		/** @see de.uka.ipd.idaho.gamta.TokenSequence#getTokenizer()
-		 */
 		public Tokenizer getTokenizer() {
 			return this.value.getTokenizer();
 		}
-		
-		/** @see de.uka.ipd.idaho.gamta.TokenSequence#getSubsequence(int, int)
-		 */
 		public TokenSequence getSubsequence(int start, int size) {
 			return this.value.getSubsequence(start, size);
 		}
-		
-		/** @see java.lang.Comparable#compareTo(java.lang.Object)
-		 */
 		public int compareTo(Object o) {
 			if (o == null) return -1;
 			if (o instanceof GPathAttributeAnnotation) {
@@ -2119,148 +2014,94 @@ public class GPathEngine implements GPathConstants {
 				return c;
 			} else return 1;
 		}
-		
-		/** @see java.lang.Object#equals(java.lang.Object)
-		 */
 		public boolean equals(Object o) {
 			return (this.compareTo(o) == 0);
 		}
 	}
 	
 	private static class GPathTokenAnnotation extends GPathAnnotation {
-		
 		private int index;
 		private Token token;
 		
-		/**	Constructor
-		 * @param	source		the Annotation this Annotation is a Token of
-		 * @param	index		the index of this Token in the source Annotation
-		 */
 		GPathTokenAnnotation(QueriableAnnotation source, int index) {
 			super(source);
 			this.index = index;
 			this.token = source.tokenAt(this.index);
 		}
 		
-		/** @see de.uka.ipd.idaho.gamta.util.gPath.GPathEngine.GPathAnnotation#cleanup()
-		 */
 		void cleanup() {}
-		
-		/** @see de.uka.ipd.idaho.gamta.util.gPath.GPathEngine.GPathAnnotation#getParent()
-		 */
 		GPathAnnotation getParent() {
 			return ((GPathAnnotation) this.source);
 		}
-		
-		/** @see de.uka.ipd.idaho.gamta.Annotation#getStartIndex()
-		 */
 		public int getStartIndex() {
 			return this.index;
 		}
-		
-		/** @see de.uka.ipd.idaho.gamta.MutableAnnotation#getAbsoluteStartIndex()
-		 */
 		public int getAbsoluteStartIndex() {
 			return (this.source.getAbsoluteStartIndex() + this.getStartIndex());
 		}
-		
 		public int getAbsoluteStartOffset() {
 			return (this.source.getAbsoluteStartOffset() + this.getStartOffset());
 		}
-
-		/** @see de.uka.ipd.idaho.gamta.TokenSequence#size()
-		 */
 		public int size() {
 			return 1;
 		}
-		
-		/** @see de.uka.ipd.idaho.gamta.Annotation#getEndIndex()
-		 */
 		public int getEndIndex() {
 			return (this.getStartIndex() + 1);
 		}
-		
-		/** @see de.uka.ipd.idaho.gamta.util.gPath.GPathEngine.GPathAnnotation#getEndOffset()
-		 */
 		public int getEndOffset() {
 			return (this.getStartOffset() + this.length());
 		}
-
-		/* (non-Javadoc)
-		 * @see de.uka.ipd.idaho.gamta.util.gPath.GPathEngine.GPathAnnotation#getStartOffset()
-		 */
 		public int getStartOffset() {
 			return this.token.getStartOffset();
 		}
-
-		/** @see de.uka.ipd.idaho.gamta.util.gPath.GPathEngine.GPathAnnotation#charAt(int)
-		 */
 		public char charAt(int index) {
 			return this.token.charAt(index);
 		}
-
-		/** @see de.uka.ipd.idaho.gamta.util.gPath.GPathEngine.GPathAnnotation#subSequence(int, int)
-		 */
 		public CharSequence subSequence(int start, int end) {
 			return this.token.subSequence(start, end);
 		}
-
-		/** @see de.uka.ipd.idaho.gamta.Annotation#getType()
-		 */
 		public String getType() {
 			return Token.TOKEN_ANNOTATION_TYPE;
 		}
-		
-		/** @see de.uka.ipd.idaho.gamta.Annotation#changeTypeTo(java.lang.String)
-		 */
 		public String changeTypeTo(String newType) {
 			return Token.TOKEN_ANNOTATION_TYPE;
 		}
-		
-		/** @see de.uka.ipd.idaho.gamta.Annotation#getAnnotationID()
-		 */
 		public String getAnnotationID() {
 			return (Token.TOKEN_ANNOTATION_TYPE + "@" + this.getAbsoluteStartIndex());
 		}
-		
-		/** @see de.uka.ipd.idaho.gamta.Annotation#getValue()
-		 */
 		public String getValue() {
 			return this.source.valueAt(this.index);
 		}
-		
-		/** @see de.uka.ipd.idaho.gamta.Annotation#toXML()
-		 */
 		public String toXML() {
 			return ("<" + Token.TOKEN_ANNOTATION_TYPE + ">" + AnnotationUtils.escapeForXml(this.getValue()) + "</" + Token.TOKEN_ANNOTATION_TYPE + ">");
 		}
-		
-		/** @see de.uka.ipd.idaho.gamta.Annotation#getDocument()
-		 */
 		public QueriableAnnotation getDocument() {
 			return this.source.getDocument();
 		}
-		
-		/** @see de.uka.ipd.idaho.gamta.MutableAnnotation#getAnnotations()
-		 */
+		public QueriableAnnotation getAnnotation(String id) {
+			return null;
+		}
 		public QueriableAnnotation[] getAnnotations() {
-			return new QueriableAnnotation[0];
+			return emptyLookupResult;
 		}
-		
-		/** @see de.uka.ipd.idaho.gamta.MutableAnnotation#getAnnotations(java.lang.String)
-		 */
 		public QueriableAnnotation[] getAnnotations(String type) {
-			return new QueriableAnnotation[0];
+			return emptyLookupResult;
 		}
-		
-		/** @see de.uka.ipd.idaho.gamta.MutableAnnotation#getAnnotationTypes()
-		 */
+		public QueriableAnnotation[] getAnnotationsSpanning(int startIndex, int endIndex) {
+			return emptyLookupResult;
+		}
+		public QueriableAnnotation[] getAnnotationsSpanning(String type, int startIndex, int endIndex) {
+			return emptyLookupResult;
+		}
+		public QueriableAnnotation[] getAnnotationsOverlapping(int startIndex, int endIndex) {
+			return emptyLookupResult;
+		}
+		public QueriableAnnotation[] getAnnotationsOverlapping(String type, int startIndex, int endIndex) {
+			return emptyLookupResult;
+		}
 		public String[] getAnnotationTypes() {
 			return new String[0];
 		}
-		
-		/** @see de.uka.ipd.idaho.gamta.Annotation#setAttribute(java.lang.String, java.lang.String)
-		 */
 		public Object setAttribute(String name, Object value) {
 			if (Annotation.START_INDEX_ATTRIBUTE.equals(name)) return ("" + this.getStartIndex());
 			else if (GPath.ABSOLUTE_START_INDEX_ATTRIBUTE.equals(name)) return ("" + this.getAbsoluteStartIndex());
@@ -2271,15 +2112,9 @@ public class GPathEngine implements GPathConstants {
 			else if (Token.PARAGRAPH_END_ATTRIBUTE.equals(name)) return this.token.setAttribute(Token.PARAGRAPH_END_ATTRIBUTE, Token.PARAGRAPH_END_ATTRIBUTE);
 			else return this.token.setAttribute(name, value);
 		}
-		
-		/** @see de.uka.ipd.idaho.gamta.Annotation#getAttribute(java.lang.String)
-		 */
 		public Object getAttribute(String name) {
 			return this.getAttribute(name, null);
 		}
-		
-		/** @see de.uka.ipd.idaho.gamta.Annotation#getAttribute(java.lang.String, java.lang.String)
-		 */
 		public Object getAttribute(String name, Object def) {
 			if (Annotation.START_INDEX_ATTRIBUTE.equals(name)) return ("" + this.getStartIndex());
 			else if (GPath.ABSOLUTE_START_INDEX_ATTRIBUTE.equals(name)) return ("" + this.getAbsoluteStartIndex());
@@ -2290,9 +2125,6 @@ public class GPathEngine implements GPathConstants {
 			else if (Token.PARAGRAPH_END_ATTRIBUTE.equals(name)) return (this.token.hasAttribute(Token.PARAGRAPH_END_ATTRIBUTE) ? GPathBoolean.TRUE : def);
 			else return this.token.getAttribute(name, def);
 		}
-			
-		/** @see de.uka.ipd.idaho.gamta.Annotation#hasAttribute(java.lang.String)
-		 */
 		public boolean hasAttribute(String name) {
 			return (this.token.hasAttribute(name) 
 					|| Annotation.START_INDEX_ATTRIBUTE.equals(name) 
@@ -2304,71 +2136,38 @@ public class GPathEngine implements GPathConstants {
 					|| (Token.PARAGRAPH_END_ATTRIBUTE.equals(name) && this.token.hasAttribute(Token.PARAGRAPH_END_ATTRIBUTE))
 					);
 		}
-		
-		/** @see de.uka.ipd.idaho.gamta.TokenSequence#tokenAt(int)
-		 */
 		public Token tokenAt(int index) {
 			if (index == 0) return this.token;
 			throw new IndexOutOfBoundsException("" + index);
 		}
-		
-		/** @see de.uka.ipd.idaho.gamta.TokenSequence#firstToken()
-		 */
 		public Token firstToken() {
 			return this.token;
 		}
-		
-		/** @see de.uka.ipd.idaho.gamta.TokenSequence#lastToken()
-		 */
 		public Token lastToken() {
 			return this.token;
 		}
-		
-		/** @see de.uka.ipd.idaho.gamta.TokenSequence#valueAt(int)
-		 */
 		public String valueAt(int index) {
 			if (index == 0) return this.token.getValue();
 			throw new IndexOutOfBoundsException("" + index);
 		}
-		
-		/** @see de.uka.ipd.idaho.gamta.TokenSequence#firstValue()
-		 */
 		public String firstValue() {
 			return this.token.getValue();
 		}
-		
-		/** @see de.uka.ipd.idaho.gamta.TokenSequence#lastValue()
-		 */
 		public String lastValue() {
 			return this.token.getValue();
 		}
-		
-		/** @see de.uka.ipd.idaho.gamta.TokenSequence#getLeadingWhitespace()
-		 */
 		public String getLeadingWhitespace() {
 			return "";
 		}
-		
-		/** @see de.uka.ipd.idaho.gamta.TokenSequence#length()
-		 */
 		public int length() {
 			return this.token.length();
 		}
-		
-		/** @see de.uka.ipd.idaho.gamta.TokenSequence#getTokenizer()
-		 */
 		public Tokenizer getTokenizer() {
 			return this.token.getTokenizer();
 		}
-		
-		/** @see de.uka.ipd.idaho.gamta.TokenSequence#getSubsequence(int, int)
-		 */
 		public TokenSequence getSubsequence(int start, int size) {
 			return new PlainTokenSequence(this, this.getTokenizer());
 		}
-		
-		/** @see java.lang.Comparable#compareTo(java.lang.Object)
-		 */
 		public int compareTo(Object o) {
 			if (o == null) return -1;
 			if (o instanceof GPathAttributeAnnotation) return -1;
@@ -2380,9 +2179,6 @@ public class GPathEngine implements GPathConstants {
 				return c;
 			} else return 1;
 		}
-		
-		/** @see java.lang.Object#equals(java.lang.Object)
-		 */
 		public boolean equals(Object o) {
 			return (this.compareTo(o) == 0);
 		}
@@ -2394,14 +2190,9 @@ public class GPathEngine implements GPathConstants {
 	 * @author sautter
 	 */
 	private static class TokenAnnotation implements QueriableAnnotation {
-		
 		private QueriableAnnotation source;
 		private int index;
 		
-		/**	Constructor
-		 * @param	source		the Annotation this Annotation represents a Token of
-		 * @param	index		the index of this Token in the source Annotation
-		 */
 		TokenAnnotation(QueriableAnnotation source, int index) {
 			this.index = index;
 			this.source = source;
@@ -2427,122 +2218,78 @@ public class GPathEngine implements GPathConstants {
 		public int hashCode() {
 			return (Token.TOKEN_ANNOTATION_TYPE + "@" + this.getAbsoluteStartIndex()).hashCode();
 		}
-		
-		/** @see de.uka.ipd.idaho.gamta.Annotation#getStartIndex()
-		 */
 		public int getStartIndex() {
 			return this.index;
 		}
-		
-		/** @see de.uka.ipd.idaho.gamta.MutableAnnotation#getAbsoluteStartIndex()
-		 */
 		public int getAbsoluteStartIndex() {
 			return (this.source.getAbsoluteStartIndex() + this.getStartIndex());
 		}
-		
 		public int getAbsoluteStartOffset() {
 			return (this.source.getAbsoluteStartOffset() + this.getStartOffset());
 		}
-
-		/** @see de.uka.ipd.idaho.gamta.TokenSequence#size()
-		 */
 		public int size() {
 			return 1;
 		}
-		
-		/** @see de.uka.ipd.idaho.gamta.Annotation#getEndIndex()
-		 */
 		public int getEndIndex() {
 			return (this.getStartIndex() + 1);
 		}
-		
-		/** @see de.uka.ipd.idaho.gamta.util.gPath.GPathEngine.GPathAnnotation#getEndOffset()
-		 */
 		public int getEndOffset() {
 			return (this.getStartOffset() + this.length());
 		}
-
-		/* (non-Javadoc)
-		 * @see de.uka.ipd.idaho.gamta.util.gPath.GPathEngine.GPathAnnotation#getStartOffset()
-		 */
 		public int getStartOffset() {
 			return this.source.tokenAt(this.index).getStartOffset();
 		}
-
-		/** @see de.uka.ipd.idaho.gamta.util.gPath.GPathEngine.GPathAnnotation#charAt(int)
-		 */
 		public char charAt(int index) {
 			return this.source.tokenAt(this.index).charAt(index);
 		}
-
-		/** @see de.uka.ipd.idaho.gamta.util.gPath.GPathEngine.GPathAnnotation#subSequence(int, int)
-		 */
 		public CharSequence subSequence(int start, int end) {
 			return this.source.tokenAt(this.index).subSequence(start, end);
 		}
-
-		/** @see de.uka.ipd.idaho.gamta.Annotation#getType()
-		 */
 		public String getType() {
 			return Token.TOKEN_ANNOTATION_TYPE;
 		}
-		
-		/** @see de.uka.ipd.idaho.gamta.Annotation#changeTypeTo(java.lang.String)
-		 */
 		public String changeTypeTo(String newType) {
 			return Token.TOKEN_ANNOTATION_TYPE;
 		}
-		
-		/** @see de.uka.ipd.idaho.gamta.Annotation#getAnnotationID()
-		 */
 		public String getAnnotationID() {
 			return (Token.TOKEN_ANNOTATION_TYPE + "@" + this.getAbsoluteStartIndex());
 		}
-		
-		/** @see de.uka.ipd.idaho.gamta.Annotation#getValue()
-		 */
 		public String getValue() {
 			return this.source.valueAt(this.index);
 		}
-		
-		/** @see de.uka.ipd.idaho.gamta.Annotation#toXML()
-		 */
 		public String toXML() {
 			return ("<" + Token.TOKEN_ANNOTATION_TYPE + ">" + AnnotationUtils.escapeForXml(this.getValue()) + "</" + Token.TOKEN_ANNOTATION_TYPE + ">");
 		}
-		
-		/** @see de.uka.ipd.idaho.gamta.Annotation#getDocument()
-		 */
 		public QueriableAnnotation getDocument() {
 			return this.source.getDocument();
 		}
-		
-		/** @see de.uka.ipd.idaho.gamta.MutableAnnotation#getAnnotations()
-		 */
+		public QueriableAnnotation getAnnotation(String id) {
+			return null;
+		}
 		public QueriableAnnotation[] getAnnotations() {
-			return new QueriableAnnotation[0];
+			return emptyLookupResult;
 		}
-		
-		/** @see de.uka.ipd.idaho.gamta.MutableAnnotation#getAnnotations(java.lang.String)
-		 */
 		public QueriableAnnotation[] getAnnotations(String type) {
-			return new QueriableAnnotation[0];
+			return emptyLookupResult;
 		}
-		
-		/** @see de.uka.ipd.idaho.gamta.MutableAnnotation#getAnnotationTypes()
-		 */
+		public QueriableAnnotation[] getAnnotationsSpanning(int startIndex, int endIndex) {
+			return emptyLookupResult;
+		}
+		public QueriableAnnotation[] getAnnotationsSpanning(String type, int startIndex, int endIndex) {
+			return emptyLookupResult;
+		}
+		public QueriableAnnotation[] getAnnotationsOverlapping(int startIndex, int endIndex) {
+			return emptyLookupResult;
+		}
+		public QueriableAnnotation[] getAnnotationsOverlapping(String type, int startIndex, int endIndex) {
+			return emptyLookupResult;
+		}
 		public String[] getAnnotationTypes() {
 			return new String[0];
 		}
-		
-		/** @see de.uka.ipd.idaho.gamta.QueriableAnnotation#getAnnotationNestingOrder()
-		 */
 		public String getAnnotationNestingOrder() {
 			return this.source.getAnnotationNestingOrder();
 		}
-		
-		/** @see de.uka.ipd.idaho.gamta.Attributed#setAttribute(java.lang.String)
-		 */
 		public void setAttribute(String name) {
 			if (Annotation.START_INDEX_ATTRIBUTE.equals(name)) {}
 			else if (GPath.ABSOLUTE_START_INDEX_ATTRIBUTE.equals(name)) {}
@@ -2553,9 +2300,6 @@ public class GPathEngine implements GPathConstants {
 			else if (Token.PARAGRAPH_END_ATTRIBUTE.equals(name)) {}
 			else this.source.tokenAt(this.index).setAttribute(name);
 		}
-		
-		/** @see de.uka.ipd.idaho.gamta.Annotation#setAttribute(java.lang.String, java.lang.String)
-		 */
 		public Object setAttribute(String name, Object value) {
 			if (Annotation.START_INDEX_ATTRIBUTE.equals(name)) return ("" + this.getStartIndex());
 			else if (GPath.ABSOLUTE_START_INDEX_ATTRIBUTE.equals(name)) return ("" + this.getAbsoluteStartIndex());
@@ -2566,16 +2310,10 @@ public class GPathEngine implements GPathConstants {
 			else if (Token.PARAGRAPH_END_ATTRIBUTE.equals(name)) return this.source.tokenAt(this.index).setAttribute(Token.PARAGRAPH_END_ATTRIBUTE, Token.PARAGRAPH_END_ATTRIBUTE);
 			else return this.source.tokenAt(this.index).setAttribute(name, value);
 		}
-		
-		/** @see de.uka.ipd.idaho.gamta.Annotation#getAttribute(java.lang.String)
-		 */
 		public Object getAttribute(String name) {
 			if (Token.PARAGRAPH_END_ATTRIBUTE.equals(name)) return (this.source.tokenAt(this.index).hasAttribute(Token.PARAGRAPH_END_ATTRIBUTE) ? GPathBoolean.TRUE : GPathBoolean.FALSE);
 			else return this.getAttribute(name, null);
 		}
-		
-		/** @see de.uka.ipd.idaho.gamta.Annotation#getAttribute(java.lang.String, java.lang.String)
-		 */
 		public Object getAttribute(String name, Object def) {
 			if (Annotation.START_INDEX_ATTRIBUTE.equals(name)) return ("" + this.getStartIndex());
 			else if (GPath.ABSOLUTE_START_INDEX_ATTRIBUTE.equals(name)) return ("" + this.getAbsoluteStartIndex());
@@ -2586,9 +2324,6 @@ public class GPathEngine implements GPathConstants {
 			else if (Token.PARAGRAPH_END_ATTRIBUTE.equals(name)) return (this.source.tokenAt(this.index).hasAttribute(Token.PARAGRAPH_END_ATTRIBUTE) ? GPathBoolean.TRUE : def);
 			else return this.source.tokenAt(this.index).getAttribute(name, def);
 		}
-			
-		/** @see de.uka.ipd.idaho.gamta.Annotation#hasAttribute(java.lang.String)
-		 */
 		public boolean hasAttribute(String name) {
 			return (this.source.tokenAt(this.index).hasAttribute(name) 
 					|| Annotation.START_INDEX_ATTRIBUTE.equals(name) 
@@ -2600,27 +2335,15 @@ public class GPathEngine implements GPathConstants {
 					|| (Token.PARAGRAPH_END_ATTRIBUTE.equals(name) && this.source.tokenAt(this.index).hasAttribute(Token.PARAGRAPH_END_ATTRIBUTE))
 					);
 		}
-		
-		/** @see de.uka.ipd.idaho.gamta.Attributed#clearAttributes()
-		 */
 		public void clearAttributes() {
 			this.source.tokenAt(this.index).clearAttributes();
 		}
-
-		/** @see de.uka.ipd.idaho.gamta.Attributed#copyAttributes(de.uka.ipd.idaho.gamta.Attributed)
-		 */
 		public void copyAttributes(Attributed source) {
 			this.source.tokenAt(this.index).copyAttributes(source);
 		}
-
-		/** @see de.uka.ipd.idaho.gamta.Attributed#getAttributeNames()
-		 */
 		public String[] getAttributeNames() {
 			return this.source.tokenAt(this.index).getAttributeNames();
 		}
-
-		/** @see de.uka.ipd.idaho.gamta.Attributed#removeAttribute(java.lang.String)
-		 */
 		public Object removeAttribute(String name) {
 			if (Annotation.START_INDEX_ATTRIBUTE.equals(name)) return ("" + this.getStartIndex());
 			else if (GPath.ABSOLUTE_START_INDEX_ATTRIBUTE.equals(name)) return ("" + this.getAbsoluteStartIndex());
@@ -2630,96 +2353,51 @@ public class GPathEngine implements GPathConstants {
 			else if (Annotation.ANNOTATION_ID_ATTRIBUTE.equals(name)) return this.getAnnotationID();
 			else return this.source.tokenAt(this.index).removeAttribute(name);
 		}
-		
-		/** @see de.uka.ipd.idaho.gamta.Annotation#getDocumentProperty(java.lang.String)
-		 */
 		public String getDocumentProperty(String propertyName) {
 			return this.source.getDocumentProperty(propertyName);
 		}
-
-		/** @see de.uka.ipd.idaho.gamta.Annotation#getDocumentProperty(java.lang.String, java.lang.String)
-		 */
 		public String getDocumentProperty(String propertyName, String defaultValue) {
 			return this.source.getDocumentProperty(propertyName, defaultValue);
 		}
-
-		/** @see de.uka.ipd.idaho.gamta.Annotation#getDocumentPropertyNames()
-		 */
 		public String[] getDocumentPropertyNames() {
 			return this.source.getDocumentPropertyNames();
 		}
-
-		/** @see de.uka.ipd.idaho.gamta.TokenSequence#tokenAt(int)
-		 */
 		public Token tokenAt(int index) {
 			if (index == 0) return this.source.tokenAt(this.index);
 			throw new IndexOutOfBoundsException("" + index);
 		}
-		
-		/** @see de.uka.ipd.idaho.gamta.TokenSequence#firstToken()
-		 */
 		public Token firstToken() {
 			return this.source.tokenAt(this.index);
 		}
-		
-		/** @see de.uka.ipd.idaho.gamta.TokenSequence#lastToken()
-		 */
 		public Token lastToken() {
 			return this.source.tokenAt(this.index);
 		}
-		
-		/** @see de.uka.ipd.idaho.gamta.TokenSequence#valueAt(int)
-		 */
 		public String valueAt(int index) {
 			if (index == 0) return this.source.tokenAt(this.index).getValue();
 			throw new IndexOutOfBoundsException("" + index);
 		}
-		
-		/** @see de.uka.ipd.idaho.gamta.TokenSequence#getWhitespaceAfter(int)
-		 */
 		public String getWhitespaceAfter(int index) {
 			if (index == 0) return "";
 			throw new IndexOutOfBoundsException("" + index);
 		}
-		
-		/** @see de.uka.ipd.idaho.gamta.TokenSequence#firstValue()
-		 */
 		public String firstValue() {
 			return this.source.tokenAt(this.index).getValue();
 		}
-		
-		/** @see de.uka.ipd.idaho.gamta.TokenSequence#lastValue()
-		 */
 		public String lastValue() {
 			return this.source.tokenAt(this.index).getValue();
 		}
-		
-		/** @see de.uka.ipd.idaho.gamta.TokenSequence#getLeadingWhitespace()
-		 */
 		public String getLeadingWhitespace() {
 			return "";
 		}
-		
-		/** @see de.uka.ipd.idaho.gamta.TokenSequence#length()
-		 */
 		public int length() {
 			return this.source.tokenAt(this.index).length();
 		}
-		
-		/** @see de.uka.ipd.idaho.gamta.TokenSequence#getTokenizer()
-		 */
 		public Tokenizer getTokenizer() {
 			return this.source.tokenAt(this.index).getTokenizer();
 		}
-		
-		/** @see de.uka.ipd.idaho.gamta.TokenSequence#getSubsequence(int, int)
-		 */
 		public TokenSequence getSubsequence(int start, int size) {
 			return new PlainTokenSequence(this, this.getTokenizer());
 		}
-		
-		/** @see java.lang.Comparable#compareTo(java.lang.Object)
-		 */
 		public int compareTo(Object o) {
 			if (o == null) return -1;
 			if (o instanceof GPathAttributeAnnotation) return -1;
@@ -2729,11 +2407,76 @@ public class GPathEngine implements GPathConstants {
 			}
 			else return 1;
 		}
-		
-		/** @see java.lang.Object#equals(java.lang.Object)
-		 */
 		public boolean equals(Object o) {
 			return (this.compareTo(o) == 0);
 		}
 	}
+//	
+//	//	PARENT AXIS TEST
+//	public static void main(String[] args) throws Exception {
+//		Reader docIn = new BufferedReader(new InputStreamReader(new FileInputStream(new File("E:/Temp/D765A86FFF8BDD5AFFF2FFEDFFFA4F4E.dtp.gamta")), "UTF-8"));
+//		MutableAnnotation doc = GenericGamtaXML.readDocument(docIn);
+//		docIn.close();
+//		QueriableAnnotation[] tAnnots = doc.getAnnotations("transit");
+//		for (int t = 0; t < tAnnots.length; t++) {
+//			GPathObject ddid = GPath.evaluateExpression("./parent::detail/@ddid", tAnnots[t], null);
+//			System.out.println("Ddid = " + ddid.asString().value);
+//			GPathObject ddl = GPath.evaluateExpression("./parent::detail/@label", tAnnots[t], null);
+//			System.out.println("Ddl = " + ddl.asString().value);
+//		}
+//	}
+//	
+//	//	PARENT AXIS TEST TO ROOT AND '/' ROOT TEST
+//	public static void main(String[] args) throws Exception {
+//		Reader docIn = new BufferedReader(new InputStreamReader((new URL("http://tb.plazi.org/GgServer/xml/3565C773CFEA97C0E5CA2850C4FF8FC7")).openStream(), "UTF-8"));
+//		MutableAnnotation doc = SgmlDocumentReader.readDocument(docIn);
+//		docIn.close();
+//		GPathObject res;
+//		GPathExpression gpe;
+//		
+//		gpe = GPathParser.parseExpression("(substring-after(string(./treatment[./parent::document/@checkinUser = 'ZooBank']/taxonomicName/@LSID-ZBK), ':act:'))");
+//		res = GPath.evaluateExpression(gpe, doc, null);
+//		System.out.println(gpe.toString());
+//		System.out.println(res.asString().value); // ==> WORKS
+//		
+//		gpe = GPathParser.parseExpression("substring-after(string(./treatment[./parent::document/@checkinUser = 'ZooBank']/taxonomicName/@LSID-ZBK), ':act:')");
+//		res = GPath.evaluateExpression(gpe, doc, null);
+//		System.out.println(gpe.toString());
+//		System.out.println(res.asString().value); // ==> WORKS
+//		
+//		gpe = GPathParser.parseExpression("string(./treatment[./parent::document/@checkinUser != 'FooBank' and ./parent::document/@docUuidSource = 'ZooBank']/parent::document/@docUuid)");
+//		res = GPath.evaluateExpression(gpe, doc, null);
+//		System.out.println(gpe.toString());
+//		System.out.println(res.asString().value); // ==> WORKS
+//		
+//		gpe = GPathParser.parseExpression("string(/document[./@checkinUser != 'FooBank' and ./@docUuidSource = 'ZooBank']/@docUuid)");
+//		res = GPath.evaluateExpression(gpe, doc, null);
+//		System.out.println(gpe.toString());
+//		System.out.println(res.asString().value); // ==> FAILS (to get root)
+//		
+//		gpe = GPathParser.parseExpression("/document[./@checkinUser != 'FooBank' and ./@docUuidSource = 'ZooBank']/@docUuid");
+//		res = GPath.evaluateExpression(gpe, doc, null);
+//		System.out.println(gpe.toString());
+//		System.out.println(res.asString().value); // ==> FAILS (to get root)
+//		
+//		gpe = GPathParser.parseExpression("/[./@checkinUser != 'FooBank' and ./@docUuidSource = 'ZooBank']/@docUuid");
+//		res = GPath.evaluateExpression(gpe, doc, null);
+//		System.out.println(gpe.toString());
+//		System.out.println(res.asString().value); // ==> FAILS (parse wrong)
+//		
+//		gpe = GPathParser.parseExpression("document[./@checkinUser != 'FooBank' and ./@docUuidSource = 'ZooBank']/@docUuid");
+//		res = GPath.evaluateExpression(gpe, doc, null);
+//		System.out.println(gpe.toString());
+//		System.out.println(res.asString().value); // ==> WORKS
+//		
+//		gpe = GPathParser.parseExpression("string(document[./@checkinUser != 'FooBank' and ./@docUuidSource = 'ZooBank']/@docUuid)");
+//		res = GPath.evaluateExpression(gpe, doc, null);
+//		System.out.println(gpe.toString());
+//		System.out.println(res.asString().value); // ==> WORKS
+//		
+//		gpe = GPathParser.parseExpression("(substring-after(string(./treatment[/@checkinUser = 'ZooBank']/taxonomicName/@LSID-ZBK), ':act:'))");
+//		res = GPath.evaluateExpression(gpe, doc, null);
+//		System.out.println(gpe.toString());
+//		System.out.println(res.asString().value); // ==> WORKS
+//	}
 }

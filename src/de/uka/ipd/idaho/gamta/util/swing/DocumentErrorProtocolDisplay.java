@@ -28,6 +28,7 @@
 package de.uka.ipd.idaho.gamta.util.swing;
 
 import java.awt.BorderLayout;
+import java.awt.Component;
 import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -39,16 +40,21 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedHashSet;
+import java.util.LinkedList;
 import java.util.TreeMap;
 import java.util.Vector;
 
 import javax.swing.AbstractListModel;
 import javax.swing.BorderFactory;
 import javax.swing.DefaultComboBoxModel;
+import javax.swing.DefaultListCellRenderer;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
+import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JList;
 import javax.swing.JOptionPane;
@@ -76,10 +82,9 @@ import de.uka.ipd.idaho.stringUtils.StringUtils;
  * @author sautter
  */
 public class DocumentErrorProtocolDisplay extends JPanel {
-	private static String ALL_ERRORS_FILTER_TYPE = "<>";
 	private static String ALL_ERRORS_FILTER_LABEL = "<All Errors>";
 	
-	private static class ErrorSeverityFilter extends JCheckBox {
+	private static class ErrorSeverityFilter extends JCheckBox implements ErrorFilter, ErrorDisplayListener {
 		private String severity;
 		private String baseLabel;
 		ErrorSeverityFilter(String severity) {
@@ -88,14 +93,35 @@ public class DocumentErrorProtocolDisplay extends JPanel {
 			this.baseLabel = (StringUtils.capitalize(severity) + "s");
 			this.setText(this.baseLabel);
 		}
-		void updateCounts(DocumentErrorProtocol dep, String category, ErrorTypeFilter etf) {
-			if (this.isSelected())
-				etf.showingCount += (ALL_ERRORS_FILTER_TYPE.equals(etf.type) ? dep.getErrorSeverityCount(category, this.severity) : dep.getErrorSeverityCount(category, etf.type, this.severity));
+		public boolean passes(DocumentError error) {
+			return (this.isSelected() ? this.severity.equals(error.severity) : false);
 		}
-		void updateLabel(DocumentErrorProtocol dep, String category, String type) {
-			int count = dep.getErrorSeverityCount(category, this.severity);
-			int showingCount = (ALL_ERRORS_FILTER_TYPE.equals(type) ? count : dep.getErrorSeverityCount(category, type, this.severity));
-			this.setText(this.baseLabel + " (" + showingCount + " of " + count + ")");
+		private int matchCount = 0;
+		private int displayMatchCount = 0;
+		public void errorDisplayCleared() {
+			this.matchCount = 0;
+			this.displayMatchCount = 0;
+		}
+		public void errorAdded(DocumentError error, boolean displaying) {
+			if (this.severity.equals(error.severity)) {
+				this.matchCount++;
+				if (displaying)
+					this.displayMatchCount++;
+			}
+		}
+		public void errorRemoved(DocumentError error, boolean displaying) {
+			if (this.severity.equals(error.severity)) {
+				this.matchCount--;
+				if (displaying)
+					this.displayMatchCount--;
+			}
+		}
+		public void errorDisplayUpdated(int displaying, int total) {
+//			for _active_ filters, show how many of how many overall errors match, and how many are actually showing
+//			for  _inactive_ filters, show how many of how many overall errors would match, and how many would pass the other filters
+			if (this.isSelected())
+				this.setText(this.baseLabel + " (" + this.displayMatchCount + "/" + this.matchCount + " of " + total + ")");
+			else this.setText(this.baseLabel + " (" + this.matchCount + " of " + total + ")");
 		}
 	}
 	
@@ -105,7 +131,26 @@ public class DocumentErrorProtocolDisplay extends JPanel {
 	private String errorCategoryOrder = null;
 	private String errorTypeOrder = null;
 	
-	private TreeMap errorTabsByCategory = new TreeMap(String.CASE_INSENSITIVE_ORDER);
+	private Comparator errorTabOrder = new Comparator() {
+		public int compare(Object obj1, Object obj2) {
+			String ec1 = ((String) obj1);
+			String ec2 = ((String) obj2);
+			if (ec1.equals(ec2))
+				return 0;
+			if (errorCategoryOrder != null) {
+				int pos1 = errorCategoryOrder.indexOf(ec1);
+				int pos2 = errorCategoryOrder.indexOf(ec2);
+				if (pos1 == pos2) {}
+				else if (pos1 == -1)
+					return 1;
+				else if (pos2 == -1)
+					return -1;
+				else return (pos1 - pos2);
+			}
+			return String.CASE_INSENSITIVE_ORDER.compare(ec1, ((String) ec2));
+		}
+	};
+	private TreeMap errorTabsByCategory = new TreeMap(this.errorTabOrder);
 	private JTabbedPane errorTabs = new JTabbedPane();
 	private int categoryTabPlacement = JTabbedPane.LEFT;
 	private boolean muteErrorCategoryChanges = false;
@@ -124,8 +169,20 @@ public class DocumentErrorProtocolDisplay extends JPanel {
 	private ErrorSeverityFilter showMinors = new ErrorSeverityFilter(DocumentError.SEVERITY_MINOR);
 	private JPanel showErrorsPanel = new JPanel(new GridLayout(1, 0), true);
 	private boolean severityFiltersActive = true;
+	private ErrorFilter errorSeverityFilter;
 	
+	private LinkedHashSet errorFilters = new LinkedHashSet();
+	private LinkedHashSet errorDisplayListeners = new LinkedHashSet();
+	
+	private boolean highlightLabeledErrors = true;
 	private boolean autoSelectNextError = true;
+	
+	/**
+	 * Constructor
+	 */
+	public DocumentErrorProtocolDisplay() {
+		this(null, false);
+	}
 	
 	/**
 	 * Constructor
@@ -165,13 +222,15 @@ public class DocumentErrorProtocolDisplay extends JPanel {
 		//	configure severity filters ...
 		ItemListener showSeverityListener = new ItemListener() {
 			public void itemStateChanged(ItemEvent ie) {
-				applySeverityFilter();
+				applyErrorFilters();
 			}
 		};
 		this.showBlockers.addItemListener(showSeverityListener);
 		this.showCriticals.addItemListener(showSeverityListener);
 		this.showMajors.addItemListener(showSeverityListener);
 		this.showMinors.addItemListener(showSeverityListener);
+		ErrorFilter[] severityFilters = {this.showBlockers, this.showCriticals, this.showMajors, this.showMinors};
+		this.errorSeverityFilter = buildDisjunctiveErrorFilter(severityFilters);
 		
 		//	... and tray them up
 		this.showErrorsPanel.add(this.showBlockers);
@@ -185,7 +244,7 @@ public class DocumentErrorProtocolDisplay extends JPanel {
 		this.errorTabs.addChangeListener(new ChangeListener() {
 			public void stateChanged(ChangeEvent ce) {
 				moveAccessories();
-				applySeverityFilter();
+//				applySeverityFilter();
 				notifyErrorCategorySelected();
 				notifyErrorSelected();
 			}
@@ -241,6 +300,16 @@ public class DocumentErrorProtocolDisplay extends JPanel {
 			this.errorTabs.add(this.getErrorTabLabel(errorCategories[c]), ecd);
 			this.errorTabsByCategory.put(errorCategories[c], ecd);
 		}
+		/*
+TODO MAYBE, add "All Errors" category tab ...
+... showing whole list of errors ...
+... with two-flag setting (showByCategory, showAll) ...
+... and show categories and/or overall lists accordingly
+==> maybe switch based upon overall number of errors ...
+==> ... or even provide "Show by Category" checkbox ...
+==> ... and automatically switch to "All Errors" below some threshold
+  ==> provide getter and setter for latter
+		 */
 		
 		//	make errors show
 		this.validate();
@@ -463,23 +532,6 @@ public class DocumentErrorProtocolDisplay extends JPanel {
 			ecd.updateAccessories();
 	}
 	
-	void applySeverityFilter() {
-		ErrorCategoryDisplay ecd = ((ErrorCategoryDisplay) this.errorTabs.getSelectedComponent());
-		if (ecd != null)
-			ecd.applySeverityFilter();
-	}
-	boolean passesSeverityFilter(DocumentError error) {
-		if (DocumentError.SEVERITY_BLOCKER.equals(error.severity))
-			return this.showBlockers.isSelected();
-		else if (DocumentError.SEVERITY_CRITICAL.equals(error.severity))
-			return this.showCriticals.isSelected();
-		else if (DocumentError.SEVERITY_MAJOR.equals(error.severity))
-			return this.showMajors.isSelected();
-		else if (DocumentError.SEVERITY_MINOR.equals(error.severity))
-			return this.showMinors.isSelected();
-		else return false;
-	}
-	
 	void removeError(boolean falsePositive) {
 		ErrorCategoryDisplay ecd = ((ErrorCategoryDisplay) this.errorTabs.getSelectedComponent());
 		if (ecd != null)
@@ -534,7 +586,40 @@ public class DocumentErrorProtocolDisplay extends JPanel {
 	 * @param eco the error category order
 	 */
 	public void setErrorCategoryOrder(String eco) {
+		if (this.errorTabs.getTabCount() < 2) {
+			this.errorCategoryOrder = eco;
+			return;
+		}
+		
+		ErrorCategoryDisplay set = ((ErrorCategoryDisplay) this.errorTabs.getSelectedComponent());
+		HashMap ets = new HashMap();
+		ets.putAll(this.errorTabsByCategory);
+		LinkedList etcs = new LinkedList(this.errorTabsByCategory.keySet());
+		
+		this.errorTabsByCategory.clear();
 		this.errorCategoryOrder = eco;
+		this.errorTabsByCategory.putAll(ets);
+		
+		boolean errorTabsInOrder = true;
+		for (Iterator etcit = this.errorTabsByCategory.keySet().iterator(); etcit.hasNext();) {
+			String etc = ((String) etcit.next());
+			if ((etcs.size() != 0) && etc.equals(etcs.removeFirst()))
+				continue;
+			errorTabsInOrder = false;
+			break;
+		}
+		if (errorTabsInOrder)
+			return;
+		
+		this.muteErrorCategoryChanges = true;
+		this.errorTabs.removeAll();
+		for (Iterator etcit = this.errorTabsByCategory.keySet().iterator(); etcit.hasNext();) {
+			String etc = ((String) etcit.next());
+			ErrorCategoryDisplay et = ((ErrorCategoryDisplay) this.errorTabsByCategory.get(etc));
+			this.errorTabs.addTab(this.getErrorTabLabel(etc), et);
+		}
+		this.errorTabs.setSelectedComponent(set);
+		this.muteErrorCategoryChanges = false;
 	}
 	
 	/**
@@ -716,24 +801,303 @@ public class DocumentErrorProtocolDisplay extends JPanel {
 		}
 	};
 	
+	/**
+	 * Provide a label for a given error. This default implementation returns
+	 * null, sub classes are welcome to overwrite it as needed.
+	 * @param error the error to get the label for
+	 * @return the label for the argument error
+	 */
+	protected String getErrorLabel(DocumentError error) {
+		return null;
+	}
+	
+	/**
+	 * Check whether or not this error protocol display is highlighting errors
+	 * that have a label, i.e., ones for which the <code>getErrorLabel()</code>
+	 * method returns a non-null value.
+	 * @return true if labeled errors are highlighted, false otherwise
+	 */
+	public boolean isHighlightingLabeledErrors() {
+		return this.highlightLabeledErrors;
+	}
+	
+	/**
+	 * Activate or deactivate highlighting of labeled errors. Setting this
+	 * property to true will have labeled errors, i.e., errors for which the
+	 * <code>getErrorLabel()</code> method returns a non-null value, rendered
+	 * in bold.
+	 * @param hle highlight labeled errors?
+	 */
+	public void setHighlightLabeledErrors(boolean hle) {
+		if (this.highlightLabeledErrors == hle)
+			return;
+		this.highlightLabeledErrors = hle;
+		this.validate();
+		this.repaint();
+	}
+	
+	/**
+	 * Add a custom error filter to the protocol display. If the filter is
+	 * added for the first time, this entails a call to the
+	 * <code>applyErrorFilters()</code> method. Also, if the argument filter
+	 * also is an error display listener, it is added in the latter capacity
+	 * as well. The combination is mainly intended for filters that are based
+	 * upon UI components that want to display status information.
+	 * @param filter the error filter to add
+	 */
+	public void addErrorFilter(ErrorFilter filter) {
+		if (filter == null)
+			return;
+		if (filter instanceof ErrorDisplayListener)
+			this.addErrorDisplayListener((ErrorDisplayListener) filter);
+		if (this.errorFilters.add(filter))
+			this.applyErrorFilters();
+	}
+	
+	/**
+	 * Remove a custom error filter to the protocol display. If the filter was
+	 * actually present, this entails a call to the
+	 * <code>applyErrorFilters()</code> method. Also, if the argument filter
+	 * also is an error display listener, it is removed in the latter capacity
+	 * as well. The combination is mainly intended for filters that are based
+	 * upon UI components that want to display status information.
+	 * @param filter the error filter to remove
+	 */
+	public void removeErrorFilter(ErrorFilter filter) {
+		if (filter == null)
+			return;
+		if (filter instanceof ErrorDisplayListener)
+			this.removeErrorDisplayListener((ErrorDisplayListener) filter);
+		if (this.errorFilters.remove(filter))
+			this.applyErrorFilters();
+	}
+	
+	/**
+	 * Re-apply error filters, both internal and custom ones. This will update
+	 * the error protocol display based upon the filters present.
+	 */
+	public void applyErrorFilters() {
+		ErrorCategoryDisplay ecd = ((ErrorCategoryDisplay) this.errorTabs.getSelectedComponent());
+		if (ecd != null)
+			ecd.updateErrorList();
+	}
+	
+	/**
+	 * A custom filter for errors to show in the protocol display.
+	 * 
+	 * @author sautter
+	 */
+	public static interface ErrorFilter {
+		
+		/**
+		 * Test whether or not a given document error passes the filter.
+		 * @param error the error to check
+		 * @return rue if the argument error passes the filter, false otherwise
+		 */
+		public abstract boolean passes(DocumentError error);
+	}
+	
+	/**
+	 * Add an error display listener to receive notifications of updates to the
+	 * error display.
+	 * @param edl the error display listener to add
+	 */
+	public void addErrorDisplayListener(ErrorDisplayListener edl) {
+		if (edl != null)
+			this.errorDisplayListeners.add(edl);
+	}
+	
+	/**
+	 * Add an error display listener to receive notifications of updates to the
+	 * error display.
+	 * @param edl the error display listener to add
+	 */
+	public void removeErrorDisplayListener(ErrorDisplayListener edl) {
+		if (edl != null)
+			this.errorDisplayListeners.remove(edl);
+	}
+	
+	/**
+	 * Observer of the document error display, to receive notification of
+	 * updates to the displaying list of errors, e.g. as filters or filter
+	 * settings change.
+	 * 
+	 * @author sautter
+	 */
+	public static interface ErrorDisplayListener {
+		
+		/**
+		 * Receive notification that the error display was cleared, usually to
+		 * the re-populated from scratch.
+		 */
+		public abstract void errorDisplayCleared();
+		
+		/**
+		 * Receive notification that an error was added to the protocol whose
+		 * content is showing in the display, regardless of whether or not the
+		 * error is actually showing.
+		 * @param error the error that was added
+		 * @param displaying is the error actually displaying?
+		 */
+		public abstract void errorAdded(DocumentError error, boolean displaying);
+		
+		/**
+		 * Receive notification that an error was removed from the protocol
+		 * whose content is showing in the display, regardless of whether or
+		 * not the error is actually showing.
+		 * @param error the error that was removed
+		 * @param displaying is the error actually displaying?
+		 */
+		public abstract void errorRemoved(DocumentError error, boolean displaying);
+		
+		/**
+		 * Receive notification that the error protocol display was updated.
+		 * This method is called at the end of an update, before the changes
+		 * show in the UI. The number of displaying errors is the number of
+		 * errors that are visible under the current filter settings.
+		 * @param displaying the number of displaying errors
+		 * @param total the total number of errors in the selected category
+		 */
+		public abstract void errorDisplayUpdated(int displaying, int total);
+	}
+	
+	void notifyErrorDisplayCleared(ErrorDisplayListener errorTypeFilter) {
+		if (this.severityFiltersActive)
+			((ErrorDisplayListener) this.errorSeverityFilter).errorDisplayCleared();
+		if (errorTypeFilter != null)
+			errorTypeFilter.errorDisplayCleared();
+		for (Iterator edlit = this.errorDisplayListeners.iterator(); edlit.hasNext();)
+			((ErrorDisplayListener) edlit.next()).errorDisplayCleared();
+	}
+	
+	void notifyErrorAdded(ErrorDisplayListener errorTypeFilter, DocumentError error, boolean displaying) {
+		if (this.severityFiltersActive)
+			((ErrorDisplayListener) this.errorSeverityFilter).errorAdded(error, displaying);
+		if (errorTypeFilter != null)
+			errorTypeFilter.errorAdded(error, displaying);
+		for (Iterator edlit = this.errorDisplayListeners.iterator(); edlit.hasNext();)
+			((ErrorDisplayListener) edlit.next()).errorAdded(error, displaying);
+	}
+	
+	void notifyErrorRemoved(ErrorDisplayListener errorTypeFilter, DocumentError error, boolean displaying) {
+		if (this.severityFiltersActive)
+			((ErrorDisplayListener) this.errorSeverityFilter).errorRemoved(error, displaying);
+		if (errorTypeFilter != null)
+			errorTypeFilter.errorRemoved(error, displaying);
+		for (Iterator edlit = this.errorDisplayListeners.iterator(); edlit.hasNext();)
+			((ErrorDisplayListener) edlit.next()).errorRemoved(error, displaying);
+	}
+	
+	void notifyErrorDisplayUpdated(ErrorDisplayListener errorTypeFilter, int displaying, int total) {
+		if (this.severityFiltersActive)
+			((ErrorDisplayListener) this.errorSeverityFilter).errorDisplayUpdated(displaying, total);
+		if (errorTypeFilter != null)
+			errorTypeFilter.errorDisplayUpdated(displaying, total);
+		for (Iterator edlit = this.errorDisplayListeners.iterator(); edlit.hasNext();)
+			((ErrorDisplayListener) edlit.next()).errorDisplayUpdated(displaying, total);
+	}
+	
+	/**
+	 * Create an error filter passing any document error that passes at least
+	 * one of a number of given error filters. If any of the error filters in
+	 * the argument array are also error display listeners, so is the returned
+	 * combined error filter.
+	 * @param filters the filters to wrap into a disjunctive one
+	 * @return the disjunctive filter
+	 */
+	public static ErrorFilter buildDisjunctiveErrorFilter(ErrorFilter[] filters) {
+		
+		//	check if we need to listen to display updates
+		LinkedHashSet filterList = new LinkedHashSet(filters.length);
+		boolean plain = true;
+		for (int f = 0; f < filters.length; f++) {
+			if (filters[f] != null)
+				filterList.add(filters[f]);
+			if (filters[f] instanceof ErrorDisplayListener)
+				plain = false;
+			
+		}
+		
+		//	return plain or listening error filter
+		if (plain)
+			return new PlainDisjunctiveErrorFilter(((ErrorFilter[]) filterList.toArray(new ErrorFilter[filterList.size()])));
+		else return new ListeningDisjunctiveErrorFilter(((ErrorFilter[]) filterList.toArray(new ErrorFilter[filterList.size()])));
+	}
+	
+	private static class PlainDisjunctiveErrorFilter implements ErrorFilter {
+		private ErrorFilter[] filters;
+		PlainDisjunctiveErrorFilter(ErrorFilter[] filters) {
+			this.filters = filters;
+		}
+		public boolean passes(DocumentError error) {
+			for (int f = 0; f < this.filters.length; f++) {
+				if (this.filters[f].passes(error))
+					return true;
+			}
+			return false;
+		}
+	}
+	
+	private static class ListeningDisjunctiveErrorFilter implements ErrorFilter, ErrorDisplayListener {
+		private ErrorFilter[] filters;
+		ListeningDisjunctiveErrorFilter(ErrorFilter[] filters) {
+			this.filters = filters;
+		}
+		public boolean passes(DocumentError error) {
+			for (int f = 0; f < this.filters.length; f++) {
+				if (this.filters[f].passes(error))
+					return true;
+			}
+			return false;
+		}
+		public void errorDisplayCleared() {
+			for (int f = 0; f < this.filters.length; f++) {
+				if (this.filters[f] instanceof ErrorDisplayListener)
+					((ErrorDisplayListener) this.filters[f]).errorDisplayCleared();
+			}
+		}
+		public void errorAdded(DocumentError error, boolean displaying) {
+			for (int f = 0; f < this.filters.length; f++) {
+				if (this.filters[f] instanceof ErrorDisplayListener)
+					((ErrorDisplayListener) this.filters[f]).errorAdded(error, displaying);
+			}
+		}
+		public void errorRemoved(DocumentError error, boolean displaying) {
+			for (int f = 0; f < this.filters.length; f++) {
+				if (this.filters[f] instanceof ErrorDisplayListener)
+					((ErrorDisplayListener) this.filters[f]).errorRemoved(error, displaying);
+			}
+		}
+		public void errorDisplayUpdated(int displaying, int total) {
+			for (int f = 0; f < this.filters.length; f++) {
+				if (this.filters[f] instanceof ErrorDisplayListener)
+					((ErrorDisplayListener) this.filters[f]).errorDisplayUpdated(displaying, total);
+			}
+		}
+	}
+	
+	/*
+TODO MAYBE, create public static abstract class JCheckBoxErrorFilter ...
+... with behavior akin to severity filters ...
+... implementing listener for UI updates
+
+TODO MAYBE, create public static abstract class AlternativeErrorFilter ...
+... for wrapping in JComboBoxErrorFilter or JRadioButtonErrorFilter
+  ==> provide respective factory methods
+... with latter implementing behavior akin to type filter ...
+... implementing listener for UI updates
+	 */
+	
 	private class ErrorCategoryDisplay extends JPanel {
 		final String category;
-		
-		private ErrorTypeFilter allErrorTypesFilter = new ErrorTypeFilter(ALL_ERRORS_FILTER_TYPE, ALL_ERRORS_FILTER_LABEL);
-		private TreeMap errorTypeFiltersByLabel = new TreeMap(String.CASE_INSENSITIVE_ORDER);
-		private Vector errorTypeFilters = new Vector();
-		
 		private JLabel description;
 		
-		private ErrorFilterModel errorTypeFilterModel = new ErrorFilterModel();
-		private JComboBox errorTypeFilterSelector = new JComboBox(this.errorTypeFilterModel);
-		private ErrorTypeFilter errorTypeFilter = null;
-		
+		private ErrorTypeFilter errorTypeFilter = new ErrorTypeFilter();
 		private JPanel topPanel = new JPanel(new GridLayout(0, 1, 0, 2), true);
 		
 		private Vector errorTrays = new Vector();
-		
 		private Vector listErrorTrays = new Vector();
+		
 		private ErrorListModel errorListModel = new ErrorListModel();
 		private JList errorList = new JList(this.errorListModel);
 		
@@ -745,28 +1109,12 @@ public class DocumentErrorProtocolDisplay extends JPanel {
 			DocumentError[] errors = dep.getErrors(this.category);
 			
 			//	populate error list and filters
-			this.allErrorTypesFilter.count = dep.getErrorCount(this.category);
-			for (int e = 0; e < errors.length; e++) {
+			for (int e = 0; e < errors.length; e++)
 				this.errorTrays.add(new ErrorTray(errors[e]));
-				String label = dep.getErrorTypeLabel(this.category, errors[e].type);
-				ErrorTypeFilter etf = ((ErrorTypeFilter) this.errorTypeFiltersByLabel.get(label));
-				if (etf == null) {
-					etf = new ErrorTypeFilter(errors[e].type, label);
-					etf.count = dep.getErrorCount(this.category, errors[e].type);
-					this.errorTypeFiltersByLabel.put(label, etf);
-				}
-			}
-			
-			//	compute showing error counts
-			this.applySeverityFilter();
-			
-			//	select 'all' filter for starters
-			this.errorTypeFilter = ((ErrorTypeFilter) this.errorTypeFilters.get(0));
 			
 			//	add functionality
-			this.errorTypeFilterSelector.setEditable(false);
-			this.errorTypeFilterSelector.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createLineBorder(this.getBackground()), BorderFactory.createLoweredBevelBorder()));
-			this.errorTypeFilterSelector.addItemListener(new ItemListener() {
+			this.errorTypeFilter.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createLineBorder(this.getBackground()), BorderFactory.createLoweredBevelBorder()));
+			this.errorTypeFilter.addItemListener(new ItemListener() {
 				public void itemStateChanged(ItemEvent ie) {
 					updateErrorTypeFilter();
 				}
@@ -792,6 +1140,7 @@ public class DocumentErrorProtocolDisplay extends JPanel {
 					selectError();
 				}
 			});
+			this.errorList.setCellRenderer(new ErrorListCellRenderer());
 			JScrollPane errorListBox = new JScrollPane(this.errorList);
 			errorListBox.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
 			errorListBox.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
@@ -801,18 +1150,16 @@ public class DocumentErrorProtocolDisplay extends JPanel {
 			
 			//	assemble the whole stuff
 			this.topPanel.add(this.description);
-			this.topPanel.add(this.errorTypeFilterSelector);
+			this.topPanel.add(this.errorTypeFilter);
 			
 			this.add(this.topPanel, BorderLayout.NORTH);
 			this.add(errorListBox, BorderLayout.CENTER);
 			
-			//	make data show
-			this.errorTypeFilterModel.fireContentsChanged();
-			this.errorListModel.fireContentsChanged();
-			this.errorTypeFilterSelector.setSelectedIndex(0);
+			//	make data show (also updates filters)
+			this.updateErrorList();
 			
 			//	notify sub class
-			errorTypeSelected((ALL_ERRORS_FILTER_TYPE.equals(this.errorTypeFilter.type) ? null : this.errorTypeFilter.type), this.category, this.errorTypeFilter.count);
+			errorTypeSelected(this.errorTypeFilter.getErrorType(), this.category, this.errorTypeFilter.getErrorCount());
 		}
 		
 		void updateAccessories() {
@@ -822,11 +1169,11 @@ public class DocumentErrorProtocolDisplay extends JPanel {
 			//	add type selector and buttons in same row if there are no custom buttons
 			if (showButtons && ((customButtons == null) || (customButtons.length == 0))) {
 				JPanel functionPanel = new JPanel(new BorderLayout(), true);
-				functionPanel.add(this.errorTypeFilterSelector, BorderLayout.CENTER);
+				functionPanel.add(this.errorTypeFilter, BorderLayout.CENTER);
 				functionPanel.add(errorButtonPanel, BorderLayout.EAST);
 				this.topPanel.add(functionPanel);
 			}
-			else this.topPanel.add(this.errorTypeFilterSelector);
+			else this.topPanel.add(this.errorTypeFilter);
 			
 			//	add severity filters
 			if (severityFiltersActive)
@@ -837,29 +1184,11 @@ public class DocumentErrorProtocolDisplay extends JPanel {
 				this.topPanel.add(errorButtonPanel);
 			
 			//	show total and visible counts on severities
-			this.updateErrorSeverityFilters();
+			this.updateErrorList();
 			
 			//	make the whole stuff show
 			this.validate();
 			this.repaint();
-		}
-		
-		void applySeverityFilter() {
-			this.recomputeShowingCount(this.allErrorTypesFilter);
-			for (Iterator fit = this.errorTypeFiltersByLabel.keySet().iterator(); fit.hasNext();) {
-				ErrorTypeFilter etf = ((ErrorTypeFilter) this.errorTypeFiltersByLabel.get(fit.next()));
-				this.recomputeShowingCount(etf);
-			}
-			this.updateErrorTypeFilters(true);
-			this.updateErrorList();
-		}
-		
-		private void recomputeShowingCount(ErrorTypeFilter etf) {
-			etf.showingCount = 0;
-			showBlockers.updateCounts(dep, this.category, etf);
-			showCriticals.updateCounts(dep, this.category, etf);
-			showMajors.updateCounts(dep, this.category, etf);
-			showMinors.updateCounts(dep, this.category, etf);
 		}
 		
 		void errorAdded(DocumentError error) {
@@ -867,26 +1196,31 @@ public class DocumentErrorProtocolDisplay extends JPanel {
 			this.errorTrays.add(et);
 			Collections.sort(this.errorTrays, errorTrayOrder);
 			
-			String label = dep.getErrorTypeLabel(error.category, error.type);
-			ErrorTypeFilter etf = ((ErrorTypeFilter) this.errorTypeFiltersByLabel.get(label));
-			if (etf == null) {
-				etf = new ErrorTypeFilter(error.type, label);
-				this.errorTypeFiltersByLabel.put(label, etf);
+			//	add error, notify listeners, sort list, and update display if error showing
+			boolean display = this.displayError(et.error);
+			DocumentError oldSelError = this.getSelectedError();
+			if (display)
+				this.listErrorTrays.add(et);
+			notifyErrorAdded(this.errorTypeFilter, error, display);
+			notifyErrorDisplayUpdated(this.errorTypeFilter, this.listErrorTrays.size(), this.errorTrays.size());
+			if (display) {
+				Collections.sort(this.listErrorTrays, errorTrayOrder);
+				this.errorListModel.fireContentsChanged();
 			}
-			etf.count++;
-			this.allErrorTypesFilter.count++;
-			if (passesSeverityFilter(error)) {
-				etf.showingCount++;
-				this.allErrorTypesFilter.showingCount++;
-			}
-			this.updateErrorTypeFilters(true);
-			this.updateErrorSeverityFilters();
-			
-			this.errorTypeFilter = ((ErrorTypeFilter) this.errorTypeFilterSelector.getSelectedItem());
-			this.updateErrorList();
 			
 			errorCategoryChanged(this);
-			errorTypeSelected((ALL_ERRORS_FILTER_TYPE.equals(this.errorTypeFilter.type) ? null : this.errorTypeFilter.type), this.category, this.errorTypeFilter.count);
+			if (display)
+				this.notifyErrorSelectedIfChanged(oldSelError);
+			else if (!this.errorTypeFilter.passes(error)) {
+				this.errorTypeFilter.setErrorType(null);
+				this.notifyErrorSelectedIfChanged(oldSelError);
+			}
+			errorTypeSelected(this.errorTypeFilter.getErrorType(), this.category, this.errorTypeFilter.getErrorCount());
+		}
+		private void notifyErrorSelectedIfChanged(DocumentError oldSelError) {
+			DocumentError selError = this.getSelectedError();
+			if ((oldSelError != null) && (oldSelError != selError))
+				errorSelected(selError);
 		}
 		
 		void errorRemoved(DocumentError error) {
@@ -900,7 +1234,7 @@ public class DocumentErrorProtocolDisplay extends JPanel {
 		}
 		
 		String getErrorType() {
-			return (ALL_ERRORS_FILTER_TYPE.equals(this.errorTypeFilter.type) ? null : this.errorTypeFilter.type);
+			return this.errorTypeFilter.getErrorType();
 		}
 		
 		DocumentError getSelectedError() {
@@ -913,18 +1247,7 @@ public class DocumentErrorProtocolDisplay extends JPanel {
 		}
 		
 		boolean setErrorType(String type) {
-			if (type == null)
-				type = ALL_ERRORS_FILTER_TYPE;
-			if ((this.errorTypeFilter != null) && type.equals(this.errorTypeFilter.type))
-				return true;
-			for (int f = 0; f < this.errorTypeFilters.size(); f++) {
-				ErrorTypeFilter etf = ((ErrorTypeFilter) this.errorTypeFilters.get(f));
-				if (type.equals(etf.type)) {
-					this.errorTypeFilterSelector.setSelectedItem(etf);
-					return true;
-				}
-			}
-			return false;
+			return this.errorTypeFilter.setErrorType(type);
 		}
 		
 		boolean setError(DocumentError error) {
@@ -940,50 +1263,49 @@ public class DocumentErrorProtocolDisplay extends JPanel {
 		}
 		
 		void updateErrorTypeFilter() {
-			this.errorTypeFilter = ((ErrorTypeFilter) this.errorTypeFilterSelector.getSelectedItem());
 			this.updateErrorList();
-			this.updateErrorSeverityFilters();
-			errorTypeSelected((ALL_ERRORS_FILTER_TYPE.equals(this.errorTypeFilter.type) ? null : this.errorTypeFilter.type), this.category, this.errorTypeFilter.count);
+			errorTypeSelected(this.errorTypeFilter.getErrorType(), this.category, this.errorTypeFilter.getErrorCount());
 		}
 		
-		private void updateErrorTypeFilters(boolean isChange) {
-			this.errorTypeFilters.clear();
-			ErrorTypeFilter preEtf = ((ErrorTypeFilter) this.errorTypeFilterSelector.getSelectedItem());
-			for (Iterator fit = this.errorTypeFiltersByLabel.keySet().iterator(); fit.hasNext();) {
-				ErrorTypeFilter etf = ((ErrorTypeFilter) this.errorTypeFiltersByLabel.get(fit.next()));
-				if (etf.showingCount != 0)
-					this.errorTypeFilters.add(etf);
+		private boolean updatingErrorList = false;
+		void updateErrorList() {
+			if (this.updatingErrorList)
+				return;
+			try {
+				this.updatingErrorList = true;
+				this.doUpdateErrorList();
 			}
-			if (this.errorTypeFilters.size() != 1)
-				this.errorTypeFilters.add(0, this.allErrorTypesFilter);
-			if (isChange)
-				this.errorTypeFilterModel.fireContentsChanged();
-			if ((this.errorTypeFilter == null) || !this.errorTypeFilters.contains(preEtf)) {
-				this.errorTypeFilter = ((ErrorTypeFilter) this.errorTypeFilters.get(0));
-				this.errorTypeFilterSelector.setSelectedItem(this.errorTypeFilter);
+			finally {
+				this.updatingErrorList = false;
 			}
 		}
 		
-		private void updateErrorSeverityFilters() {
-			showBlockers.updateLabel(dep, this.category, this.errorTypeFilter.type);
-			showCriticals.updateLabel(dep, this.category, this.errorTypeFilter.type);
-			showMajors.updateLabel(dep, this.category, this.errorTypeFilter.type);
-			showMinors.updateLabel(dep, this.category, this.errorTypeFilter.type);
-		}
-		
-		private void updateErrorList() {
+		private void doUpdateErrorList() {
+			Collections.sort(this.errorTrays, errorTrayOrder);
 			this.listErrorTrays.clear();
+			notifyErrorDisplayCleared(this.errorTypeFilter);
 			for (int e = 0; e < this.errorTrays.size(); e++) {
 				ErrorTray et = ((ErrorTray) this.errorTrays.get(e));
-				if (passesSeverityFilter(et.error)) {
-					if (ALL_ERRORS_FILTER_TYPE.equals(this.errorTypeFilter.type))
-						this.listErrorTrays.add(et);
-					else if (this.errorTypeFilter.type.equals(et.error.type))
-						this.listErrorTrays.add(et);
-				}
+				boolean display = this.displayError(et.error);
+				if (display)
+					this.listErrorTrays.add(et);
+				notifyErrorAdded(this.errorTypeFilter, et.error, display);
 			}
-			Collections.sort(this.errorTrays, errorTrayOrder);
+			notifyErrorDisplayUpdated(this.errorTypeFilter, this.listErrorTrays.size(), this.errorTrays.size());
 			this.errorListModel.fireContentsChanged();
+		}
+		
+		private boolean displayError(DocumentError error) {
+			if (severityFiltersActive && !errorSeverityFilter.passes(error))
+				return false;
+			if (!this.errorTypeFilter.passes(error))
+				return false;
+			for (Iterator efit = errorFilters.iterator(); efit.hasNext();) {
+				ErrorFilter ef = ((ErrorFilter) efit.next());
+				if (!ef.passes(error))
+					return false;
+			}
+			return true;
 		}
 		
 		void selectError() {
@@ -1008,8 +1330,9 @@ public class DocumentErrorProtocolDisplay extends JPanel {
 			
 			//	remove error
 			this.errorTrays.remove(et);
-			this.listErrorTrays.remove(et);
-			this.errorListModel.fireContentsChanged();
+			boolean removed = this.listErrorTrays.remove(et);
+			if (removed)
+				this.errorListModel.fireContentsChanged();
 			
 			//	remove error from protocol and notify anyone interested (only if we triggered the removal, though)
 			if (uiTriggered) {
@@ -1031,34 +1354,13 @@ public class DocumentErrorProtocolDisplay extends JPanel {
 			else this.errorList.clearSelection();
 			
 			//	decrement filter counters
-			String el = dep.getErrorTypeLabel(et.error.category, et.error.type);
-			ErrorTypeFilter etf = ((ErrorTypeFilter) this.errorTypeFiltersByLabel.get(el));
-			etf.count--;
-			this.allErrorTypesFilter.count--;
-			if (passesSeverityFilter(et.error)) {
-				etf.showingCount--;
-				this.allErrorTypesFilter.showingCount--;
-			}
-			if (etf.count == 0)
-				this.errorTypeFiltersByLabel.remove(el);
-			this.updateErrorTypeFilters(true);
+			notifyErrorRemoved(this.errorTypeFilter, et.error, removed);
+			notifyErrorDisplayUpdated(this.errorTypeFilter, this.listErrorTrays.size(), this.errorTrays.size());
 			
 			//	update tab label, and notify sub class
 			errorCategoryChanged(this);
-			errorTypeSelected((ALL_ERRORS_FILTER_TYPE.equals(this.errorTypeFilter.type) ? null : this.errorTypeFilter.type), this.category, this.errorTypeFilter.count);
-			errorSelected(this.getSelectedError());
-		}
-		
-		private class ErrorFilterModel extends DefaultComboBoxModel {
-			public Object getElementAt(int index) {
-				return ((index < errorTypeFilters.size()) ? errorTypeFilters.get(index) : null);
-			}
-			public int getSize() {
-				return errorTypeFilters.size();
-			}
-			public void fireContentsChanged() {
-				super.fireContentsChanged(this, 0, this.getSize());
-			}
+			errorTypeSelected(this.errorTypeFilter.getErrorType(), this.category, this.errorTypeFilter.getErrorCount());
+				errorSelected(this.getSelectedError());
 		}
 		
 		private class ErrorListModel extends AbstractListModel {
@@ -1072,29 +1374,209 @@ public class DocumentErrorProtocolDisplay extends JPanel {
 				super.fireContentsChanged(this, 0, this.getSize());
 			}
 		}
+		
+		private class ErrorListCellRenderer extends DefaultListCellRenderer {
+			public Component getListCellRendererComponent(JList list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
+				Component elcr = super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+				((JComponent) elcr).setToolTipText(((ErrorTray) value).label);
+				return elcr;
+			}
+		}
+		
+		private class ErrorTypeFilter extends JComboBox implements ErrorFilter, ErrorDisplayListener {
+			private ErrorType wildcardErrorType = new ErrorType(null, ALL_ERRORS_FILTER_LABEL);
+			private HashMap allErrorTypes = new HashMap();
+			private Vector errorTypes = new Vector();
+			private ErrorTypeModel errorTypeModel = new ErrorTypeModel();
+			private ErrorType activeErrorType = this.wildcardErrorType;
+			ErrorTypeFilter() {
+				this.setEditable(false);
+				this.errorTypes.addElement(this.wildcardErrorType);
+				this.setModel(this.errorTypeModel);
+			}
+			private class ErrorTypeModel extends DefaultComboBoxModel {
+				public Object getElementAt(int index) {
+					return ((index < errorTypes.size()) ? errorTypes.get(index) : null);
+				}
+				public int getSize() {
+					return errorTypes.size();
+				}
+				void fireContentsChanged() {
+					super.fireContentsChanged(this, 0, this.getSize());
+				}
+				public Object getSelectedItem() {
+//					return super.getSelectedItem();
+					System.out.println("ErrorTypeModel: returning selected type " + activeErrorType.type);
+					return activeErrorType;
+				}
+				public void setSelectedItem(Object anObject) {
+//					super.setSelectedItem(anObject);
+					System.out.println("ErrorTypeModel: setting selected type " + ((ErrorType) anObject).type);
+					activeErrorType = ((ErrorType) anObject);
+					System.out.println("ErrorTypeModel: set selected type " + activeErrorType.type);
+				}
+			}
+			String getErrorType() {
+				return this.activeErrorType.type;
+			}
+			int getErrorCount() {
+				return this.activeErrorType.matchCount;
+			}
+			boolean setErrorType(String type) {
+				if (type == null) {
+					if (this.activeErrorType.type == null)
+						return true;
+					if (this.errorTypes.get(0) == this.wildcardErrorType) {
+						this.setSelectedIndex(0);
+						return true;
+					}
+					return false;
+				}
+				for (int t = 0; t < this.errorTypes.size(); t++) {
+					ErrorType cet = ((ErrorType) this.errorTypes.get(t));
+					if (cet.type == null)
+						continue;
+					if (type.equals(cet.type)) {
+						this.setSelectedItem(cet);
+						return true;
+					}
+				}
+				return false;
+			}
+			public boolean passes(DocumentError error) {
+				return this.activeErrorType.passes(error);
+			}
+			public void errorDisplayCleared() {
+				//System.out.println("TypeFilter: display cleared");
+				this.errorTypes.clear();
+				this.wildcardErrorType.matchCount = 0;
+				this.wildcardErrorType.displayMatchCount = 0;
+			}
+			public void errorAdded(DocumentError error, boolean displaying) {
+				//System.out.println("TypeFilter: adding " + error.severity + " in " + error.category + "/" + error.type);
+				ErrorType et = null;
+				for (int t = 0; t < this.errorTypes.size(); t++) {
+					ErrorType cet = ((ErrorType) this.errorTypes.get(t));
+					if (cet.type == null)
+						continue;
+					int c = error.type.compareTo(cet.type);
+					if (c == 0) {
+						et = cet;
+						break;
+					}
+					if (c < 0) {
+						et = this.getErrorType(error.category, error.type);
+						this.errorTypes.add(t, et);
+						break;
+					}
+				}
+				if (et == null) {
+					et = this.getErrorType(error.category, error.type);
+					this.errorTypes.add(et);
+				}
+				et.matchCount++;
+				if (displaying)
+					et.displayMatchCount++;
+				this.wildcardErrorType.matchCount++;
+				if (displaying)
+					this.wildcardErrorType.displayMatchCount++;
+			}
+			private ErrorType getErrorType(String category, String type) {
+				ErrorType et = ((ErrorType) this.allErrorTypes.get(type));
+				if (et == null) {
+					et = new ErrorType(type, dep.getErrorTypeLabel(category, type));
+					this.allErrorTypes.put(type, et);
+				}
+				else {
+					et.matchCount = 0;
+					et.displayMatchCount = 0;
+				}
+				return et;
+			}
+			public void errorRemoved(DocumentError error, boolean displaying) {
+				//System.out.println("TypeFilter: removing " + error.severity + " in " + error.category + "/" + error.type);
+				for (int t = 0; t < this.errorTypes.size(); t++) {
+					ErrorType cet = ((ErrorType) this.errorTypes.get(t));
+					if (cet.type == null)
+						continue;
+					if (cet.type.equals(error.type)) {
+						cet.matchCount--;
+						if (cet.matchCount == 0)
+							this.errorTypes.remove(t);
+						else if (displaying)
+							cet.displayMatchCount--;
+						break;
+					}
+				}
+				this.wildcardErrorType.matchCount--;
+				if (displaying)
+					this.wildcardErrorType.displayMatchCount--;
+			}
+			public void errorDisplayUpdated(int displaying, int total) {
+				//System.out.println("TypeFilter: finishing display update with " + displaying + " errors displaying of " + total);
+				
+				//	make sure we have at least "all" filter ...
+				if (this.errorTypes.isEmpty())
+					this.errorTypes.add(this.wildcardErrorType);
+				
+				//	... and have "all" filter in presence of multiple error types ...
+				else if ((this.errorTypes.size() != 1) && (this.errorTypes.get(0) != this.wildcardErrorType))
+					this.errorTypes.add(0, this.wildcardErrorType);
+				
+				//	... but not with single error type
+				else if ((this.errorTypes.get(0) == this.wildcardErrorType) && (this.errorTypes.size() == 2))
+					this.errorTypes.remove(0);
+				
+				//	switch to "all" filter on removal of last error of selected type ...
+				//	... or to last remaining error type
+				if (this.activeErrorType.matchCount <= 0)
+					this.setSelectedItem((ErrorType) this.errorTypes.get(0));
+				else if (this.errorTypes.size() == 1)
+					this.setSelectedItem((ErrorType) this.errorTypes.get(0));
+				
+				//	make changes show
+				this.errorTypeModel.fireContentsChanged();
+				this.revalidate();
+				this.repaint();
+			}
+			
+			private class ErrorType implements ErrorFilter {
+				final String type;
+				final String label;
+				int matchCount = 0;
+				int displayMatchCount = 0;
+				ErrorType(String type, String label) {
+					this.type = type;
+					this.label = label;
+				}
+				public boolean passes(DocumentError error) {
+					return ((this.type == null) ? true : this.type.equals(error.type));
+				}
+				public String toString() {
+//					- for _active_ filters, show how many of how many overall errors match, and how many are actually showing
+//					- for  _inactive_ filters, show how many of how many overall errors would match, and how many would pass the other filters
+					if (activeErrorType == this)
+						return (this.label + " (" + this.displayMatchCount + "/" + this.matchCount + " of " + wildcardErrorType.matchCount + ")");
+					else return (this.label + " (" + this.matchCount + " of " + wildcardErrorType.matchCount + ")");
+				}
+				public boolean equals(Object obj) {
+					ErrorType et = ((ErrorType) obj);
+					return ((this.type == null) ? (et.type == null) : this.type.equals(et.type));
+				}
+			}
+		}
 	}
 	
-	private static class ErrorTypeFilter {
-		final String type;
-		final String label;
-		int count = 0;
-		int showingCount = 0;
-		ErrorTypeFilter(String type, String label) {
-			this.type = type;
-			this.label = label;
-		}
-		public String toString() {
-			return (this.label + " (" + this.showingCount + " of " + this.count + ")");
-		}
-	}
-	
-	private static class ErrorTray {
+	private class ErrorTray {
 		final DocumentError error;
+		final String label;
 		ErrorTray(DocumentError error) {
 			this.error = error;
+			this.label = getErrorLabel(this.error);
 		}
 		public String toString() {
-			return (StringUtils.capitalize(this.error.severity) + ": " + this.error.description);
+			String str = (StringUtils.capitalize(this.error.severity) + ": " + this.error.description);
+			return ((highlightLabeledErrors && (this.label != null)) ? ("<HTML><B>" + str + "</B></HTML>") : str);
 		}
 	}
 	

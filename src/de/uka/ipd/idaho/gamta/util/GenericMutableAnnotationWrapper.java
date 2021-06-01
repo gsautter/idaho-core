@@ -76,15 +76,40 @@ public class GenericMutableAnnotationWrapper extends GenericQueriableAnnotationW
 		return this.wrapMutableAnnotation(this.mutableAnnotationData.addAnnotation(type, startIndex, size));
 	}
 	
+	public MutableAnnotation addAnnotation(int startIndex, int endIndex, String type) {
+		return this.wrapMutableAnnotation(this.mutableAnnotationData.addAnnotation(startIndex, endIndex, type));
+	}
+	
+	public MutableAnnotation getMutableAnnotation(String id) {
+		MutableAnnotation annotation = this.mutableAnnotationData.getMutableAnnotation(id);
+		return ((annotation == null) ? null : this.wrapMutableAnnotation(annotation));
+	}
+	
 	public MutableAnnotation[] getMutableAnnotations() {
-		MutableAnnotation[] annotations = this.mutableAnnotationData.getMutableAnnotations();
-		for (int a = 0; a < annotations.length; a++)
-			annotations[a] = this.wrapMutableAnnotation(annotations[a]);
-		return annotations;
+		return this.wrapMutableAnnotations(this.mutableAnnotationData.getMutableAnnotations());
 	}
 	
 	public MutableAnnotation[] getMutableAnnotations(String type) {
-		MutableAnnotation[] annotations = this.mutableAnnotationData.getMutableAnnotations(type);
+		return this.wrapMutableAnnotations(this.mutableAnnotationData.getMutableAnnotations(type));
+	}
+	
+	public MutableAnnotation[] getMutableAnnotationsSpanning(int startIndex, int endIndex) {
+		return this.wrapMutableAnnotations(this.mutableAnnotationData.getMutableAnnotationsSpanning(startIndex, endIndex));
+	}
+	
+	public MutableAnnotation[] getMutableAnnotationsSpanning(String type, int startIndex, int endIndex) {
+		return this.wrapMutableAnnotations(this.mutableAnnotationData.getMutableAnnotationsSpanning(type, startIndex, endIndex));
+	}
+	
+	public MutableAnnotation[] getMutableAnnotationsOverlapping(int startIndex, int endIndex) {
+		return this.wrapMutableAnnotations(this.mutableAnnotationData.getMutableAnnotationsOverlapping(startIndex, endIndex));
+	}
+	
+	public MutableAnnotation[] getMutableAnnotationsOverlapping(String type, int startIndex, int endIndex) {
+		return this.wrapMutableAnnotations(this.mutableAnnotationData.getMutableAnnotationsOverlapping(type, startIndex, endIndex));
+	}
+	
+	private MutableAnnotation[] wrapMutableAnnotations(MutableAnnotation[] annotations) {
 		for (int a = 0; a < annotations.length; a++)
 			annotations[a] = this.wrapMutableAnnotation(annotations[a]);
 		return annotations;

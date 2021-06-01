@@ -30,7 +30,6 @@ package de.uka.ipd.idaho.htmlXmlUtil.accessories;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStreamWriter;
@@ -135,54 +134,6 @@ public class HtmlPageBuilder extends TokenReceiver {
 		 *         is un-loaded in a browser
 		 */
 		public abstract String[] getOnunloadCalls();
-	}
-	
-	/**
-	 * This wrapper jumps over a leading byte order mark in XML files, always
-	 * returning '&lt;' the first byte. This helps preventing errors in components
-	 * that take input streams as a data source, but cannot handle byte order marks.
-	 * For instance, this wrapper prevents the "content not allowed in prolog"
-	 * exception thrown by Java's XML components. Using this wrapper with data
-	 * other than XML or HTML is likely to cause undesired behavior.
-	 */
-	public static class ByteOrderMarkFilterInputStream extends FilterInputStream {
-		private boolean inContent = false;
-		
-		/**
-		 * Constructor
-		 * @param in the input stream to wrap
-		 */
-		public ByteOrderMarkFilterInputStream(InputStream in) {
-			super(in);
-		}
-		
-		/* (non-Javadoc)
-		 * @see java.io.FilterInputStream#read()
-		 */
-		public int read() throws IOException {
-			int i = super.read();
-			while (!this.inContent) {
-				if (i == '<') this.inContent = true;
-				else i = super.read();
-			}
-			return i;
-		}
-
-		/* (non-Javadoc)
-		 * @see java.io.FilterInputStream#read(byte[], int, int)
-		 */
-		public int read(byte[] b, int off, int len) throws IOException {
-			if (this.inContent)	return super.read(b, off, len);
-			else {
-				int i = super.read();
-				while (!this.inContent) {
-					if (i == '<') this.inContent = true;
-					else i = super.read();
-				}
-				b[off] = ((byte) i);
-				return (1 + super.read(b, (off + 1), (len - 1)));
-			}
-		}
 	}
 	
 	/** HTML grammar for extracting type information from tokens, etc */

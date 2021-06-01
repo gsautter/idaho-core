@@ -28,6 +28,7 @@
 package de.uka.ipd.idaho.gamta.util;
 
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -464,5 +465,41 @@ public class CountingSet implements Set {
 		}
 		sb.append("}");
 		return sb.toString();
+	}
+	
+	/**
+	 * Create a comparator that compares objects based upon their count in this
+	 * set. Modifications to the set reflect in the behavior of the comparator.
+	 * The returned comparator represents an order by increasing counts. To
+	 * reverse this order, use <code>getDecreasingCountOrder</code>.
+	 * @return the comparator
+	 */
+	public Comparator getIncreasingCountOrder() {
+		/* This is the less frequent use case, as obtaining the most frequent
+		 * elements is a far more common task. Hence, it's better to incur the
+		 * slight performance overhead of the inversion wrapper in this case.
+		 */
+		return Collections.reverseOrder(this.getDecreasingCountOrder());
+	}
+	
+	/**
+	 * Create a comparator that compares objects based upon their count in this
+	 * set. Modifications to the set reflect in the behavior of the comparator.
+	 * The returned comparator represents an order by decreasing counts. To
+	 * reverse this order, use <code>getIncreasingCountOrder</code>.
+	 * @return the comparator
+	 */
+	public Comparator getDecreasingCountOrder() {
+		return new CountComparator(this);
+	}
+	
+	private static class CountComparator implements Comparator {
+		private CountingSet cs;
+		CountComparator(CountingSet cs) {
+			this.cs = cs;
+		}
+		public int compare(Object obj1, Object obj2) {
+			return (this.cs.getCount(obj2) - this.cs.getCount(obj1)); // sort by descending count
+		}
 	}
 }

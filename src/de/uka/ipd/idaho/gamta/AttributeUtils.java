@@ -43,7 +43,7 @@ public class AttributeUtils {
 	private static final Pattern ANamePattern = Pattern.compile(ANameRegEx);
 	
 	/**
-	 * check whether an attribute name String is valid
+	 * Check whether an attribute name String is valid
 	 * @param name the attribute name String to test
 	 * @return true if and only if the specified attribute name is valid (a
 	 *         QName in the sense of XML)
@@ -68,14 +68,14 @@ public class AttributeUtils {
 //	}
 	
 	/**
-	 * attribute copy mode that sets attributes at the target object to the
+	 * Attribute copy mode that sets attributes at the target object to the
 	 * values from the source object, regardless if they were set with the
 	 * target object before. This mode is the default.
 	 */
 	public static final int SET_ATTRIBUTE_COPY_MODE = 0;
 	
 	/**
-	 * attribute copy mode that sets attributes at the target object to the
+	 * Attribute copy mode that sets attributes at the target object to the
 	 * values from the source object only if they were not set with the target
 	 * object before. This mode does not overwrite existing values at the target
 	 * object.
@@ -83,7 +83,7 @@ public class AttributeUtils {
 	public static final int ADD_ATTRIBUTE_COPY_MODE = 1;
 	
 	/**
-	 * attribute copy mode that sets attributes at the target object to the
+	 * Attribute copy mode that sets attributes at the target object to the
 	 * values from the source object only if they were set with the target
 	 * object before. This mode does not add new attributes to the target
 	 * object, only changes values of existing ones. 
@@ -91,7 +91,7 @@ public class AttributeUtils {
 	public static final int OVERWRITE_ATTRIBUTE_COPY_MODE = 2;
 	
 	/**
-	 * copy attributes from one Attributed object to another one.
+	 * Copy attributes from one Attributed object to another one.
 	 * @param source the Attributed object to copy the attributes from
 	 * @param target the Attributed object to transfer the attributes to
 	 */
@@ -100,7 +100,7 @@ public class AttributeUtils {
 	}
 	
 	/**
-	 * copy attributes from one Attributed object to another one.
+	 * Copy attributes from one Attributed object to another one.
 	 * @param source the Attributed object to copy the attributes from
 	 * @param target the Attributed object to transfer the attributes to
 	 * @param mode the copying mode, one of SET_ATTRIBUTE_COPY_MODE,
@@ -111,7 +111,7 @@ public class AttributeUtils {
 	}
 	
 	/**
-	 * copy attributes from one Attributed object to another one.
+	 * Copy attributes from one Attributed object to another one.
 	 * @param source the Attributed object to copy the attributes from
 	 * @param target the Attributed object to transfer the attributes to
 	 * @param filter a Set containing the names of the Attributes to copy
@@ -121,7 +121,7 @@ public class AttributeUtils {
 	}
 	
 	/**
-	 * copy attributes from one Attributed object to another one.
+	 * Copy attributes from one Attributed object to another one.
 	 * @param source the Attributed object to copy the attributes from
 	 * @param target the Attributed object to transfer the attributes to
 	 * @param mode the copying mode, one of SET_ATTRIBUTE_COPY_MODE,
@@ -130,25 +130,24 @@ public class AttributeUtils {
 	 */
 	public static void copyAttributes(Attributed source, Attributed target, int mode, Set filter) {
 		
+		//	TODO allow registering attribute merger objects to merge up attribute values (akin to transformers in ImObjectTransformer)
+		
 		//	get attribute names of source
 		String[] attributeNames = source.getAttributeNames();
 		
 		//	process attributes one by one
-		for (int a = 0; a < attributeNames.length; a++) {
-			
-			//	check filter
-			if ((filter == null) || filter.contains(attributeNames[a]))
-				
-				//	check copy mode
-				if (((mode != ADD_ATTRIBUTE_COPY_MODE) && target.hasAttribute(attributeNames[a])) || ((mode != OVERWRITE_ATTRIBUTE_COPY_MODE) && !target.hasAttribute(attributeNames[a])))
-					
-					//	copy attribute
-					target.setAttribute(attributeNames[a], source.getAttribute(attributeNames[a]));
-		}
+		for (int a = 0; a < attributeNames.length; a++)
+			if ((filter == null) || filter.contains(attributeNames[a])) {
+				if ((mode == ADD_ATTRIBUTE_COPY_MODE) && target.hasAttribute(attributeNames[a]))
+					continue; // not replacing values in add mode
+				if ((mode == OVERWRITE_ATTRIBUTE_COPY_MODE) && !target.hasAttribute(attributeNames[a]))
+					continue; // not adding new attributes in replace-only mode
+				target.setAttribute(attributeNames[a], source.getAttribute(attributeNames[a]));
+			}
 	}
 	
 	/**
-	 * test if some Attributed object has at least the attributes of some
+	 * Test if some Attributed object has at least the attributes of some
 	 * reference object
 	 * @param toTest the Attributed object to test
 	 * @param reference the reference object
@@ -160,7 +159,7 @@ public class AttributeUtils {
 	}
 	
 	/**
-	 * test if some Attributed object has at least the attributes of some
+	 * Test if some Attributed object has at least the attributes of some
 	 * reference object
 	 * @param toTest the Attributed object to test
 	 * @param reference the reference object
@@ -186,7 +185,7 @@ public class AttributeUtils {
 	}
 	
 	/**
-	 * test if some Attributed object has at exactly the same attributes as some
+	 * Test if some Attributed object has at exactly the same attributes as some
 	 * reference object
 	 * @param toTest the Attributed object to test
 	 * @param reference the reference object
@@ -198,7 +197,7 @@ public class AttributeUtils {
 	}
 	
 	/**
-	 * test if some Attributed object has at exactly the same attributes as some
+	 * Test if some Attributed object has at exactly the same attributes as some
 	 * reference object
 	 * @param toTest the Attributed object to test
 	 * @param reference the reference object
@@ -235,7 +234,7 @@ public class AttributeUtils {
 	}
 	
 	/**
-	 * test if some Attributed object has at least the attributes of some
+	 * Test if some Attributed object has at least the attributes of some
 	 * reference object, with the same values
 	 * @param toTest the Attributed object to test
 	 * @param reference the reference object
@@ -247,7 +246,7 @@ public class AttributeUtils {
 	}
 	
 	/**
-	 * test if some Attributed object has at least the attributes of some
+	 * Test if some Attributed object has at least the attributes of some
 	 * reference object, with the same values
 	 * @param toTest the Attributed object to test
 	 * @param reference the reference object
@@ -283,7 +282,7 @@ public class AttributeUtils {
 	}
 	
 	/**
-	 * test if some Attributed object has exactly the same attributes as some
+	 * Test if some Attributed object has exactly the same attributes as some
 	 * reference object, with the same values
 	 * @param toTest the Attributed object to test
 	 * @param reference the reference object
@@ -295,7 +294,7 @@ public class AttributeUtils {
 	}
 	
 	/**
-	 * test if some Attributed object has exactly the same attributes as some
+	 * Test if some Attributed object has exactly the same attributes as some
 	 * reference object, with the same values
 	 * @param toTest the Attributed object to test
 	 * @param reference the reference object
@@ -339,8 +338,10 @@ public class AttributeUtils {
 		for (int a = 0; a < toTestAttributeNames.length; a++) {
 			
 			//	check filter
-			if ((filter == null) || filter.contains(toTestAttributeNames[a]))
-				if (!reference.hasAttribute(toTestAttributeNames[a])) return false;
+			if ((filter == null) || filter.contains(toTestAttributeNames[a])) {
+				if (!reference.hasAttribute(toTestAttributeNames[a]))
+					return false;
+			}
 		}
 		
 		//	all checks successful

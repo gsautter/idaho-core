@@ -33,11 +33,11 @@ import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.Properties;
 
-import de.uka.ipd.idaho.gamta.util.gPath.exceptions.InvalidArgumentsException;
 import de.uka.ipd.idaho.htmlXmlUtil.exceptions.ParseException;
 import de.uka.ipd.idaho.htmlXmlUtil.exceptions.UnexpectedCharacterException;
 import de.uka.ipd.idaho.htmlXmlUtil.grammars.Grammar;
 import de.uka.ipd.idaho.htmlXmlUtil.grammars.StandardGrammar;
+import de.uka.ipd.idaho.htmlXmlUtil.xPath.exceptions.InvalidArgumentsException;
 
 /**
  * Container for the attributes of an XML element, much like

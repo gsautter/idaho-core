@@ -32,7 +32,6 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FilterInputStream;
 import java.io.FilterOutputStream;
 import java.io.FilterWriter;
 import java.io.IOException;
@@ -48,9 +47,12 @@ import java.io.UnsupportedEncodingException;
 import java.io.Writer;
 import java.net.URL;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.Properties;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import javax.xml.transform.ErrorListener;
 import javax.xml.transform.OutputKeys;
@@ -64,7 +66,12 @@ import javax.xml.transform.URIResolver;
 import javax.xml.transform.stream.StreamResult;
 import javax.xml.transform.stream.StreamSource;
 
+import de.uka.ipd.idaho.htmlXmlUtil.Parser;
+import de.uka.ipd.idaho.htmlXmlUtil.TokenReceiver;
+import de.uka.ipd.idaho.htmlXmlUtil.TreeNodeAttributeSet;
 import de.uka.ipd.idaho.htmlXmlUtil.accessories.XsltUtils.TransformerPool.PooledTransformer;
+import de.uka.ipd.idaho.htmlXmlUtil.grammars.Grammar;
+import de.uka.ipd.idaho.htmlXmlUtil.grammars.StandardGrammar;
 
 /**
  * Utility class for creating and caching XSLT transformers, and for chaining
@@ -73,57 +80,6 @@ import de.uka.ipd.idaho.htmlXmlUtil.accessories.XsltUtils.TransformerPool.Pooled
  * @author sautter
  */
 public class XsltUtils {
-	
-	/**
-	 * This wrapper jumps over a leading byte order mark in XML files, always
-	 * returning '&lt;' the first byte. This helps preventing errors in components
-	 * that take input streams as a data source, but cannot handle byte order marks.
-	 * For instance, this wrapper prevents the "content not allowed in prolog"
-	 * exception thrown by Java's XML components. Using this wrapper with data
-	 * other than XML or HTML is likely to cause undesired behavior.
-	 */
-	public static class ByteOrderMarkFilterInputStream extends FilterInputStream {
-		private boolean inContent = false;
-		
-		/**
-		 * Constructor
-		 * @param in the input stream to wrap
-		 */
-		public ByteOrderMarkFilterInputStream(InputStream in) {
-			super(in);
-		}
-		
-		/* (non-Javadoc)
-		 * @see java.io.FilterInputStream#read()
-		 */
-		public int read() throws IOException {
-			int i = super.read();
-			while (!this.inContent) {
-				if (i == '<') this.inContent = true;
-				else i = super.read();
-			}
-			return i;
-		}
-
-		/* (non-Javadoc)
-		 * @see java.io.FilterInputStream#read(byte[], int, int)
-		 */
-		public int read(byte[] b, int off, int len) throws IOException {
-			if (this.inContent)	return super.read(b, off, len);
-			else {
-				int i = super.read();
-				while (!this.inContent) {
-					if (i == '<')
-						this.inContent = true;
-					else if (i == -1)
-						return -1;
-					else i = super.read();
-				}
-				b[off] = ((byte) i);
-				return (1 + super.read(b, (off + 1), (len - 1)));
-			}
-		}
-	}
 	
 	//	!!! for test purposes only !!!
 	public static void main(String[] args) throws Exception {
@@ -410,7 +366,7 @@ public class XsltUtils {
 		}
 		
 		/**
-		 * Acording to the purpose of this class, this method does nothing.
+		 * As by the purpose of this class, this method does nothing.
 		 * @see java.io.FilterOutputStream#flush()
 		 */
 		public void flush() throws IOException {
@@ -419,7 +375,7 @@ public class XsltUtils {
 		}
 		
 		/**
-		 * Acording to the purpose of this class, this method does nothing.
+		 * As by the purpose of this class, this method does nothing.
 		 * @see java.io.FilterOutputStream#close()
 		 */
 		public void close() throws IOException {}
@@ -732,8 +688,8 @@ public class XsltUtils {
 	
 	/**
 	 * Produce an XSLT transformer pool from a stylesheet located in a file or
-	 * at a URL. If the specified address starts with 'http://', it is
-	 * interpreted as a URL, otherwise as a file name.
+	 * at a URL. If the specified address starts with  &quot;http://&quot;, it
+	 * is interpreted as a URL, otherwise as a file name.
 	 * @param xsltAddress the address containing the stylesheet to load
 	 * @return an XSLT transformer produced from the stylesheet located at the
 	 *         specified address
@@ -745,8 +701,8 @@ public class XsltUtils {
 	
 	/**
 	 * Produce an XSLT transformer pool from a stylesheet located in a file or
-	 * at a URL. If the specified address starts with 'http://', it is
-	 * interpreted as a URL, otherwise as a file name.
+	 * at a URL. If the specified address starts with &quot;http://&quot;, it
+	 * is interpreted as a URL, otherwise as a file name.
 	 * @param xsltAddress the address containing the stylesheet to load
 	 * @param allowCache allow using cached transformers? Specifying false
 	 *            forces loading the transformer from the specified address.
@@ -827,9 +783,9 @@ public class XsltUtils {
 	}
 	
 	/**
-	 * Produce an XSLT transformer pool from a stylesheet loaded from some input
-	 * stream. If the argument name is null, there are no cache lookups, and the
-	 * transformer pool will not be cached.
+	 * Produce an XSLT transformer pool from a stylesheet loaded from some
+	 * input stream. If the argument name is null, there are no cache lookups,
+	 * and the transformer pool will not be cached.
 	 * @param xsltIn an input stream to load the stylesheet from
 	 * @param name the name of the input stream, for caching
 	 * @return an XSLT transformer produced from the specified stylesheet
@@ -840,9 +796,10 @@ public class XsltUtils {
 	}
 	
 	/**
-	 * Produce an XSLT transformer pool from a stylesheet loaded from some input
-	 * stream. If the argument name is null, there are no cache lookups, and the
-	 * transformer pool will not be cached.
+	 * Produce an XSLT transformer pool from a stylesheet loaded from some
+	 * input stream. If the argument name is null, there are no cache lookups,
+	 * and the transformer pool will not be cached. This method reads the
+	 * argument input stream through the end and closes it afterwards.
 	 * @param xsltIn an input stream to load the stylesheet from
 	 * @param name the name of the input stream, for caching
 	 * @param allowCache allow using cached transformers? Specifying false
@@ -857,17 +814,17 @@ public class XsltUtils {
 		}
 		InputStream tis = new ByteOrderMarkFilterInputStream(xsltIn);
 		ByteArrayOutputStream xsltBytes = new ByteArrayOutputStream();
-		int bytesRead;
 		byte[] byteBuffer = new byte[1024];
-		while ((bytesRead = tis.read(byteBuffer, 0, byteBuffer.length)) != -1)
-			xsltBytes.write(byteBuffer, 0, bytesRead);
+		for (int r; (r = tis.read(byteBuffer, 0, byteBuffer.length)) != -1;)
+			xsltBytes.write(byteBuffer, 0, r);
+		tis.close();
 		return doGetTransformer(name, xsltBytes.toByteArray(), allowCache);
 	}
 	
 	/**
 	 * Produce an XSLT transformer pool from a stylesheet loaded from some
-	 * reader. If the argument name is null, there are no cache lookups, and the
-	 * transformer pool will not be cached.
+	 * reader. If the argument name is null, there are no cache lookups, and
+	 * the transformer pool will not be cached.
 	 * @param xsltIn a reader to load the stylesheet from
 	 * @param name the name of the input stream, for caching
 	 * @return an XSLT transformer produced from the specified stylesheet
@@ -879,8 +836,9 @@ public class XsltUtils {
 	
 	/**
 	 * Produce an XSLT transformer pool from a stylesheet loaded from some
-	 * reader. If the argument name is null, there are no cache lookups, and the
-	 * transformer pool will not be cached.
+	 * reader. If the argument name is null, there are no cache lookups, and
+	 * the transformer pool will not be cached. This method reads the argument
+	 * reader through the end and closes it afterwards.
 	 * @param xsltIn a reader to load the stylesheet from
 	 * @param name the name of the input stream, for caching
 	 * @param allowCache allow using cached transformers? Specifying false
@@ -907,13 +865,14 @@ public class XsltUtils {
 			xsltBytes.write('\r');
 			xsltBytes.write('\n');
 		}
+		xsltReader.close();
 		return doGetTransformer(name, xsltBytes.toByteArray(), allowCache);
 	}
 	
 	/**
 	 * Produce an XSLT transformer pool from a stylesheet. If the argument name
-	 * is null, there are no cache lookups, and the transformer pool will not be
-	 * cached.
+	 * is null, there are no cache lookups, and the transformer pool will not
+	 * be cached.
 	 * @param name the name of the input stream, for caching
 	 * @param xsltBytes an array holding the bytes of the stylesheet to load
 	 * @return an XSLT transformer produced from the specified stylesheet
@@ -925,8 +884,8 @@ public class XsltUtils {
 	
 	/**
 	 * Produce an XSLT transformer pool from a stylesheet. If the argument name
-	 * is null, there are no cache lookups, and the transformer pool will not be
-	 * cached.
+	 * is null, there are no cache lookups, and the transformer pool will not
+	 * be cached.
 	 * @param name the name of the input stream, for caching
 	 * @param xsltBytes an array holding the bytes of the stylesheet to load
 	 * @param allowCache allow using cached transformers? Specifying false
@@ -999,9 +958,9 @@ public class XsltUtils {
 	/**
 	 * This class mimics the interface of javax.xml.transform.Transformer. As
 	 * opposed to the latter transformers, however, instances of this class
-	 * <b>are</b> safe to use by multiple threads concurrently. They hold a pool
-	 * of actual transformers internally, making sure each is used by only one
-	 * thread at a time. The size of the internal transformer pool can be
+	 * <b>are</b> safe to use by multiple threads concurrently. They hold a
+	 * pool of actual transformers internally, making sure each is used by only
+	 * one thread at a time. The size of the internal transformer pool can be
 	 * modified via the setTransformerPoolSize() method. Larger pool sizes
 	 * result in better performance in high-load situations because no extra
 	 * transformers have to be created to meet demand. However, this comes at
@@ -1024,10 +983,12 @@ public class XsltUtils {
 		
 		private byte[] stylesheet;
 		private Transformer model;
+		private HashSet usedElementNames = null;
 		
 		private HashMap parameters = new HashMap(3);
 		private Properties properties;
 		private URIResolver uriResolver;
+		private ErrorListener errorListener;
 		
 		private LinkedList transformerPool = new LinkedList();
 		private int transformerPoolSize = 3;
@@ -1061,6 +1022,12 @@ public class XsltUtils {
 			}
 		}
 		
+		HashSet getUsedElementNames() {
+			if (this.usedElementNames == null)
+				this.usedElementNames = XsltUtils.getUsedElementNames(this.stylesheet);
+			return this.usedElementNames;
+		}
+		
 		/**
 		 * Obtain a transformer from the pool for explicit configuration an use.
 		 * If no transformer is available in the pool due to heavy use, a new
@@ -1083,7 +1050,7 @@ public class XsltUtils {
 			catch (TransformerConfigurationException tce) {
 				return null; // not going to happen after constructor goes OK, but Java don't know ...
 			}
-			pt.prepare(this.parameters, this.properties, this.uriResolver);
+			pt.prepare(this.parameters, this.properties, this.uriResolver, this.errorListener);
 //			System.out.println(" - transformer prepared");
 			return pt;
 		}
@@ -1274,7 +1241,9 @@ public class XsltUtils {
 		 * method.
 		 * @see javax.xml.transform.Transformer#setErrorListener(javax.xml.transform.ErrorListener)
 		 */
-		public void setErrorListener(ErrorListener listener) throws IllegalArgumentException {}
+		public void setErrorListener(ErrorListener listener) throws IllegalArgumentException {
+			this.errorListener = listener;
+		}
 		
 		/**
 		 * This implementation always returns null because instances of this
@@ -1287,7 +1256,7 @@ public class XsltUtils {
 		 * @see javax.xml.transform.Transformer#getErrorListener()
 		 */
 		public ErrorListener getErrorListener() {
-			return null;
+			return this.errorListener;
 		}
 		
 		/**
@@ -1302,15 +1271,13 @@ public class XsltUtils {
 		 * @author sautter
 		 */
 		public class PooledTransformer extends Transformer {
-			
 			private TransformerPool parent;
 			private Transformer transformer;
-			
 			PooledTransformer(TransformerPool parent, Transformer transformer) {
 				this.parent = parent;
 				this.transformer = transformer;
 			}
-			void prepare(HashMap parameters, Properties outFormat, URIResolver uriResolver) {
+			void prepare(HashMap parameters, Properties outFormat, URIResolver uriResolver, ErrorListener errorListener) {
 				for (Iterator pit = parameters.keySet().iterator(); pit.hasNext();) {
 					String name = ((String) pit.next());
 					this.transformer.setParameter(name, parameters.get(name));
@@ -1322,6 +1289,12 @@ public class XsltUtils {
 				}
 				
 				this.transformer.setURIResolver(uriResolver);
+				
+				if (errorListener != null)
+					this.transformer.setErrorListener(errorListener);
+			}
+			HashSet getUsedElementNames() {
+				return this.parent.getUsedElementNames();
 			}
 			
 			/**
@@ -1379,5 +1352,98 @@ public class XsltUtils {
 				this.transformer.transform(xmlSource, outputTarget);
 			}
 		}
+	}
+	
+	/**
+	 * Retrieve the names of the input XML elements used by a transformer. If
+	 * the argument transformer was not loaded via this class, this method
+	 * returns null. If the argument transformer uses wildcard matches, the
+	 * returned set contains <code>*</code> to indicate so.
+	 * @param transformer the transformer to check
+	 * @return a set containing the used elements
+	 */
+	public static HashSet getUsedElementNames(Transformer transformer) {
+		if (transformer instanceof TransformerPool)
+			return ((TransformerPool) transformer).getUsedElementNames();
+		else if (transformer instanceof PooledTransformer)
+			return ((PooledTransformer) transformer).getUsedElementNames();
+		else return null;
+	}
+	
+	private static final Properties expressionAttributeNames = new Properties();
+	static {
+		expressionAttributeNames.setProperty("xsl:apply-templates", "select");
+		expressionAttributeNames.setProperty("xsl:for-each", "select");
+		expressionAttributeNames.setProperty("xsl:if", "test");
+		expressionAttributeNames.setProperty("xsl:number", "count");
+		expressionAttributeNames.setProperty("xsl:param", "select");
+		expressionAttributeNames.setProperty("xsl:sort", "select");
+		expressionAttributeNames.setProperty("xsl:template", "match");
+		expressionAttributeNames.setProperty("xsl:value-of", "select");
+		expressionAttributeNames.setProperty("xsl:variable", "select");
+		expressionAttributeNames.setProperty("xsl:when", "test");
+		expressionAttributeNames.setProperty("xsl:with-param", "select");
+		expressionAttributeNames.setProperty("xslt:apply-templates", "select");
+		expressionAttributeNames.setProperty("xslt:for-each", "select");
+		expressionAttributeNames.setProperty("xslt:if", "test");
+		expressionAttributeNames.setProperty("xslt:number", "count");
+		expressionAttributeNames.setProperty("xslt:param", "select");
+		expressionAttributeNames.setProperty("xslt:sort", "select");
+		expressionAttributeNames.setProperty("xslt:template", "match");
+		expressionAttributeNames.setProperty("xslt:value-of", "select");
+		expressionAttributeNames.setProperty("xslt:variable", "select");
+		expressionAttributeNames.setProperty("xslt:when", "test");
+		expressionAttributeNames.setProperty("xslt:with-param", "select");
+	}
+	
+	private static final Grammar xmlGrammar = new StandardGrammar();
+	private static final Parser xmlParser = new Parser(xmlGrammar);
+	private static final Pattern qNamePattern = Pattern.compile("(" +
+			"((([a-zA-Z][a-zA-Z0-9\\_\\-]+)|\\*)\\:)?" +
+			"[a-zA-Z\\_\\-][a-zA-Z0-9\\_\\-]+\\*?" +
+			")", Pattern.CASE_INSENSITIVE);
+	
+	private static final HashSet getUsedElementNames(byte[] xsltBytes) {
+		final HashSet usedElementNames = new HashSet();
+		try {
+			xmlParser.stream(new ByteArrayInputStream(xsltBytes), new TokenReceiver() {
+				public void storeToken(String token, int treeDepth) throws IOException {
+					if (xmlGrammar.isTag(token)) {
+						if (xmlGrammar.isEndTag(token))
+							return;
+						String type = xmlGrammar.getType(token).toLowerCase();
+						if (type.startsWith("xsl:") || type.startsWith("xslt:")) {
+							String attributeName = expressionAttributeNames.getProperty(type);
+							if (attributeName == null)
+								return;
+							TreeNodeAttributeSet tnas = TreeNodeAttributeSet.getTagAttributes(token, xmlGrammar);
+							String expression = tnas.getAttribute(attributeName);
+							if (expression == null)
+								return;
+							Matcher qNameMatcher = qNamePattern.matcher(expression);
+							while (qNameMatcher.find()) {
+								String qName = qNameMatcher.group(0);
+								if (qNameMatcher.start(0) == 0) {}
+								else if ("@'\"".indexOf(expression.charAt(qNameMatcher.start(0)-1)) != -1)
+									continue; // skip attribute names and string literals
+								else if (qNameMatcher.end(0) == expression.length()) {}
+								else if ("('\"".indexOf(expression.charAt(qNameMatcher.end(0))) != -1)
+									continue; // skip function names and more string literals
+								else if (expression.startsWith("::", qNameMatcher.end(0)))
+									continue; // skip axis names
+								usedElementNames.add(qName);
+								if (qName.indexOf('*') != -1)
+									usedElementNames.add("*");
+							}
+						}
+					}
+				}
+				public void close() throws IOException {}
+			});
+		}
+		catch (IOException ioe) {
+			usedElementNames.add("*");
+		}
+		return usedElementNames;
 	}
 }

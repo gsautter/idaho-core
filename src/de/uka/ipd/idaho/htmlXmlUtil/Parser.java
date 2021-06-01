@@ -33,7 +33,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.Reader;
 import java.io.Writer;
-import java.util.Stack;
+import java.util.ArrayList;
 import java.util.Vector;
 
 import de.uka.ipd.idaho.htmlXmlUtil.TokenSource.Token;
@@ -58,7 +58,6 @@ import de.uka.ipd.idaho.htmlXmlUtil.grammars.StandardGrammar;
  * @author sautter
  */
 public class Parser {
-	
 	private final boolean correctErrors;
 	private final Grammar grammar;
 	
@@ -81,8 +80,7 @@ public class Parser {
 	 * @return	the root node of the XML tree
 	 */
 	public TreeNode parse(InputStream input) throws IOException {
-//		return this.processTree(TokenSource.getTokenSource(input, this.grammar), null, true);
-		return this.parse(TokenSource.getTokenSource(input, this.grammar), null, true);
+		return this.doParse(TokenSource.getTokenSource(input, this.grammar), null);
 	}
 	
 	/**	build an XML tree out of the chars provided by the specified Reader
@@ -90,8 +88,7 @@ public class Parser {
 	 * @return	the root node of the XML tree
 	 */
 	public TreeNode parse(Reader input) throws IOException {
-//		return this.processTree(TokenSource.getTokenSource(input, this.grammar), null, true);
-		return this.parse(TokenSource.getTokenSource(input, this.grammar), null, true);
+		return this.doParse(TokenSource.getTokenSource(input, this.grammar), null);
 	}
 	
 	/**	build an XML tree out of the specified String
@@ -99,8 +96,7 @@ public class Parser {
 	 * @return	the root node of the XML tree
 	 */
 	public TreeNode parse(String input) throws IOException {
-//		return this.processTree(TokenSource.getTokenSource(input, this.grammar), null, true);
-		return this.parse(TokenSource.getTokenSource(input, this.grammar), null, true);
+		return this.doParse(TokenSource.getTokenSource(input, this.grammar), null);
 	}
 	
 	/**	build an XML tree out of the chars provided by the specified InputStream, stream it to the specified OutputStream simultaneously
@@ -109,8 +105,7 @@ public class Parser {
 	 * @return	the root node of the XML tree
 	 */
 	public TreeNode parse(InputStream input, OutputStream output) throws IOException {
-//		return this.processTree(TokenSource.getTokenSource(input, this.grammar), TokenReceiver.getTokenReceiver(output), true);
-		return this.parse(TokenSource.getTokenSource(input, this.grammar), TokenReceiver.getTokenReceiver(output), true);
+		return this.doParse(TokenSource.getTokenSource(input, this.grammar), TokenReceiver.getTokenReceiver(output));
 	}
 	
 	/**	build an XML tree out of the chars provided by the specified Reader, stream it to the specified OutputStream simultaneously
@@ -119,8 +114,7 @@ public class Parser {
 	 * @return	the root node of the XML tree
 	 */
 	public TreeNode parse(Reader input, OutputStream output) throws IOException {
-//		return this.processTree(TokenSource.getTokenSource(input, this.grammar), TokenReceiver.getTokenReceiver(output), true);
-		return this.parse(TokenSource.getTokenSource(input, this.grammar), TokenReceiver.getTokenReceiver(output), true);
+		return this.doParse(TokenSource.getTokenSource(input, this.grammar), TokenReceiver.getTokenReceiver(output));
 	}
 	
 	/**	build an XML tree out of the specified String, stream it to the specified OutputStream simultaneously
@@ -129,8 +123,7 @@ public class Parser {
 	 * @return	the root node of the XML tree
 	 */
 	public TreeNode parse(String input, OutputStream output) throws IOException {
-//		return this.processTree(TokenSource.getTokenSource(input, this.grammar), TokenReceiver.getTokenReceiver(output), true);
-		return this.parse(TokenSource.getTokenSource(input, this.grammar), TokenReceiver.getTokenReceiver(output), true);
+		return this.doParse(TokenSource.getTokenSource(input, this.grammar), TokenReceiver.getTokenReceiver(output));
 	}
 	
 	/**	build an XML tree out of the chars provided by the specified InputStream, stream it to the specified Writer simultaneously
@@ -139,8 +132,7 @@ public class Parser {
 	 * @return	the root node of the XML tree
 	 */
 	public TreeNode parse(InputStream input, Writer output) throws IOException {
-//		return this.processTree(TokenSource.getTokenSource(input, this.grammar), TokenReceiver.getTokenReceiver(output), true);
-		return this.parse(TokenSource.getTokenSource(input, this.grammar), TokenReceiver.getTokenReceiver(output), true);
+		return this.doParse(TokenSource.getTokenSource(input, this.grammar), TokenReceiver.getTokenReceiver(output));
 	}
 	
 	/**	build an XML tree out of the chars provided by the specified Reader, stream it to the specified Writer simultanously
@@ -149,8 +141,7 @@ public class Parser {
 	 * @return	the root node of the XML tree
 	 */
 	public TreeNode parse(Reader input, Writer output) throws IOException {
-//		return this.processTree(TokenSource.getTokenSource(input, this.grammar), TokenReceiver.getTokenReceiver(output), true);
-		return this.parse(TokenSource.getTokenSource(input, this.grammar), TokenReceiver.getTokenReceiver(output), true);
+		return this.doParse(TokenSource.getTokenSource(input, this.grammar), TokenReceiver.getTokenReceiver(output));
 	}
 	
 	/**	build an XML tree out of the specified String, stream it to the specified Writer simultaneously
@@ -159,8 +150,7 @@ public class Parser {
 	 * @return	the root node of the XML tree
 	 */
 	public TreeNode parse(String input, Writer output) throws IOException {
-//		return this.processTree(TokenSource.getTokenSource(input, this.grammar), TokenReceiver.getTokenReceiver(output), true);
-		return this.parse(TokenSource.getTokenSource(input, this.grammar), TokenReceiver.getTokenReceiver(output), true);
+		return this.doParse(TokenSource.getTokenSource(input, this.grammar), TokenReceiver.getTokenReceiver(output));
 	}
 	
 	/**	build an XML tree out of the chars provided by the specified InputStream, stream it to the specified TokenReceiver simultaneously
@@ -169,8 +159,7 @@ public class Parser {
 	 * @return	the root node of the XML tree
 	 */
 	public TreeNode parse(InputStream input, TokenReceiver output) throws IOException {
-//		return this.processTree(TokenSource.getTokenSource(input, this.grammar), output, true);
-		return this.parse(TokenSource.getTokenSource(input, this.grammar), output, true);
+		return this.doParse(TokenSource.getTokenSource(input, this.grammar), output);
 	}
 	
 	/**	build an XML tree out of the chars provided by the specified Reader, stream it to the specified TokenReceiver simultaneously
@@ -179,8 +168,7 @@ public class Parser {
 	 * @return	the root node of the XML tree
 	 */
 	public TreeNode parse(Reader input, TokenReceiver output) throws IOException {
-//		return this.processTree(TokenSource.getTokenSource(input, this.grammar), output, true);
-		return this.parse(TokenSource.getTokenSource(input, this.grammar), output, true);
+		return this.doParse(TokenSource.getTokenSource(input, this.grammar), output);
 	}
 	
 	/**	build an XML tree out of the specified String, stream it to the specified TokenReceiver simultaneously
@@ -189,11 +177,10 @@ public class Parser {
 	 * @return	the root node of the XML tree
 	 */
 	public TreeNode parse(String input, TokenReceiver output) throws IOException {
-//		return this.processTree(TokenSource.getTokenSource(input, this.grammar), output, true);
-		return this.parse(TokenSource.getTokenSource(input, this.grammar), output, true);
+		return this.doParse(TokenSource.getTokenSource(input, this.grammar), output);
 	}
 	
-	private TreeNode parse(TokenSource input, TokenReceiver output, boolean t) throws IOException {
+	private TreeNode doParse(TokenSource input, TokenReceiver output) throws IOException {
 		ParserInstance pi = new ParserInstance(input, output, false);
 		pi.consumeTokens();
 		return pi.getRootNode();
@@ -204,8 +191,7 @@ public class Parser {
 	 * @param	output		the OutputStream to write the tree to
 	 */
 	public void stream(InputStream input, OutputStream output) throws IOException {
-//		this.processTree(TokenSource.getTokenSource(input, this.grammar), TokenReceiver.getTokenReceiver(output), false);
-		this.stream(TokenSource.getTokenSource(input, this.grammar), TokenReceiver.getTokenReceiver(output), false);
+		this.doStream(TokenSource.getTokenSource(input, this.grammar), TokenReceiver.getTokenReceiver(output));
 	}
 	
 	/**	virtually build an XML tree out of the chars provided by the specified Reader, and write the tokens to the specified OutputStream
@@ -213,8 +199,7 @@ public class Parser {
 	 * @param	output		the OutputStream to write the tree to
 	 */
 	public void stream(Reader input, OutputStream output) throws IOException {
-//		this.processTree(TokenSource.getTokenSource(input, this.grammar), TokenReceiver.getTokenReceiver(output), false);
-		this.stream(TokenSource.getTokenSource(input, this.grammar), TokenReceiver.getTokenReceiver(output), false);
+		this.doStream(TokenSource.getTokenSource(input, this.grammar), TokenReceiver.getTokenReceiver(output));
 	}
 	
 	/**	virtually build an XML tree out of the specified String, and write the tokens to the specified OutputStream
@@ -222,8 +207,7 @@ public class Parser {
 	 * @param	output		the OutputStream to write the tree to
 	 */
 	public void stream(String input, OutputStream output) throws IOException {
-//		this.processTree(TokenSource.getTokenSource(input, this.grammar), TokenReceiver.getTokenReceiver(output), false);
-		this.stream(TokenSource.getTokenSource(input, this.grammar), TokenReceiver.getTokenReceiver(output), false);
+		this.doStream(TokenSource.getTokenSource(input, this.grammar), TokenReceiver.getTokenReceiver(output));
 	}
 	
 	/**	virtually build an XML tree out of the chars provided by the specified InputStream, and write the tokens to the specified Writer
@@ -231,8 +215,7 @@ public class Parser {
 	 * @param	output		the Writer to write the tree to
 	 */
 	public void stream(InputStream input, Writer output) throws IOException {
-//		this.processTree(TokenSource.getTokenSource(input, this.grammar), TokenReceiver.getTokenReceiver(output), false);
-		this.stream(TokenSource.getTokenSource(input, this.grammar), TokenReceiver.getTokenReceiver(output), false);
+		this.doStream(TokenSource.getTokenSource(input, this.grammar), TokenReceiver.getTokenReceiver(output));
 	}
 	
 	/**	virtually build an XML tree out of the chars provided by the specified Reader, and write the tokens to the specified Writer
@@ -240,8 +223,7 @@ public class Parser {
 	 * @param	output		the Writer to write the tree to
 	 */
 	public void stream(Reader input, Writer output) throws IOException {
-//		this.processTree(TokenSource.getTokenSource(input, this.grammar), TokenReceiver.getTokenReceiver(output), false);
-		this.stream(TokenSource.getTokenSource(input, this.grammar), TokenReceiver.getTokenReceiver(output), false);
+		this.doStream(TokenSource.getTokenSource(input, this.grammar), TokenReceiver.getTokenReceiver(output));
 	}
 	
 	/**	virtually build an XML tree out of the specified String, and write the tokens to the specified Writer
@@ -249,8 +231,7 @@ public class Parser {
 	 * @param	output		the Writer to write the tree to
 	 */
 	public void stream(String input, Writer output) throws IOException {
-//		this.processTree(TokenSource.getTokenSource(input, this.grammar), TokenReceiver.getTokenReceiver(output), false);
-		this.stream(TokenSource.getTokenSource(input, this.grammar), TokenReceiver.getTokenReceiver(output), false);
+		this.doStream(TokenSource.getTokenSource(input, this.grammar), TokenReceiver.getTokenReceiver(output));
 	}
 	
 	/**	virtually build an XML tree out of the chars provided by the specified InputStream, and write the tokens to the specified TokenReceiver
@@ -258,8 +239,7 @@ public class Parser {
 	 * @param	output		the TokenReceiver to write the tokens to
 	 */
 	public void stream(InputStream input, TokenReceiver output) throws IOException {
-//		this.processTree(TokenSource.getTokenSource(input, this.grammar), output, false);
-		this.stream(TokenSource.getTokenSource(input, this.grammar), output, false);
+		this.doStream(TokenSource.getTokenSource(input, this.grammar), output);
 	}
 	
 	/**	virtually build an XML tree out of the chars provided by the specified Reader, and write the tokens to the specified TokenReceiver
@@ -267,8 +247,7 @@ public class Parser {
 	 * @param	output		the TokenReceiver to write the tokens to
 	 */
 	public void stream(Reader input, TokenReceiver output) throws IOException {
-//		this.processTree(TokenSource.getTokenSource(input, this.grammar), output, false);
-		this.stream(TokenSource.getTokenSource(input, this.grammar), output, false);
+		this.doStream(TokenSource.getTokenSource(input, this.grammar), output);
 	}
 	
 	/**	virtually build an XML tree out of the specified String, and write the tokens to the specified TokenReceiver
@@ -276,11 +255,10 @@ public class Parser {
 	 * @param	output		the TokenReceiver to write the tokens to
 	 */
 	public void stream(String input, TokenReceiver output) throws IOException {
-//		this.processTree(TokenSource.getTokenSource(input, this.grammar), output, false);
-		this.stream(TokenSource.getTokenSource(input, this.grammar), output, false);
+		this.doStream(TokenSource.getTokenSource(input, this.grammar), output);
 	}
 	
-	private void stream(TokenSource input, TokenReceiver output, boolean t) throws IOException {
+	private void doStream(TokenSource input, TokenReceiver output) throws IOException {
 		(new ParserInstance(input, output, true)).consumeTokens();
 	}
 	
@@ -355,176 +333,6 @@ public class Parser {
 	public ParserInstance getInstance(String input, TokenReceiver output) throws IOException {
 		return new ParserInstance(TokenSource.getTokenSource(input, this.grammar), output, true);
 	}
-//	
-//	//	method used for parsing
-//	private TreeNode processTree(TokenSource input, TokenReceiver output, boolean build) throws IOException {
-//		
-//		TreeNode rootNode = new TreeNode(null, TreeNode.ROOT_NODE_TYPE);
-//		TreeNode lastNode;
-//		TreeNode node = rootNode;
-//		TreeNode newNode;
-//		
-//		StringStack parserStack = new StringStack();
-//		Vector missingEndTags = new Vector();
-//		
-//		while (input.hasMoreTokens()) {
-//			
-//			String token = input.retrieveToken();
-//			
-//			//	handle tag
-//			if ((token != null) && this.grammar.isTag(token)) {
-//				
-//				String tagType = this.grammar.getType(token);
-//				
-//				//	handle end tag
-//				if (this.grammar.isEndTag(token)) {
-//					
-//					//	tag closed implicitly
-//					if (missingEndTags.contains(tagType.toLowerCase())) {
-//						
-//						//	remove current tag from list of implicitly closed tags
-//						missingEndTags.remove(tagType.toLowerCase());
-//					}
-//					
-//					//	end tag matches an open tag
-//					else if (parserStack.search(tagType) > -1) {
-//						
-//						//	rise to matching start tag, close lower tags implicitly and write end tags
-//						while (!parserStack.empty() && !parserStack.peek().equalsIgnoreCase(tagType)) {
-//							missingEndTags.add(parserStack.pop().toLowerCase());
-//							lastNode = node;
-//							node = node.getParent();
-//							
-//							//	if streaming, write end tag directly and clean up closed tag and it's content
-//							if (output != null)
-//								output.storeToken(lastNode.getEndTag(this.grammar), parserStack.size() + 1);
-//							if (!build)
-//								lastNode.deleteSubtree();
-//						}
-//						
-//						//	if end tag(s) missing and not correcting errors, throw Exception
-//						if (!this.correctErrors && (missingEndTags.size() > 0))
-//							throw new MissingEndTagException("The following tag(s) have not been closed properly: <" + TreeTools.concatVector(missingEndTags, ">, <") + ">");
-//						
-//						//	rise one tree level and write end tag
-//						if (!parserStack.empty())
-//							parserStack.pop();
-//						lastNode = node;
-//						node = node.getParent();
-//						
-//						//	if streaming, write end tag directly and clean up closed tag and it's content
-//						if (output != null)
-//							output.storeToken(lastNode.getEndTag(this.grammar), parserStack.size() + 1);
-//						if (!build)
-//							lastNode.deleteSubtree();
-//					}
-//					
-//					//	end tag not matching any open tag
-//					else {
-//						
-//						//	if tag not open and not correcting errors, throw Exception
-//						if (!this.correctErrors) throw new UnexpectedEndTagException("The following tag has never been opened: <" + tagType + ">");
-//					}
-//				}
-//				
-//				//	handle start tag
-//				else {
-//					
-//					//	clean list of implicitly closed tags
-//					missingEndTags.clear();
-//					
-//					//	rise to next appropriate parent tag, close lower tags implicitly
-//					while (!parserStack.empty() && ((this.searchParent(tagType, parserStack) > 0) || !this.embeddingValid(tagType, parserStack))) {
-//						
-//						//	if not correcting errors, throw Exception
-//						if (!this.correctErrors)
-//							throw new InvalidNestingException("<" + parserStack.peek() + "> is not a valid parent for <" + tagType + "> in the context of the Grammar in use (" + this.grammar.getClass().getName() + ")");
-//						
-//						//	rise to appropriate parent tag, close lower tags implicitly and write end tags
-//						parserStack.pop();
-//						lastNode = node;
-//						node = node.getParent();
-//						
-//						//	if streaming, write end tag directly
-//						if (output != null)
-//							output.storeToken(lastNode.getEndTag(this.grammar), parserStack.size());
-//						if (!build)
-//							lastNode.deleteSubtree();
-//					}
-//					
-//					//	create new node and link it to the tree
-//					newNode = new TreeNode(node, this.grammar.translateTag(tagType), "", TreeNodeAttributeSet.getTagAttributes(token, this.grammar));
-//					node.addChildNode(newNode);
-//					 
-//					//	descend to new node if tag not singular, and write start tag
-//					if (!this.grammar.isSingularTag(token)) {
-//						parserStack.push(tagType);
-//						node = newNode;
-//						
-//						//	if streaming, write start tag directly
-//						if (output != null)
-//							output.storeToken(node.getStartTag(this.grammar), parserStack.size());
-//					}
-//					else {
-//						
-//						//	if streaming, write singular tag directly
-//						if (output != null) {
-//							
-//							//	get singular tag
-//							String singularTag = newNode.getSingularTag(this.grammar);
-//							
-//							//	write singular tag if allowed in context of grammar in use
-//							if (singularTag != null)
-//								output.storeToken(singularTag, parserStack.size());
-//							
-//							//	otherwise, write start tag and end tag
-//							else {
-//								output.storeToken(newNode.getStartTag(this.grammar), parserStack.size());
-//								output.storeToken(newNode.getEndTag(this.grammar), parserStack.size());
-//							}
-//						}
-//					}
-//				}
-//			}
-//			
-//			//	handle data, comment, DTD, or processing instruction
-//			else if (token != null) {
-//				
-//				//	create new data / comment node and link it to the tree
-//				if (this.grammar.isComment(token)) {
-//					
-//					//	if streaming, write comment directly
-//					if (output != null)
-//						output.storeToken(token, parserStack.size() + 1);
-//					node.addChildNode(new TreeNode(node, TreeNode.COMMENT_NODE_TYPE, token));
-//				}
-//				else if (this.grammar.isDTD(token)) {
-//					
-//					//	if streaming, write data directly
-//					if (output != null)
-//						output.storeToken(token, parserStack.size() + 1);
-//					node.addChildNode(new TreeNode(node, TreeNode.DTD_NODE_TYPE, token));
-//				}
-//				else if (this.grammar.isProcessingInstruction(token)) {
-//					
-//					//	if streaming, write data directly
-//					if (output != null)
-//						output.storeToken(token, parserStack.size() + 1);
-//					node.addChildNode(new TreeNode(node, TreeNode.PROCESSING_INSTRUCTION_NODE_TYPE, token));
-//				}
-//				else {
-//					
-//					//	if streaming, write data directly
-//					if (output != null)
-//						output.storeToken(token, parserStack.size() + 1);
-//					node.addChildNode(new TreeNode(node, TreeNode.DATA_NODE_TYPE, this.grammar.unescape(token)));
-//				}
-//			}
-//		}
-//		
-//		//	return root of tree if not streaming
-//		return rootNode;
-//	}
 	
 	/**
 	 * Objects of this class parse a single input stream using the grammar of
@@ -570,7 +378,6 @@ public class Parser {
 		 */
 		public boolean consumeToken() throws IOException {
 			if (this.input.hasMoreTokens()) {
-//				this.consumToken(this.input.retrieveToken());
 				Token token = this.input.retrieveToken();
 				this.consumToken(token.value, token.start);
 				return true;
@@ -590,7 +397,6 @@ public class Parser {
 			return ((this.stream || this.hasMoreTokens()) ? null : this.rootNode);
 		}
 		
-//		private void consumToken(String token) throws IOException {
 		private void consumToken(String token, int tokenStart) throws IOException {
 			
 			//	catch empty tokens
@@ -629,7 +435,6 @@ public class Parser {
 						
 						//	if end tag(s) missing and not correcting errors, throw Exception
 						if (!correctErrors && (this.missingEndTags.size() > 0))
-//							throw new MissingEndTagException("The following tag(s) have not been closed properly: <" + TreeTools.concatVector(this.missingEndTags, ">, <") + ">");
 							throw new MissingEndTagException(("<" + this.missingEndTags.get(0) + ">"), ("<" + tagType + ">"), tokenStart);
 						
 						//	rise one tree level and write end tag
@@ -650,7 +455,6 @@ public class Parser {
 						
 						//	if tag not open and not correcting errors, throw Exception
 						if (!correctErrors)
-//							throw new UnexpectedEndTagException("The following tag has never been opened: <" + tagType + ">");
 							throw new UnexpectedEndTagException(("<" + tagType + ">"), (this.stack.empty() ? "end of input" : ("<" + this.stack.peek() + ">")), tokenStart);
 					}
 				}
@@ -667,7 +471,6 @@ public class Parser {
 						
 						//	if not correcting errors, throw Exception
 						if (!correctErrors)
-//							throw new InvalidNestingException("<" + this.stack.peek() + "> is not a valid parent for <" + tagType + "> in the context of the Grammar in use (" + grammar.getClass().getName() + ")");
 							throw new InvalidNestingException(("<" + tagType + ">"), ("<" + this.stack.peek() + ">"), grammar, tokenStart);
 						
 						//	ascend to appropriate parent tag, close lower tags implicitly and write end tags
@@ -771,72 +574,38 @@ public class Parser {
 		return true;
 	}
 	
-	/**
-	 * String specific wrapper for a Stack
-	 * 
-	 * @author sautter
-	 */
 	private class StringStack {
-		
-		private Stack content = new Stack();
-		
-		/**	Constructor
-		 */
-		public StringStack(){}
-		
-		/**	@return true if and only if this stack contains no elements 
-		 */
-		public boolean empty() {
+		private ArrayList content = new ArrayList();
+		StringStack(){}
+		boolean empty() {
 			return (this.content.isEmpty());
 		}
-		
-		/**	push an element onto the stack
-		 * @param	s	the element to be pushed
-		 */
-		public void push(String s) {
-			this.content.push(s);
+		void push(String s) {
+			this.content.add(s);
 		}
-		
-		/**	@return	the top element of this stack (without removing it, see also pop())
-		 */
-		public String peek() {
-			return ((String) this.content.peek());
+		String peek() {
+			return ((String) this.content.get(this.content.size() - 1));
 		}
-		
-		/**	@return	the top element of this stack (removing it, see also peek())
-		 */
-		public String pop() {
-			return ((String) this.content.pop());
+		String pop() {
+			String s = this.peek();
+			this.content.remove(this.content.size() - 1);
+			return s;
 		}
-		
-		/**	search this stack for an element
-		 * @param	s	the element to be searched
-		 * @return the stack depth of the specified element, or -1, if this stack doesn't contain that element
-		 */
-		public int search(String s) {
+		int search(String s) {
 			int r = this.content.size()-1;
 			for (int i = 0; i < this.content.size(); i++) {
-				if (((String) this.content.get(r-i)).equalsIgnoreCase(s)) return i;
+				if (((String) this.content.get(r-i)).equalsIgnoreCase(s))
+					return i;
 			}
 			return -1;
 		}
-		
-		/**	@return the number of element in this stack
-		 */
-		public int size() {
+		int size() {
 			return this.content.size();
 		}
-		
-		/**	inspect an element from the middle of the stack
-		 * @param	index	the stack depth
-		 * @return the element at the specified stack depth (get(0) has the same effect as peek())
-		 */
-		public String get(int index) {
-			if ((index >= 0) && (index < this.content.size())) {
+		String get(int index) {
+			if ((index >= 0) && (index < this.content.size()))
 				return ((String) this.content.get(this.content.size() - 1 - index));
-			} else {
-				return "";
-			}
+			else return "";
 		}
 //		
 //		/**	@return a String concatenated from all of this stack's elements, separated by space characters

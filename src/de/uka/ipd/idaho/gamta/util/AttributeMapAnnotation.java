@@ -22,9 +22,9 @@ import de.uka.ipd.idaho.stringUtils.csvHandler.StringTupel;
  * This class is a simple wrapper that allows key / value mappings to act as a
  * queriable annotation, optionally including an annotation value. If the value
  * token sequence handed to any of the constructors is null, it will simply be
- * 'DUMMY' using the default tokenizer. When any of the String / Tokenizer
- * constructors is used, the contained token sequence is generated only when
- * first accessed. If the value String is null, it defaults to 'DUMMY', if the
+ * 'DUMMY' using the default tokenizer. If any of the String / Tokenizer
+ * constructors is used, the contained token sequence is generated only on
+ * first access. If the value String is null, it defaults to 'DUMMY', if the
  * tokenizer is null, the default tokenizer is used.
  * 
  * @author sautter
@@ -426,6 +426,13 @@ public class AttributeMapAnnotation extends AbstractAttributed implements Queria
 	}
 	
 	/* (non-Javadoc)
+	 * @see de.uka.ipd.idaho.gamta.QueriableAnnotation#getAnnotation(java.lang.String)
+	 */
+	public QueriableAnnotation getAnnotation(String id) {
+		return null;
+	}
+	
+	/* (non-Javadoc)
 	 * @see de.uka.ipd.idaho.gamta.QueriableAnnotation#getAnnotations()
 	 */
 	public QueriableAnnotation[] getAnnotations() {
@@ -436,6 +443,34 @@ public class AttributeMapAnnotation extends AbstractAttributed implements Queria
 	 * @see de.uka.ipd.idaho.gamta.QueriableAnnotation#getAnnotations(java.lang.String)
 	 */
 	public QueriableAnnotation[] getAnnotations(String type) {
+		return qaDummy;
+	}
+	
+	/* (non-Javadoc)
+	 * @see de.uka.ipd.idaho.gamta.QueriableAnnotation#getAnnotationsSpanning(int, int)
+	 */
+	public QueriableAnnotation[] getAnnotationsSpanning(int startIndex, int endIndex) {
+		return qaDummy;
+	}
+	
+	/* (non-Javadoc)
+	 * @see de.uka.ipd.idaho.gamta.QueriableAnnotation#getAnnotationsSpanning(java.lang.String, int, int)
+	 */
+	public QueriableAnnotation[] getAnnotationsSpanning(String type, int startIndex, int endIndex) {
+		return qaDummy;
+	}
+	
+	/* (non-Javadoc)
+	 * @see de.uka.ipd.idaho.gamta.QueriableAnnotation#getAnnotationsOverlapping(int, int)
+	 */
+	public QueriableAnnotation[] getAnnotationsOverlapping(int startIndex, int endIndex) {
+		return qaDummy;
+	}
+	
+	/* (non-Javadoc)
+	 * @see de.uka.ipd.idaho.gamta.QueriableAnnotation#getAnnotationsOverlapping(java.lang.String, int, int)
+	 */
+	public QueriableAnnotation[] getAnnotationsOverlapping(String type, int startIndex, int endIndex) {
 		return qaDummy;
 	}
 	

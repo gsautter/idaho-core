@@ -372,7 +372,7 @@ public class GamtaTokenSequence extends AbstractMutableTokenSequence {
 	 */
 	public CharSequence setWhitespaceAfter(CharSequence whitespace, int index) throws IllegalArgumentException {
 		if (whitespace.toString().trim().length() != 0)
-			throw new IllegalArgumentException("Whitespace must not contain non-whitespace characters.");
+			throw new IllegalArgumentException("Whitespace must not contain non-whitespace characters: " + whitespace);
 		return this.charData.setChars(whitespace, this.tokenAt(index).getEndOffset(), this.getWhitespaceAfter(index).length());
 	}
 	
@@ -443,7 +443,8 @@ public class GamtaTokenSequence extends AbstractMutableTokenSequence {
 	public CharSequence addTokens(CharSequence tokens) {
 		
 		//	check parameter
-		if ((tokens == null) || (tokens.length() == 0)) return tokens;
+		if ((tokens == null) || (tokens.length() == 0))
+			return tokens;
 		
 		//	insert padding if necessary
 		if (this.needsPadding(this.charData, this.charData.length(), tokens, 0))
@@ -464,17 +465,20 @@ public class GamtaTokenSequence extends AbstractMutableTokenSequence {
 	private boolean needsPadding(CharSequence cs1, int o1, CharSequence cs2, int o2) {
 		
 		//	insertion at start of first sequence, or first sequence has whitespace in ending position
-		if ((o1 == 0) || (cs1.charAt(o1 - 1) < 33)) return false;
+		if ((o1 == 0) || (cs1.charAt(o1 - 1) < 33))
+			return false;
 		
 		//	insertion at end of second sequence, or second sequence has whitespace in starting position
-		if ((o2 == cs2.length()) || (cs2.charAt(o2) < 33)) return false;
+		if ((o2 == cs2.length()) || (cs2.charAt(o2) < 33))
+			return false;
 		
 		//	check if padding necessary
 		Tokenizer.TokenIterator ti;
 		
 		//	find start of last block in cs1
 		int lbs = o1 - 1;
-		while ((lbs > -1) && (cs1.charAt(lbs) > 32)) lbs--;
+		while ((lbs > -1) && (cs1.charAt(lbs) > 32))
+			lbs--;
 		String lb = cs1.subSequence((lbs + 1), o1).toString();
 		
 		//	count tokens in own last block
@@ -487,7 +491,8 @@ public class GamtaTokenSequence extends AbstractMutableTokenSequence {
 		
 		//	count tokens in parameter's first block
 		int fbe = o2;
-		while ((fbe < cs2.length()) && (cs2.charAt(fbe) > 32)) fbe++;
+		while ((fbe < cs2.length()) && (cs2.charAt(fbe) > 32))
+			fbe++;
 		String fb = cs2.subSequence(o2, fbe).toString();
 		
 		//	count tokens in parameter's first block

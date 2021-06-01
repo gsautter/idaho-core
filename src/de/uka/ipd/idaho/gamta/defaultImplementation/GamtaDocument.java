@@ -28,18 +28,22 @@
 package de.uka.ipd.idaho.gamta.defaultImplementation;
 
 
+import java.lang.ref.SoftReference;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.Map.Entry;
 import java.util.Properties;
-import java.util.Vector;
+import java.util.TreeSet;
 
 import de.uka.ipd.idaho.gamta.Annotation;
 import de.uka.ipd.idaho.gamta.AnnotationListener;
 import de.uka.ipd.idaho.gamta.AnnotationUtils;
-import de.uka.ipd.idaho.gamta.AttributeUtils;
 import de.uka.ipd.idaho.gamta.Attributed;
 import de.uka.ipd.idaho.gamta.CharSequenceListener;
 import de.uka.ipd.idaho.gamta.DocumentRoot;
@@ -53,7 +57,7 @@ import de.uka.ipd.idaho.gamta.TokenSequence;
 import de.uka.ipd.idaho.gamta.TokenSequenceListener;
 import de.uka.ipd.idaho.gamta.Tokenizer;
 import de.uka.ipd.idaho.gamta.util.ImmutableAnnotation;
-import de.uka.ipd.idaho.stringUtils.StringVector;
+//import java.util.Vector;
 
 /**
  * Markup overlay for MutableTokenSequence instances
@@ -72,9 +76,10 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 	
 	private Properties documentProperties = new Properties(); // the store for document properties
 	
-	private String annotationNestingOrder = DEFAULT_ANNOTATION_NESTING_ORDER; // the nesting order for annotations to this document 
+	private String annotationNestingOrder = Gamta.getAnnotationNestingOrder(); // the nesting order for annotations to this document 
 	private Comparator nestingOrder = AnnotationUtils.getComparator(this.annotationNestingOrder);
 	private Comparator typeNestingOrder = AnnotationUtils.getTypeComparator(this.annotationNestingOrder);
+	private int orderModCount = 0;
 	
 	private ArrayList annotationListeners = null;
 	
@@ -334,6 +339,7 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 		this.annotationNestingOrder = ((ano == null) ? DEFAULT_ANNOTATION_NESTING_ORDER : ano);
 		this.typeNestingOrder = AnnotationUtils.getTypeComparator(this.annotationNestingOrder);
 		this.nestingOrder = AnnotationUtils.getComparator(this.annotationNestingOrder);
+		this.orderModCount++;
 		return old;
 	}
 
@@ -632,26 +638,57 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 	public int getAbsoluteStartOffset() {
 		return 0;
 	}
-
+	
+	/* (non-Javadoc)
+	 * @see de.uka.ipd.idaho.gamta.QueriableAnnotation#getAnnotation(java.lang.String)
+	 */
+	public QueriableAnnotation getAnnotation(String id) {
+		AnnotationBase ab = this.annotations.getAnnotation(id);
+		return ((ab == null) ? null : new QueriableAnnotationView(ab, this));
+	}
+	
 	/* (non-Javadoc)
 	 * @see de.gamta.QueriableAnnotation#getAnnotations()
 	 */
 	public QueriableAnnotation[] getAnnotations() {
 		return this.getAnnotations(null);
 	}
-
+	
 	/* (non-Javadoc)
 	 * @see de.gamta.QueriableAnnotation#getAnnotations(java.lang.String)
 	 */
 	public QueriableAnnotation[] getAnnotations(String type) {
-		AnnotationBase[] abs = this.annotations.getAnnotations(type);
-		QueriableAnnotation[] qas = new QueriableAnnotation[abs.length];
-		for (int a = 0; a < abs.length; a++)
-			qas[a] = new QueriableAnnotationView(abs[a], this);
-		Arrays.sort(qas, this.nestingOrder);
-		return qas;
+		return this.wrapAnnotationBasesQueriable(this.annotations.getAnnotations(type), this);
 	}
-
+	
+	/* (non-Javadoc)
+	 * @see de.uka.ipd.idaho.gamta.QueriableAnnotation#getAnnotationsSpanning(int, int)
+	 */
+	public QueriableAnnotation[] getAnnotationsSpanning(int startIndex, int endIndex) {
+		return this.getAnnotationsSpanning(null, startIndex, endIndex);
+	}
+	
+	/* (non-Javadoc)
+	 * @see de.uka.ipd.idaho.gamta.QueriableAnnotation#getAnnotationsSpanning(java.lang.String, int, int)
+	 */
+	public QueriableAnnotation[] getAnnotationsSpanning(String type, int startIndex, int endIndex) {
+		return this.wrapAnnotationBasesQueriable(this.annotations.getAnnotationsSpanning(type, startIndex, endIndex), this);
+	}
+	
+	/* (non-Javadoc)
+	 * @see de.uka.ipd.idaho.gamta.QueriableAnnotation#getAnnotationsOverlapping(int, int)
+	 */
+	public QueriableAnnotation[] getAnnotationsOverlapping(int startIndex, int endIndex) {
+		return this.getAnnotationsOverlapping(null, startIndex, endIndex);
+	}
+	
+	/* (non-Javadoc)
+	 * @see de.uka.ipd.idaho.gamta.QueriableAnnotation#getAnnotationsOverlapping(java.lang.String, int, int)
+	 */
+	public QueriableAnnotation[] getAnnotationsOverlapping(String type, int startIndex, int endIndex) {
+		return this.wrapAnnotationBasesQueriable(this.annotations.getAnnotationsOverlapping(type, startIndex, endIndex), this);
+	}
+	
 	/* (non-Javadoc)
 	 * @see de.gamta.QueriableAnnotation#getAnnotationTypes()
 	 */
@@ -665,7 +702,8 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 	public MutableAnnotation addAnnotation(Annotation annotation) {
 		
 		//	check parameter
-		if (annotation == null) return null;
+		if (annotation == null)
+			return null;
 		
 		//	create AnnotationBase
 		AnnotationBase ab = this.addAnnotationAbsolute(annotation.getType(), annotation.getStartIndex(), annotation.size());
@@ -703,10 +741,19 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 		return new MutableAnnotationView(ab, this);
 	}
 	
+	/* (non-Javadoc)
+	 * @see de.uka.ipd.idaho.gamta.MutableAnnotation#addAnnotation(int, int, java.lang.String)
+	 */
+	public MutableAnnotation addAnnotation(int startIndex, int endIndex, String type) {
+		return this.addAnnotation(type, startIndex, (endIndex - startIndex));
+	}
+	
 	//	add an Annotation
 	private AnnotationBase addAnnotationAbsolute(String type, int startIndex, int size) {
+		
 		//	check parameters
-		if ((startIndex < 0) || (size < 1)) return null;
+		if ((startIndex < 0) || (size < 1))
+			return null;
 		
 		//	create Annotation
 		AnnotationBase ab = new AnnotationBase(type, startIndex, size);
@@ -715,7 +762,15 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 		//	return Annotation
 		return ab;
 	}
-
+	
+	/* (non-Javadoc)
+	 * @see de.uka.ipd.idaho.gamta.MutableAnnotation#getMutableAnnotation(java.lang.String)
+	 */
+	public MutableAnnotation getMutableAnnotation(String id) {
+		AnnotationBase ab = this.annotations.getAnnotation(id);
+		return ((ab == null) ? null : new MutableAnnotationView(ab, this));
+	}
+	
 	/* (non-Javadoc)
 	 * @see de.gamta.MutableAnnotation#getMutableAnnotations()
 	 */
@@ -727,31 +782,55 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 	 * @see de.gamta.MutableAnnotation#getMutableAnnotations(java.lang.String)
 	 */
 	public MutableAnnotation[] getMutableAnnotations(String type) {
-		AnnotationBase[] abs = this.annotations.getAnnotations(type);
-		MutableAnnotation[] mas = new MutableAnnotation[abs.length];
-		for (int a = 0; a < abs.length; a++)
-			mas[a] = new MutableAnnotationView(abs[a], this);
-		Arrays.sort(mas, this.nestingOrder);
-		return mas;
+		return this.wrapAnnotationBasesMutable(this.annotations.getAnnotations(type), this);
 	}
-
+	
+	/* (non-Javadoc)
+	 * @see de.uka.ipd.idaho.gamta.MutableAnnotation#getMutableAnnotationsSpanning(int, int)
+	 */
+	public MutableAnnotation[] getMutableAnnotationsSpanning(int startIndex, int endIndex) {
+		return this.getMutableAnnotationsSpanning(null, startIndex, endIndex);
+	}
+	
+	/* (non-Javadoc)
+	 * @see de.uka.ipd.idaho.gamta.MutableAnnotation#getMutableAnnotationsSpanning(java.lang.String, int, int)
+	 */
+	public MutableAnnotation[] getMutableAnnotationsSpanning(String type, int startIndex, int endIndex) {
+		return this.wrapAnnotationBasesMutable(this.annotations.getAnnotationsSpanning(type, startIndex, endIndex), this);
+	}
+	
+	/* (non-Javadoc)
+	 * @see de.uka.ipd.idaho.gamta.MutableAnnotation#getMutableAnnotationsOverlapping(int, int)
+	 */
+	public MutableAnnotation[] getMutableAnnotationsOverlapping(int startIndex, int endIndex) {
+		return this.getMutableAnnotationsOverlapping(null, startIndex, endIndex);
+	}
+	
+	/* (non-Javadoc)
+	 * @see de.uka.ipd.idaho.gamta.MutableAnnotation#getMutableAnnotationsOverlapping(java.lang.String, int, int)
+	 */
+	public MutableAnnotation[] getMutableAnnotationsOverlapping(String type, int startIndex, int endIndex) {
+		return this.wrapAnnotationBasesMutable(this.annotations.getAnnotationsOverlapping(type, startIndex, endIndex), this);
+	}
+	
 	/* (non-Javadoc)
 	 * @see de.gamta.MutableAnnotation#removeAnnotation(de.gamta.Annotation)
 	 */
 	public Annotation removeAnnotation(Annotation annotation) {
-		AnnotationBase ab = this.annotations.removeAnnotation(0, annotation);
-		if (ab == null) return annotation;
-		else {
-			//	notify listeners
-			this.notifyAnnotationRemoved(ab);
-			
-			//	create standalone Annotation
-			Annotation ra = new TemporaryAnnotation(this, ab.getType(), ab.getAbsoluteStartIndex(), ab.size());
-			ra.copyAttributes(ab);
-			
-			//	return Annotation
-			return ra;
-		}
+//		AnnotationBase ab = this.annotations.removeAnnotation(0, annotation);
+		AnnotationBase ab = this.annotations.removeAnnotation(annotation);
+		if (ab == null)
+			return annotation;
+		
+		//	notify listeners
+		this.notifyAnnotationRemoved(ab);
+		
+		//	create standalone Annotation
+		Annotation ra = new TemporaryAnnotation(this, ab.getType(), ab.absoluteStartIndex, ab.size);
+		ra.copyAttributes(ab);
+		
+		//	return Annotation
+		return ra;
 	}
 
 	/* (non-Javadoc)
@@ -780,7 +859,7 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 			this.annotationListeners.remove(al);
 	}
 	
-	private void notifyAnnotationAdded(AnnotationBase added) {
+	void notifyAnnotationAdded(AnnotationBase added) {
 		if (this.annotationListeners == null)
 			return;
 		QueriableAnnotation doc = new ImmutableAnnotation(this);
@@ -794,11 +873,11 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 		}
 	}
 	
-	private void notifyAnnotationRemoved(AnnotationBase removed) {
+	void notifyAnnotationRemoved(AnnotationBase removed) {
 		if (this.annotationListeners == null)
 			return;
 		QueriableAnnotation doc = new ImmutableAnnotation(this);
-		Annotation removedAnnotation = new TemporaryAnnotation(doc, removed.getType(), removed.getAbsoluteStartIndex(), removed.size());
+		Annotation removedAnnotation = new TemporaryAnnotation(doc, removed.getType(), removed.absoluteStartIndex, removed.size);
 		removedAnnotation.copyAttributes(removed);
 		removedAnnotation.setAttribute(ANNOTATION_ID_ATTRIBUTE, removed.annotationId);
 		for (int l = 0; l < this.annotationListeners.size(); l++) try {
@@ -810,7 +889,7 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 		}
 	}
 	
-	private void notifyAnnotationTypeChanged(AnnotationBase reTyped, String oldType) {
+	void notifyAnnotationTypeChanged(AnnotationBase reTyped, String oldType) {
 		if (this.annotationListeners == null)
 			return;
 		QueriableAnnotation doc = new ImmutableAnnotation(this);
@@ -824,7 +903,7 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 		}
 	}
 	
-	private void notifyAnnotationAttributeChanged(AnnotationBase target, String attributeName, Object oldValue) {
+	void notifyAnnotationAttributeChanged(AnnotationBase target, String attributeName, Object oldValue) {
 		if (this.annotationListeners == null)
 			return;
 		QueriableAnnotation doc = new ImmutableAnnotation(this);
@@ -940,7 +1019,7 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 		 * @see de.gamta.defaultImplementation.GamtaDocument.AnnotationBase#getAbsoluteStartIndex()
 		 */
 		public int getAbsoluteStartIndex() {
-			return this.data.getAbsoluteStartIndex();
+			return this.data.absoluteStartIndex;
 		}
 		/* (non-Javadoc)
 		 * @see de.gamta.defaultImplementation.GamtaDocument.AnnotationBase#getAbsoluteStartOffset()
@@ -955,6 +1034,13 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 			return this.data.getAnnotationID();
 		}
 		/* (non-Javadoc)
+		 * @see de.uka.ipd.idaho.gamta.QueriableAnnotation#getAnnotation(java.lang.String)
+		 */
+		public QueriableAnnotation getAnnotation(String id) {
+			AnnotationBase ab = this.data.getAnnotation(id);
+			return ((ab == null) ? null : new QueriableAnnotationView(ab, this));
+		}
+		/* (non-Javadoc)
 		 * @see de.gamta.defaultImplementation.GamtaDocument.AnnotationBase#getAnnotations()
 		 */
 		public QueriableAnnotation[] getAnnotations() {
@@ -964,12 +1050,31 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 		 * @see de.gamta.defaultImplementation.GamtaDocument.AnnotationBase#getAnnotations(java.lang.String)
 		 */
 		public QueriableAnnotation[] getAnnotations(String type) {
-			AnnotationBase[] abs = this.data.getAnnotations(type);
-			QueriableAnnotation qas[] = new QueriableAnnotation[abs.length];
-			for (int a = 0; a < abs.length; a++)
-				qas[a] = new QueriableAnnotationView(abs[a], this);
-			Arrays.sort(qas, nestingOrder);
-			return qas;
+			return wrapAnnotationBasesQueriable(this.data.getAnnotations(type), this);
+		}
+		/* (non-Javadoc)
+		 * @see de.uka.ipd.idaho.gamta.QueriableAnnotation#getAnnotationsSpanning(int, int)
+		 */
+		public QueriableAnnotation[] getAnnotationsSpanning(int startIndex, int endIndex) {
+			return this.getAnnotationsSpanning(null, startIndex, endIndex);
+		}
+		/* (non-Javadoc)
+		 * @see de.uka.ipd.idaho.gamta.QueriableAnnotation#getAnnotationsSpanning(java.lang.String, int, int)
+		 */
+		public QueriableAnnotation[] getAnnotationsSpanning(String type, int startIndex, int endIndex) {
+			return wrapAnnotationBasesQueriable(this.data.getAnnotationsSpanning(type, startIndex, endIndex), this);
+		}
+		/* (non-Javadoc)
+		 * @see de.uka.ipd.idaho.gamta.QueriableAnnotation#getAnnotationsOverlapping(int, int)
+		 */
+		public QueriableAnnotation[] getAnnotationsOverlapping(int startIndex, int endIndex) {
+			return this.getAnnotationsOverlapping(null, startIndex, endIndex);
+		}
+		/* (non-Javadoc)
+		 * @see de.uka.ipd.idaho.gamta.QueriableAnnotation#getAnnotationsOverlapping(java.lang.String, int, int)
+		 */
+		public QueriableAnnotation[] getAnnotationsOverlapping(String type, int startIndex, int endIndex) {
+			return wrapAnnotationBasesQueriable(this.data.getAnnotationsOverlapping(type, startIndex, endIndex), this);
 		}
 		/* (non-Javadoc)
 		 * @see de.gamta.defaultImplementation.GamtaDocument.AnnotationBase#getAnnotationTypes()
@@ -1005,7 +1110,7 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 		 * @see de.gamta.defaultImplementation.GamtaDocument.AnnotationBase#getStartIndex()
 		 */
 		public int getStartIndex() {
-			return (this.data.getAbsoluteStartIndex() - this.base.getAbsoluteStartIndex());
+			return (this.data.absoluteStartIndex - this.base.getAbsoluteStartIndex());
 		}
 		/* (non-Javadoc)
 		 * @see de.gamta.defaultImplementation.GamtaDocument.AnnotationBase#getStartOffset()
@@ -1077,7 +1182,7 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 		 * @see de.gamta.defaultImplementation.GamtaDocument.AnnotationBase#size()
 		 */
 		public int size() {
-			return this.data.size();
+			return this.data.size;
 		}
 		/* (non-Javadoc)
 		 * @see de.gamta.defaultImplementation.GamtaDocument.AnnotationBase#subSequence(int, int)
@@ -1245,9 +1350,9 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 	/**	a mutable view of an annotation, behaving relative to the annotation its was retrieved from
 	 */
 	private class MutableAnnotationView extends QueriableAnnotationView implements MutableAnnotation {
-		private Vector charListeners = null;
-		private Vector tokenListeners = null;
-		private Vector annotationListeners = null;
+		private ArrayList charListeners = null;
+		private ArrayList tokenListeners = null;
+		private ArrayList annotationListeners = null;
 		MutableAnnotationView(AnnotationBase data, QueriableAnnotation base) {
 			super(data, base);
 			this.data.views.add(this);
@@ -1267,7 +1372,8 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 			AnnotationBase ab = this.data.addAnnotation(annotation);
 			
 			//	check success
-			if (ab == null) return null;
+			if (ab == null)
+				return null;
 			
 			//	notify own listeners
 			this.notifyAnnotationAdded(ab);
@@ -1282,13 +1388,20 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 			AnnotationBase ab = this.data.addAnnotation(type, startIndex, size);
 			
 			//	check success
-			if (ab == null) return null;
+			if (ab == null)
+				return null;
 			
 			//	notify own listeners
 			this.notifyAnnotationAdded(ab);
 			
 			//	return new Annotation
 			return new MutableAnnotationView(ab, this);
+		}
+		/* (non-Javadoc)
+		 * @see de.uka.ipd.idaho.gamta.MutableAnnotation#addAnnotation(int, int, java.lang.String)
+		 */
+		public MutableAnnotation addAnnotation(int startIndex, int endIndex, String type) {
+			return this.addAnnotation(type, startIndex, (endIndex - startIndex));
 		}
 		/* (non-Javadoc)
 		 * @see de.gamta.defaultImplementation.GamtaDocument.AnnotationBase#addChar(char)
@@ -1315,6 +1428,13 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 			this.data.clear();
 		}
 		/* (non-Javadoc)
+		 * @see de.uka.ipd.idaho.gamta.MutableAnnotation#getMutableAnnotation(java.lang.String)
+		 */
+		public MutableAnnotation getMutableAnnotation(String id) {
+			AnnotationBase ab = this.data.getAnnotation(id);
+			return ((ab == null) ? null : new MutableAnnotationView(ab, this));
+		}
+		/* (non-Javadoc)
 		 * @see de.gamta.defaultImplementation.GamtaDocument.AnnotationBase#getMutableAnnotations()
 		 */
 		public MutableAnnotation[] getMutableAnnotations() {
@@ -1330,6 +1450,30 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 				mas[a] = new MutableAnnotationView(abs[a], this);
 			Arrays.sort(mas, nestingOrder);
 			return mas;
+		}
+		/* (non-Javadoc)
+		 * @see de.uka.ipd.idaho.gamta.MutableAnnotation#getMutableAnnotationsSpanning(int, int)
+		 */
+		public MutableAnnotation[] getMutableAnnotationsSpanning(int startIndex, int endIndex) {
+			return this.getMutableAnnotationsSpanning(null, startIndex, endIndex);
+		}
+		/* (non-Javadoc)
+		 * @see de.uka.ipd.idaho.gamta.MutableAnnotation#getMutableAnnotationsSpanning(java.lang.String, int, int)
+		 */
+		public MutableAnnotation[] getMutableAnnotationsSpanning(String type, int startIndex, int endIndex) {
+			return wrapAnnotationBasesMutable(this.data.getAnnotationsSpanning(type, startIndex, endIndex), this);
+		}
+		/* (non-Javadoc)
+		 * @see de.uka.ipd.idaho.gamta.MutableAnnotation#getMutableAnnotationsOverlapping(int, int)
+		 */
+		public MutableAnnotation[] getMutableAnnotationsOverlapping(int startIndex, int endIndex) {
+			return this.getMutableAnnotationsOverlapping(null, startIndex, endIndex);
+		}
+		/* (non-Javadoc)
+		 * @see de.uka.ipd.idaho.gamta.MutableAnnotation#getMutableAnnotationsOverlapping(java.lang.String, int, int)
+		 */
+		public MutableAnnotation[] getMutableAnnotationsOverlapping(String type, int startIndex, int endIndex) {
+			return wrapAnnotationBasesMutable(this.data.getAnnotationsOverlapping(type, startIndex, endIndex), this);
 		}
 		/* (non-Javadoc)
 		 * @see de.gamta.defaultImplementation.GamtaDocument.AnnotationBase#getMutableSubsequence(int, int)
@@ -1395,7 +1539,11 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 		 * @see de.gamta.defaultImplementation.GamtaDocument.AnnotationBase#addCharSequenceListener(de.gamta.CharSequenceListener)
 		 */
 		public void addCharSequenceListener(CharSequenceListener csl) {
-			if (this.charListeners == null) this.charListeners = new Vector(2);
+			if (csl == null)
+				return;
+//			if (this.charListeners == null) this.charListeners = new Vector(2);
+			if (this.charListeners == null)
+				this.charListeners = new ArrayList(2);
 			this.charListeners.add(csl);
 		}
 		/* (non-Javadoc)
@@ -1421,7 +1569,11 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 		 * @see de.gamta.defaultImplementation.GamtaDocument.AnnotationBase#addTokenSequenceListener(de.gamta.TokenSequenceListener)
 		 */
 		public void addTokenSequenceListener(TokenSequenceListener tsl) {
-			if (this.tokenListeners == null) this.tokenListeners = new Vector(2);
+			if (tsl == null)
+				return;
+//			if (this.tokenListeners == null) this.tokenListeners = new Vector(2);
+			if (this.tokenListeners == null) 
+				this.tokenListeners = new ArrayList(2);
 			this.tokenListeners.add(tsl);
 		}
 		/* (non-Javadoc)
@@ -1485,11 +1637,16 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 		 * @see de.gamta.MutableAnnotation#addAnnotationListener(de.gamta.AnnotationListener)
 		 */
 		public void addAnnotationListener(AnnotationListener al) {
-			if (al != null) {
-				if (this.annotationListeners == null)
-					this.annotationListeners = new Vector();
-				this.annotationListeners.add(al);
-			}
+			if (al == null)
+				return;
+			if (this.annotationListeners == null)
+				this.annotationListeners = new ArrayList(2);
+			this.annotationListeners.add(al);
+//			if (al != null) {
+//				if (this.annotationListeners == null)
+//					this.annotationListeners = new Vector(2);
+//				this.annotationListeners.add(al);
+//			}
 		}
 		/* (non-Javadoc)
 		 * @see de.gamta.MutableAnnotation#removeAnnotationListener(de.gamta.AnnotationListener)
@@ -1525,7 +1682,7 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 		void notifyAnnotationRemoved(AnnotationBase removed) {
 			if (this.annotationListeners != null) {
 				QueriableAnnotation doc = new ImmutableAnnotation(this);
-				Annotation removedAnnotation = new TemporaryAnnotation(doc, removed.getType(), (removed.getAbsoluteStartIndex() - this.getAbsoluteStartIndex()), removed.size());
+				Annotation removedAnnotation = new TemporaryAnnotation(doc, removed.getType(), (removed.absoluteStartIndex - this.getAbsoluteStartIndex()), removed.size);
 				removedAnnotation.copyAttributes(removed);
 				for (int l = 0; l < this.annotationListeners.size(); l++)
 					((AnnotationListener) this.annotationListeners.get(l)).annotationRemoved(doc, removedAnnotation);
@@ -1725,26 +1882,47 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 	
 	//	the basic implementation of an Annotation at this Document, which backs the view(s)
 	private class AnnotationBase extends AbstractAttributed {
-		private String type; // the type of the Annotation, corresponding to the XML element name
+		String type; // the type of the Annotation, corresponding to the XML element name
 		
-		private int absoluteStartIndex; // the index of this Annotation's first token in the TokenSequence of the surrounding GamtaDocument 
-		private int size; // the number of tokens contained in this Annotation
+//		private int absoluteStartIndex; // the index of this Annotation's first token in the TokenSequence of the surrounding GamtaDocument 
+//		private int size; // the number of tokens contained in this Annotation
+		int absoluteStartIndex; // the index of this Annotation's first token in the TokenSequence of the surrounding GamtaDocument 
+		int size; // the number of tokens contained in this Annotation
 		
-		private String annotationId = Gamta.getAnnotationID(); // the ID for this Annotation
+		String annotationId = Gamta.getAnnotationID(); // the ID for this Annotation
 		
 //		private long timestamp = System.currentTimeMillis(); // creation time stamp, for maintaining insertion order
 		final long createOrderNumber = getCreateOrderNumber(); // creation order number, for maintaining insertion order
 		
 		private Change change = null; // the change originating from the current update to the underlying token sequence (will be null unless a change is in progress)
 		
-		private Vector views = new Vector(); // the views currently referring to this AbbotationBase, for event notification purposes
+//		private Vector views = new Vector(); // the views currently referring to this AbbotationBase, for event notification purposes
+		private ArrayList views = new ArrayList(2); // the views currently referring to this AbbotationBase, for event notification purposes
+		
+		final AnnotationCache subAnnotationsByType = new AnnotationCache(16);
 		
 		AnnotationBase(String type, int startIndex, int size) {
-			if ((type == null) || (type.trim().length() == 0))
+//			if ((type == null) || (type.trim().length() == 0))
+			if ((type == null) || !AnnotationUtils.isValidAnnotationType(type))
 				throw new IllegalArgumentException("'" + type + "' is not a valid Annotation type");
 			this.type = type;
 			this.absoluteStartIndex = startIndex;
 			this.size = size;
+		}
+		
+		void cleanCaches() {
+			if (this.subAnnotationsByType.isEmpty())
+				return;
+			for (Iterator kit = this.subAnnotationsByType.keySet().iterator(); kit.hasNext();) {
+				AnnotationCacheEntry ace = ((AnnotationCacheEntry) this.subAnnotationsByType.get(kit.next()));
+				if (ace.isInvalid())
+					kit.remove();
+			}
+		}
+		
+		void clearCaches() {
+			this.subAnnotationsByType.clear();
+//			this.subAnnotationsByTypeAndRange.clear();
 		}
 		
 		/* (non-Javadoc)
@@ -1791,8 +1969,9 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 				if ((value != null) && (value instanceof String) && (value.toString().trim().length() == this.annotationId.length())) {
 					String oldId = this.annotationId;
 					this.annotationId = value.toString();
-					annotations.annotationIDs.remove(oldId);
-					annotations.annotationIDs.add(this.annotationId);
+//					annotations.annotationIDs.remove(oldId);
+//					annotations.annotationIDs.add(this.annotationId);
+					annotations.annotationIdChanged(this, oldId);
 					return oldId;
 				}
 				else return value;
@@ -2100,12 +2279,12 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 			}
 		}
 		String changeTypeTo(String newType) {
-			//	TODO check for inner spaces as well
-			if ((newType == null) || (newType.trim().length() == 0))
+//			if ((newType == null) || (newType.trim().length() == 0))
+			if ((newType == null) || !AnnotationUtils.isValidAnnotationType(newType))
 				throw new IllegalArgumentException("'" + newType + "' is not a valid Annotation type");
 			String oldType = this.type;
 			this.type = newType;
-			//	TODO update type specific indices in annotation store
+			annotations.annotationTypeChanged(this, oldType);
 			return oldType;
 		}
 		String getAnnotationID() {
@@ -2132,9 +2311,9 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 		}
 		CharSequence addTokens(CharSequence tokens) {
 			modificationSource = this;
-			CharSequence ch = tokenData.insertTokensAt(tokens, this.getEndIndex());
+			CharSequence cs = tokenData.insertTokensAt(tokens, this.getEndIndex());
 			modificationSource = null;
-			return ch;
+			return cs;
 		}
 		char charAt(int index) {
 			if (index >= this.length())
@@ -2298,9 +2477,9 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 			modificationSource = null;
 			return cs;
 		}
-		int size() {
-			return this.size;
-		}
+//		int size() {
+//			return this.size;
+//		}
 		CharSequence subSequence(int start, int end) {
 			if (start < 0)
 				throw new IndexOutOfBoundsException("" + start + " < " + 0);
@@ -2328,14 +2507,30 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 				throw new IndexOutOfBoundsException("" + end + " > " + this.length());
 			return tokenData.mutableSubSequence((start + this.getAbsoluteStartOffset()), (end + this.getAbsoluteStartOffset()));
 		}
-		int getAbsoluteStartIndex() {
-			return this.absoluteStartIndex;
-		}
+//		int getAbsoluteStartIndex() {
+//			return this.absoluteStartIndex;
+//		}
 		int getAbsoluteStartOffset() {
 			return this.firstToken().getStartOffset();
 		}
+		AnnotationBase getAnnotation(String id) {
+			AnnotationBase ab = annotations.getAnnotation(id);
+			if (ab == null)
+				return null;
+			if (ab.absoluteStartIndex < this.absoluteStartIndex)
+				return null;
+			if (this.getEndIndex() < ab.getEndIndex())
+				return null;
+			return ab;
+		}
 		AnnotationBase[] getAnnotations(String type) {
 			return annotations.getAnnotations(this, type);
+		}
+		AnnotationBase[] getAnnotationsSpanning(String type, int startIndex, int endIndex) {
+			return annotations.getAnnotationsSpanning(this, type, startIndex, endIndex);
+		}
+		AnnotationBase[] getAnnotationsOverlapping(String type, int startIndex, int endIndex) {
+			return annotations.getAnnotationsOverlapping(this, type, startIndex, endIndex);
 		}
 		String[] getAnnotationTypes() {
 			return annotations.getAnnotationTypes(this);
@@ -2343,13 +2538,15 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 		AnnotationBase addAnnotation(Annotation annotation) {
 			
 			//	check parameter
-			if (annotation == null) return null;
+			if (annotation == null)
+				return null;
 			
 			//	create Annotation
 			AnnotationBase ab = this.addAnnotationAbsolute(annotation.getType(), annotation.getStartIndex(), annotation.size());
 			
 			//	copy attributes
-			if (ab != null) ab.copyAttributes(annotation);
+			if (ab != null)
+				ab.copyAttributes(annotation);
 			
 			//	return Annotation
 			return ab;
@@ -2363,8 +2560,10 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 			return ab;
 		}
 		AnnotationBase addAnnotationAbsolute(String type, int startIndex, int size) {
+			
 			//	check parameters
-			if ((startIndex < 0) || (size < 1)) return null;
+			if ((startIndex < 0) || (size < 1))
+				return null;
 			
 			//	create Annotation
 			AnnotationBase ab = new AnnotationBase(type, (startIndex + this.absoluteStartIndex), size);
@@ -2374,7 +2573,8 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 			return ab;
 		}
 		AnnotationBase removeAnnotation(Annotation annotation) {
-			return annotations.removeAnnotation(this.absoluteStartIndex, annotation);
+//			return annotations.removeAnnotation(this.absoluteStartIndex, annotation);
+			return annotations.removeAnnotation(annotation);
 		}
 		TokenSequence removeTokens(Annotation annotation) {
 			modificationSource = this;
@@ -2390,371 +2590,918 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 			if (c != 0)
 				return c;
 //			c = annotationNestingOrder.getNestingOrder(this.type, ab.type);
-			c = typeNestingOrder.compare(this.type, ab.type);
-			if (c != 0)
-				return c;
+			if (!this.type.equals(ab.type)) {
+				c = typeNestingOrder.compare(this.type, ab.type);
+				if (c != 0)
+					return c;
+			}
 //			return ((int) (this.timestamp - ab.timestamp));
 			return ((int) (this.createOrderNumber - ab.createOrderNumber));
 		}
 	}
+	private Comparator annotationBaseOrder = new Comparator() {
+		public int compare(Object obj1, Object obj2) {
+			AnnotationBase ab1 = ((AnnotationBase) obj1);
+			AnnotationBase ab2 = ((AnnotationBase) obj2);
+			return ab1.compareTo(ab2);
+		}
+	};
 	
-	/**	the storage for Annotations
-	 */
-	private class AnnotationStore {
+	QueriableAnnotation[] wrapAnnotationBasesQueriable(AnnotationBase[] abs, QueriableAnnotation base) {
+		QueriableAnnotation qas[] = new QueriableAnnotation[abs.length];
+		for (int a = 0; a < abs.length; a++)
+			qas[a] = new QueriableAnnotationView(abs[a], base);
+		Arrays.sort(qas, nestingOrder);
+		return qas;
+	}
+	
+	MutableAnnotation[] wrapAnnotationBasesMutable(AnnotationBase[] abs, MutableAnnotation base) {
+		MutableAnnotation mas[] = new MutableAnnotation[abs.length];
+		for (int a = 0; a < abs.length; a++)
+			mas[a] = new MutableAnnotationView(abs[a], base);
+		Arrays.sort(mas, nestingOrder);
+		return mas;
+	}
+	
+//	private class AnnotationList {
+//		private ArrayList annotations = new ArrayList();
+//		private HashSet removed = new HashSet();
+//		private int modCount = 0;
+//		private int addCount = 0;
+//		private int cleanAddCount = 0;
+//		private int typeModCount = 0;
+//		private int cleanTypeModCount = 0;
+//		private int cleanOrderModCount = orderModCount;
+//		private final String type;
+//		AnnotationList(String type) {
+//			this.type = type;
+//		}
+//		void addAnnotation(AnnotationBase ab) {
+//			if (ab == null)
+//				return;
+//			this.removed.remove(ab);
+//			this.annotations.add(ab);
+//			this.modCount++;
+//			this.addCount++;
+//		}
+//		void removeAnnotation(AnnotationBase ab) {
+//			if (ab == null)
+//				return;
+//			this.removed.add(ab);
+//			this.modCount++;
+//		}
+//		AnnotationBase getAnnotation(int index) {
+//			this.ensureSorted();
+//			return ((AnnotationBase) this.annotations.get(index));
+//		}
+//		boolean isEmpty() {
+//			return (this.annotations.isEmpty() || this.removed.containsAll(this.annotations));
+//		}
+//		int size() {
+//			this.ensureClean();
+//			return this.annotations.size();
+//		}
+//		AnnotationBase[] getAnnotations() {
+//			this.ensureSorted();
+//			return ((AnnotationBase[]) this.annotations.toArray(new AnnotationBase[this.annotations.size()]));
+//		}
+//		AnnotationBase[] getAnnotationsIn(AnnotationBase base) {
+//			
+//			//	check cache first
+//			AnnotationCacheEntry annots = ((AnnotationCacheEntry) base.subAnnotationListsByType.get(this.type));
+//			if ((annots != null) && annots.isValid(this))
+//				return annots.annotations;
+//			
+//			//	make sure we're good to go
+//			this.ensureSorted();
+//			
+//			//	binary search first annotation
+//			int left = 0;
+//			int right = this.annotations.size();
+//			
+//			//	narrow staring point with binary search down to a 2 interval
+//			int start = -1;
+//			for (int c; (start == -1) && ((right - left) > 2);) {
+//				int middle = ((left + right) / 2);
+//				
+//				//	start linear search if interval down to 4
+//				if ((right - left) < 4)
+//					c = 0;
+//				else c = (((AnnotationBase) this.annotations.get(middle)).absoluteStartIndex - base.absoluteStartIndex);
+//				
+//				if (c < 0)
+//					left = middle; // starting point is right of middle
+//				else if (c == 0) { // start of Annotation at middle is equal to base start of base, scan leftward for others at same start
+//					start = middle;
+//					while ((start != 0) && (((AnnotationBase) this.annotations.get(start)).absoluteStartIndex == base.absoluteStartIndex))
+//						start --; // count down to 0 at most
+//				}
+//				else right = middle;  // starting point is left of middle
+//			}
+//			
+//			//	ensure valid index
+//			start = Math.max(start, 0);
+//			
+//			//	move right to exact staring point
+//			while ((start < this.annotations.size()) && (((AnnotationBase) this.annotations.get(start)).absoluteStartIndex < base.absoluteStartIndex))
+//				start++;
+//			
+//			int baseEndIndex = base.getEndIndex();
+//			ArrayList annotList = new ArrayList();
+//			for (int a = start; a < this.annotations.size(); a++) {
+//				AnnotationBase ab = ((AnnotationBase) this.annotations.get(a));
+//				if ((base.absoluteStartIndex <= ab.absoluteStartIndex) && (ab.getEndIndex() <= baseEndIndex))
+//					annotList.add(ab);
+//				if (baseEndIndex <= ab.absoluteStartIndex)
+//					break;
+//			}
+//			annots = new AnnotationCacheEntry(((AnnotationBase[]) annotList.toArray(new AnnotationBase[annotList.size()])), this);
+//			base.subAnnotationListsByType.put(this.type, annots);
+//			return annots.annotations;
+//		}
+//		void cleanup() {
+//			for (int a = 0; a < this.annotations.size(); a++) {
+//				AnnotationBase ab = ((AnnotationBase) this.annotations.get(a));
+//				if (ab.size <= 0) {
+//					this.removed.add(ab);
+//					this.modCount++;
+//					if (AnnotationBase.DEBUG_CHANGE || ab.printDebugInfo())
+//						System.out.println("REMOVED: " + ab.type + " at " + ab.absoluteStartIndex + " sized " + ab.size);
+//				}
+//			}
+//			this.ensureClean();
+//		}
+//		void clear() {
+//			this.annotations.clear();
+//			this.removed.clear();
+//			this.modCount++;
+//		}
+//		void annotationTypeChanged() {
+//			this.typeModCount++;
+//		}
+//		private void ensureSorted() {
+//			this.ensureClean();
+//			if ((this.cleanAddCount == this.addCount) && (this.cleanTypeModCount == this.typeModCount) && (this.cleanOrderModCount == orderModCount))
+//				return;
+//			/* TODOnot if order and types unmodified, we can even save sorting the whole list:
+//			 * - sort only added annotations ...
+//			 * - ... and then merge them into main list in single pass
+//			 * ==> but then, TimSort already does pretty much that ... */
+//			Collections.sort(this.annotations, annotationBaseOrder);
+//			this.cleanAddCount = this.addCount;
+//			this.cleanTypeModCount = this.typeModCount;
+//			this.cleanOrderModCount = orderModCount;
+//		}
+//		private void ensureClean() {
+//			if (this.removed.isEmpty())
+//				return;
+//			for (int a = (this.annotations.size()-1); a >= 0; a--) {
+//				if (this.removed.contains(this.annotations.get(a)))
+//					this.annotations.remove(a);
+//			}
+//			this.removed.clear();
+//		}
+//	}
+	
+	private static class CacheCleaningTrigger {
+		private AnnotationList annotList;
+		CacheCleaningTrigger(AnnotationList annotList) {
+			this.annotList = annotList;
+		}
+		protected void finalize() throws Throwable {
+			this.annotList.cleanCaches();
+		}
+	}
+	private static class CacheClearingTrigger {
+		private AnnotationList annotList;
+		CacheClearingTrigger(AnnotationList annotList) {
+			this.annotList = annotList;
+		}
+		protected void finalize() throws Throwable {
+			this.annotList.clearCaches();
+		}
+	}
+	
+	private class AnnotationList {
+		/* Handling our own array saves lots of method calls to ArrayList,
+		 * enables more efficient single-pass cleanup (without shifting the
+		 * array by one for each removed element), and and saves allocating
+		 * many new arrays (mainly for sorting, as Collections.sort() uses
+		 * toArray() internally). */
+		private AnnotationBase[] annots = new AnnotationBase[16];
+		private int annotCount = 0;
+		private HashSet removed = new HashSet();
+		private int modCount = 0;
+		private int addCount = 0;
+		private int cleanAddCount = 0;
+		private int typeModCount = 0;
+		private int cleanTypeModCount = 0;
+		private int cleanOrderModCount = orderModCount;
+		private final String type;
 		
-		private ArrayList annotations = new ArrayList();
-		//	TODO add annotation type specific index lists
-		//	TODO sort only when using annotation list (getting or removing annotations) after one or more modifications additions
-		//	TODO simply keep hash set of removed annotations in each index list ...
-		//	TODO ... and clean up on next access (in single pass) before sorting
-		//	TODO depend sort strategy on number of modifications:
-		//	- few modifications use bubble sort
-		//	- use Collections.sort() otherwise
-		private HashSet annotationIDs = new HashSet();
+		private int maxAnnotSize = 0;
+		private SoftReference cacheCleaningTrigger;
+		private SoftReference cacheClearingTrigger;
 		
-		/**	store an Annotation
-		 * @param	ab	the Annotation to be stored
-		 */
-		synchronized void storeAnnotation(AnnotationBase ab) {
-			
-			//	do not insert an Annotation twice
-			if (this.containsAnnotation(ab))
+		AnnotationList(String type) {
+			this.type = type;
+			this.cacheCleaningTrigger = new SoftReference(new CacheCleaningTrigger(this));
+			this.cacheClearingTrigger = new SoftReference(new CacheClearingTrigger(this));
+		}
+		void addAnnotation(AnnotationBase ab) {
+			if (ab == null)
 				return;
-			
-			//	TODO increase mod counter
-			
-			//	TODO update type keeping counting set
-			
-			//	TODO also add to annotation type specific index lists
-			
-			//	add Annotation to content index
-			this.annotationIDs.add(ab.annotationId);
-			
-			//	start searching insertion point at end points
-			int left = 0;
-			int right = this.annotations.size();
-			
-			//	catch special cases (head or tail insert)
-			if (this.annotations.size() != 0) {
-				
-				//	larger than largest Annotation contained so far (check first, in order to save time when adding Annotations in ascending order, which happens more often than in descending order)
-				if (((AnnotationBase) this.annotations.get(right - 1)).compareTo(ab) <= 0) {
-					this.annotations.add(right, ab);
-					return;
-				}
-				
-				//	smaller than smallest annotation contained so far
-				else if (((AnnotationBase) this.annotations.get(0)).compareTo(ab) > 0) {
-					this.annotations.add(0, ab);
-					return;
-				}
+			this.removed.remove(ab);
+			if (this.annotCount == this.annots.length) {
+				AnnotationBase[] annots = new AnnotationBase[this.annots.length * 2];
+				System.arraycopy(this.annots, 0, annots, 0, this.annots.length);
+				this.annots = annots;
 			}
-			
-			//	narrow insertion point with binary search down to a 4 interval
-			int c = -1;
-			int middle;
-			while ((right - left) > 4) {
-				middle = ((left + right) / 2);
-				c = ((AnnotationBase) this.annotations.get(middle)).compareTo(ab);
-				if (c < 0)
-					left = middle; // insertion right is left of middle
-				else if (c == 0) { // Annotation at middle is equal to inserted Annotation, search insertion point rightward to maintain insertion order
-					int lastC;
-					for (int i = middle; i < right; i++) {
-						lastC = c;
-						c = ((AnnotationBase) this.annotations.get(i)).compareTo(ab);
-						if (lastC <= 0 && c > 0) {
-							this.annotations.add(i, ab);
-							return;
-						}
-					}
-					this.annotations.add(right, ab);
-					return;
-				}
-				else right = middle;  // insertion point is left of middle
-			}
-			
-			//	insert with linear search in order to avoid special case treatments in binary search
-			int lastC;
-			for (int i = left; i < right; i++) {
-				lastC = c;
-				c = ((AnnotationBase) this.annotations.get(i)).compareTo(ab);
-				if (lastC <= 0 && c > 0) {
-					this.annotations.add(i, ab);
-					return;
-				}
-			}
-			this.annotations.add(right, ab);
+			this.annots[this.annotCount++] = ab;
+			if (this.maxAnnotSize < ab.size)
+				this.maxAnnotSize = ab.size;
+			this.modCount++;
+			this.addCount++;
+			this.cacheClearingTrigger.get(); // touch clearing trigger, so cleaning trigger gets reclaimed first
 		}
-		
-		/**	retrieve all Annotations of a particular type contained in this AnnotationStore
-		 * @param	type	the type of the desired Annotations (specifying null will return all Annotations, regardless of their type)
-		 * @return all Annotations of the specified type contained in this AnnotationStore packed in an array
-		 */
-		AnnotationBase[] getAnnotations(String type) {
-			ArrayList list = new ArrayList();
-			AnnotationBase annot;
-			//	TODO use annotation type specific index lists
-			for (int a = 0; a < this.annotations.size(); a++) {
-				annot = ((AnnotationBase) this.annotations.get(a));
-				if ((type == null) || type.equals(annot.getType()))
-					list.add(annot);
-			}
-			return ((AnnotationBase[]) list.toArray(new AnnotationBase[list.size()]));
+		void removeAnnotation(AnnotationBase ab) {
+			if (ab == null)
+				return;
+			this.removed.add(ab);
+			this.modCount++;
+			this.cacheClearingTrigger.get(); // touch clearing trigger, so cleaning trigger gets reclaimed first
 		}
-		
-		/**	retrieve all Annotations of a particular type contained in this AnnotationStore that lay inside a given range
-		 * @param	type		the type of the desired Annotations (specifying null will return all Annotations, regardless of their type)
-		 * @param	absoluteStartIndex	the start index of the range
-		 * @param	size		the size of the range
-		 * @return all Annotations of the specified type contained in this AnnotationStore that lay within the specified range, packed in an array
-		 */
-		AnnotationBase[] getAnnotations(AnnotationBase base, String type) {
-			int baseAbsoluteStartIndex = base.getAbsoluteStartIndex();
-			int start = -1;
+		AnnotationBase getAnnotation(int index) {
+			this.ensureSorted();
+			return this.annots[index];
+		}
+		boolean isEmpty() {
+			if (this.annotCount == 0)
+				return true;
+			for (int a = 0; a < this.annotCount; a++)
+				if (!this.removed.contains(this.annots[a]))
+					return false;
+			return true;
+		}
+		int size() {
+			this.ensureClean();
+			return this.annotCount;
+		}
+		AnnotationBase[] getAnnotations() {
+			this.ensureSorted();
+			return Arrays.copyOfRange(this.annots, 0, this.annotCount);
+		}
+		AnnotationBase[] getAnnotations(int maxAbsoluteStartIndex, int minAbsoluteEndIndex) {
+			//	no use caching ranges, way too little chance of cache hits
+			int minAbsoluteStartIndex = Math.max(0, (minAbsoluteEndIndex - this.maxAnnotSize));
+			int maxAbsoluteEndIndex = Math.min(GamtaDocument.this.size(), (maxAbsoluteStartIndex + this.maxAnnotSize));
+			return this.getAnnotationsIn(minAbsoluteStartIndex, maxAbsoluteStartIndex, minAbsoluteEndIndex, maxAbsoluteEndIndex);
+		}
+		AnnotationBase[] getAnnotationsIn(AnnotationBase base) {
+			AnnotationCacheEntry annots = base.subAnnotationsByType.lookup(this.type);
+			if ((annots == null) || annots.isInvalid(this)) /* cache miss, or entry stale */ {
+				AnnotationBase[] abs = this.getAnnotationsIn(base.absoluteStartIndex, (base.getEndIndex()-1), (base.absoluteStartIndex+1), base.getEndIndex());
+				annots = new AnnotationCacheEntry(abs, this);
+				base.subAnnotationsByType.cache(this.type, annots);
+			}
+			return annots.annotations;
+		}
+		AnnotationBase[] getAnnotationsIn(AnnotationBase base, int maxRelativeStartIndex, int minRelativeEndIndex) {
 			
-			//	binary search first annotation, start searching insertion point at end points
+			//	get all contained annotations (no use caching ranges, way too little chance of cache hits)
+			AnnotationBase[] allAnnots = this.getAnnotationsIn(base);
+			
+			//	make indexes absolute
+			int maxAbsoluteStartIndex = (base.absoluteStartIndex + maxRelativeStartIndex);
+			int minAbsoluteEndIndex = (base.absoluteStartIndex + minRelativeEndIndex);
+			
+			//	get qualifying annotations
+			ArrayList annotList = new ArrayList();
+			for (int a = 0; a < allAnnots.length; a++) {
+				if (maxAbsoluteStartIndex < allAnnots[a].absoluteStartIndex)
+					break;
+				if (minAbsoluteEndIndex <= allAnnots[a].getEndIndex())
+					annotList.add(this.annots[a]);
+			}
+			return ((AnnotationBase[]) annotList.toArray(new AnnotationBase[annotList.size()]));
+		}
+		private AnnotationBase[] getAnnotationsIn(int minAbsoluteStartIndex, int maxAbsoluteStartIndex, int minAbsoluteEndIndex, int maxAbsoluteEndIndex) {
+			
+			//	make sure we're good to go
+			this.ensureSorted();
+			
+			//	binary search first annotation
 			int left = 0;
-			int right = this.annotations.size();
-			//	TODO use annotation type specific index lists
+			int right = this.annotCount;
 			
 			//	narrow staring point with binary search down to a 2 interval
-			int c = -1;
-			int middle;
-			while ((start == -1) && ((right - left) > 2)) {
-				middle = ((left + right) / 2);
-				
-				//	start linear search if interval down to 4
-				if ((right - left) < 4) c = 0;
-				else c = (((AnnotationBase) this.annotations.get(middle)).absoluteStartIndex - baseAbsoluteStartIndex);
-				
-				if (c < 0) left = middle; // starting point is right of middle
-				else if (c == 0) { // start of Annotation at middle is equal to base Annotation, search insertion point leftward not to miss an Annotation
-					start = middle;
-					while ((start != 0) && (((AnnotationBase) this.annotations.get(start)).absoluteStartIndex == baseAbsoluteStartIndex))
-						start --; // count down to 0 at most
-				}
-				else right = middle;  // starting point is left of middle
-			}
-			
-			//	ensure valid index
-			start = Math.max(start, 0);
-			
-			//	move right to exact staring point
-			while ((start < this.annotations.size()) && (((AnnotationBase) this.annotations.get(start)).absoluteStartIndex < baseAbsoluteStartIndex))
-				start++;
-			
-			int absoluteStartIndexLimit = base.getAbsoluteStartIndex() + base.size();
-			ArrayList annotationList = new ArrayList();
-			AnnotationBase ab;
-			for (int a = start; a < this.annotations.size(); a++) {
-				ab = ((AnnotationBase) this.annotations.get(a));
-				if (((type == null) || type.equals(ab.type)) && (ab.absoluteStartIndex >= baseAbsoluteStartIndex) && (ab.getEndIndex() <= absoluteStartIndexLimit))
-					annotationList.add(ab);
-				if (ab.absoluteStartIndex >= absoluteStartIndexLimit)
-					return ((AnnotationBase[]) annotationList.toArray(new AnnotationBase[annotationList.size()]));
-			}
-			return ((AnnotationBase[]) annotationList.toArray(new AnnotationBase[annotationList.size()]));
-		}
-		
-		/**	retrieve all Annotations contained in this AnnotationStore that lay inside a given range
-		 * @param	absoluteStartIndex	the start index of the range
-		 * @param	size		the size of the range
-		 * @return all Annotations contained in this AnnotationStore that lay inside the specified range, packed in an array
-		 */
-		String[] getAnnotationTypes() {
-			//	TODO use counting set for this !!!
-			StringVector types = new StringVector();
-			for (int a = 0; a < this.annotations.size(); a++)
-				types.addElementIgnoreDuplicates(((AnnotationBase) this.annotations.get(a)).getType());
-			types.sortLexicographically(false, false);
-			return types.toStringArray();
-		}
-		
-		/**	retrieve all Annotations contained in this AnnotationStore that lay inside a given range
-		 * @param	absoluteStartIndex	the start index of the range
-		 * @param	size		the size of the range
-		 * @return all Annotations contained in this AnnotationStore that lay inside the specified range, packed in an array
-		 */
-		String[] getAnnotationTypes(AnnotationBase base) {
-			int baseAbsoluteStartIndex = base.getAbsoluteStartIndex();
 			int start = -1;
-			
-			//	binary search first annotation, start searching insertion point at end points
-			int left = 0;
-			int right = this.annotations.size();
-			
-			//	narrow staring point with binary search down to a 2 interval
-			int c = -1;
-			int middle;
-			while ((start == -1) && ((right - left) > 2)) {
-				middle = ((left + right) / 2);
-				
-				//	start linear search if interval down to 4
-				if ((right - left) < 4) c = 0;
-				else c = (((AnnotationBase) this.annotations.get(middle)).absoluteStartIndex - baseAbsoluteStartIndex);
-				
-				if (c < 0) left = middle; // starting point is right of middle
-				else if (c == 0) { // start of Annotation at middle is equal to base Annotation, search insertion point leftward not to miss an Annotation
-					start = middle;
-					while ((start != 0) && (((AnnotationBase) this.annotations.get(start)).absoluteStartIndex == baseAbsoluteStartIndex))
-						start --; // count down to 0 at most
-				} else right = middle;  // starting point is left of middle
-			}
-			
-			//	ensure valid index
-			start = Math.max(start, 0);
-			
-			//	move right to exact staring point
-			while ((start < this.annotations.size()) && (((AnnotationBase) this.annotations.get(start)).absoluteStartIndex < baseAbsoluteStartIndex))
-				start++;
-			
-			//	collect types
-			int absoluteStartIndexLimit = base.getAbsoluteStartIndex() + base.size();
-			StringVector types = new StringVector();
-			AnnotationBase ab;
-			for (int a = start; a < this.annotations.size(); a++) {
-				ab = ((AnnotationBase) this.annotations.get(a));
-				if ((ab.absoluteStartIndex >= baseAbsoluteStartIndex) && (ab.getEndIndex() <= absoluteStartIndexLimit)) types.addElementIgnoreDuplicates(ab.type);
-				if (ab.absoluteStartIndex >= absoluteStartIndexLimit) return types.toStringArray();
-			}
-			return types.toStringArray();
-		}
-		
-		/**	remove an Annotation from this AnnotationStore
-		 * @param	annotation	the Annotation to be removed
-		 * @return the Annotation that was just removed, or null, if the Annotation was not contained in this AnnotationStore
-		 */
-		AnnotationBase removeAnnotation(int baseStartIndex, Annotation annotation) {
-			//	TODO also remove from annotation type specific index lists
-			
-			//	find Annotation
-			AnnotationBase ab = null;
-			
-			int absoluteStartIndex = baseStartIndex + annotation.getStartIndex(); // start index of base to remove
-			int annotationSize = annotation.size();
-			int start = -1;
-			
-			//	binary search first annotation, start searching insertion point at end points
-			int left = 0;
-			int right = this.annotations.size();
-			
-			//	narrow staring point with binary search down to a 2 interval
-			int c = -1;
-			int middle;
-			while ((start == -1) && ((right - left) > 2)) {
-				middle = ((left + right) / 2);
+			for (int c; (start == -1) && ((right - left) > 2);) {
+				int middle = ((left + right) / 2);
 				
 				//	start linear search if interval down to 4
 				if ((right - left) < 4)
 					c = 0;
-				else c = (((AnnotationBase) this.annotations.get(middle)).absoluteStartIndex - absoluteStartIndex);
+				else c = (this.annots[middle].absoluteStartIndex - minAbsoluteStartIndex);
 				
 				if (c < 0)
 					left = middle; // starting point is right of middle
-				else if (c == 0) { // start of Annotation at middle is equal to base Annotation, search insertion point leftward not to miss an Annotation
+				else if (c == 0) { // start of Annotation at middle is equal to base start of base, scan leftward for others at same start
 					start = middle;
-					while ((start != 0) && (((AnnotationBase) this.annotations.get(start)).absoluteStartIndex == absoluteStartIndex))
+					while ((start != 0) && (minAbsoluteStartIndex <= this.annots[start].absoluteStartIndex))
 						start --; // count down to 0 at most
 				}
-				else right = middle;  // starting point is left of middle
+				else right = middle; // starting point is left of middle
 			}
-			
-			//	ensure valid index
-			start = Math.min(start, (this.annotations.size() - 1));
-			
-			//	move left to exact staring point
-			while ((start > -1) && (((AnnotationBase) this.annotations.get(start)).absoluteStartIndex >= absoluteStartIndex))
-				start--;
 			
 			//	ensure valid index
 			start = Math.max(start, 0);
 			
-			//	move rigth to exact staring point
-			while ((start < this.annotations.size()) && (((AnnotationBase) this.annotations.get(start)).absoluteStartIndex < absoluteStartIndex)) start++;
+			//	move right to exact staring point
+			while ((start < this.annotCount) && (this.annots[start].absoluteStartIndex < minAbsoluteStartIndex))
+				start++;
 			
-			//	find Annotation
-			for (int a = start; a < this.annotations.size(); a++) {
-				ab = ((AnnotationBase) this.annotations.get(a));
-				
-				//	annotation not found
-				if (ab.absoluteStartIndex > absoluteStartIndex)
-					return null;
-				
-				//	matching start index & size
-				else if ((ab.absoluteStartIndex == absoluteStartIndex) && (ab.size == annotationSize)) {
-					
-					//	ID match, do not attempt type / attribute match
-					if (this.annotationIDs.contains(annotation.getAnnotationID())) {
-						
-						//	matching IDs
-						if (ab.annotationId.equals(annotation.getAnnotationID())) {
-							this.annotations.remove(a);
-							this.annotationIDs.remove(ab.annotationId);
-							return ab;
-						}
-					}
-					
-					//	type / attribute match
-					else if (ab.type.equals(annotation.getType()) && AttributeUtils.hasEqualAttributes(ab, annotation)) {
-						this.annotations.remove(a);
-						this.annotationIDs.remove(ab.annotationId);
-						return ab;
-					}
+			//	move left to exact staring point
+			while ((start != 0) && (minAbsoluteStartIndex <= this.annots[start-1].absoluteStartIndex))
+				start--;
+			
+			//	collect and return matching annotations
+			ArrayList annotList = new ArrayList();
+			for (int a = start; a < this.annotCount; a++) {
+				if (maxAbsoluteStartIndex < this.annots[a].absoluteStartIndex) // to right of last potential match
+					break;
+				if ((minAbsoluteEndIndex <= this.annots[a].getEndIndex()) && (this.annots[a].getEndIndex() <= maxAbsoluteEndIndex)) // end index in range, we have a match
+					annotList.add(this.annots[a]);
+			}
+			return ((AnnotationBase[]) annotList.toArray(new AnnotationBase[annotList.size()]));
+		}
+		void cleanup() {
+			for (int a = 0; a < this.annotCount; a++)
+				if (this.annots[a].size <= 0) {
+					this.removed.add(this.annots[a]);
+					this.modCount++;
+					if (AnnotationBase.DEBUG_CHANGE || this.annots[a].printDebugInfo())
+						System.out.println("REMOVED: " + this.annots[a].type + " at " + this.annots[a].absoluteStartIndex + " sized " + this.annots[a].size);
+				}
+			this.ensureClean();
+		}
+		void clear() {
+			Arrays.fill(this.annots, 0, this.annotCount, null); // free up references to help GC
+			this.annotCount = 0;
+			this.removed.clear();
+			this.modCount++;
+		}
+		void annotationTypeChanged() {
+			this.typeModCount++;
+		}
+		private void ensureSorted() {
+			this.ensureClean();
+			if ((this.cleanAddCount == this.addCount) && (this.cleanTypeModCount == this.typeModCount) && (this.cleanOrderModCount == orderModCount))
+				return;
+			/* TODOnot if order and types unmodified, we can even save sorting the whole list:
+			 * - sort only added annotations ...
+			 * - ... and then merge them into main list in single pass
+			 * ==> but then, TimSort already does pretty much that ... */
+			Arrays.sort(this.annots, 0, this.annotCount, annotationBaseOrder);
+			this.cleanAddCount = this.addCount;
+			this.cleanTypeModCount = this.typeModCount;
+			this.cleanOrderModCount = orderModCount;
+		}
+		private void ensureClean() {
+			this.cacheClearingTrigger.get(); // touch clearing trigger, so cleaning trigger gets reclaimed first
+			if (this.removed.isEmpty())
+				return;
+			int removed = 0;
+			int maxAnnotSize = 0;
+			for (int a = 0; a < this.annotCount; a++) {
+				if (this.removed.contains(this.annots[a]))
+					removed++;
+				else {
+					this.annots[a].subAnnotationsByType.remove(this.type); // cache entries are invalid now
+					if (maxAnnotSize < this.annots[a].size)
+						maxAnnotSize = this.annots[a].size;
+					if (removed != 0)
+						this.annots[a - removed] = this.annots[a];
 				}
 			}
+			Arrays.fill(this.annots, (this.annotCount - removed), this.annotCount, null); // free up references to help GC
+			this.annotCount -= removed;
+			this.maxAnnotSize = maxAnnotSize;
+			this.removed.clear();
+		}
+		void cleanCaches() {
+			for (int a = 0; a < this.annotCount; a++)
+				this.annots[a].cleanCaches();
+			this.cacheCleaningTrigger = new SoftReference(new CacheCleaningTrigger(this));
+		}
+		void clearCaches() {
+			for (int a = 0; a < this.annotCount; a++)
+				this.annots[a].clearCaches();
+			this.cacheClearingTrigger = new SoftReference(new CacheClearingTrigger(this));
+		}
+	}
+	
+	private static class AnnotationCache extends LinkedHashMap {
+		private int maxCapacity;
+		AnnotationCache(int maxCapacity) {
+			super(8, 0.9f, true);
+			this.maxCapacity = maxCapacity;
+		}
+		AnnotationCacheEntry lookup(String key) {
+			return ((AnnotationCacheEntry) this.get(key));
+		}
+		void cache(String key, AnnotationCacheEntry entry) {
+			this.put(key, entry);
+		}
+		protected boolean removeEldestEntry(Entry eldest) {
+			return (this.maxCapacity < this.size());
+		}
+	}
+	
+	private static class AnnotationCacheEntry {
+		final AnnotationBase[] annotations;
+		private final AnnotationList parent;
+		private final int createModCount;
+		AnnotationCacheEntry(AnnotationBase[] annotations, AnnotationList parent) {
+			this.annotations = annotations;
+			this.parent = parent;
+			this.createModCount = this.parent.modCount;
+		}
+		boolean isInvalid(AnnotationList parent) {
+			return ((parent != this.parent) || (this.createModCount != this.parent.modCount));
+		}
+		boolean isInvalid() {
+			return (this.createModCount != this.parent.modCount);
+		}
+	}
+	
+	private static final AnnotationBase[] emptyAnnotationBaseArray = {};
+	private class AnnotationStore {
+		private AnnotationList annotations = new AnnotationList(null);
+		private HashMap annotationsByType = new HashMap();
+		private HashMap annotationsByID = new HashMap();
+		
+		private AnnotationList getAnnotationList(String type, boolean create) {
+			if (type == null)
+				return this.annotations;
+			AnnotationList al = ((AnnotationList) this.annotationsByType.get(type));
+			if ((al == null) && create) {
+				al = new AnnotationList(type);
+				this.annotationsByType.put(type, al);
+			}
+			return al;
+		}
+		
+		synchronized void storeAnnotation(AnnotationBase ab) {
+			if (this.annotationsByID.containsKey(ab.annotationId))
+				return; // do not insert an Annotation twice
+			this.annotations.addAnnotation(ab);
+			this.getAnnotationList(ab.type, true).addAnnotation(ab);
+			this.annotationsByID.put(ab.annotationId, ab);
+		}
+		
+		synchronized AnnotationBase removeAnnotation(Annotation annot) {
+			AnnotationBase ab;
+			if (annot instanceof QueriableAnnotationView)
+				ab = ((QueriableAnnotationView) annot).data;
+			else return null;
 			
-			//	Annotation not found
+			this.annotations.removeAnnotation(ab);
+			AnnotationList typeAnnots = this.getAnnotationList(ab.type, false);
+			if (typeAnnots != null) {
+				typeAnnots.removeAnnotation(ab);
+				if (typeAnnots.isEmpty())
+					this.annotationsByType.remove(ab.type);
+			}
+			this.annotationsByID.remove(ab.annotationId);
+			
 			return ab;
 		}
 		
-		/**	check if this store contains an Annotation
-		 * @param	ab	the Annotation to search for
-		 * @return true if and only if this AnnotationStore contains the specified Annotation
-		 */
-		boolean containsAnnotation(AnnotationBase ab) {
-			return ((ab != null) && this.annotationIDs.contains(ab.annotationId));
+		void annotationIdChanged(AnnotationBase ab, String oldId) {
+			this.annotationsByID.remove(oldId);
+			this.annotationsByID.put(ab.annotationId, ab);
 		}
 		
-		/* (non-Javadoc)
-		 * @see de.gamta.TokenSequenceListener#tokenSequenceChanged(de.gamta.MutableTokenSequence.TokenSequenceEvent)
-		 */
+		void annotationTypeChanged(AnnotationBase ab, String oldType) {
+			AnnotationList oldTypeAnnots = this.getAnnotationList(oldType, false);
+			if (oldTypeAnnots != null)
+				oldTypeAnnots.removeAnnotation(ab);
+			this.getAnnotationList(ab.type, true).addAnnotation(ab);
+			this.annotations.annotationTypeChanged();
+		}
+		
+		AnnotationBase getAnnotation(String id) {
+			return ((AnnotationBase) this.annotationsByID.get(id));
+		}
+		
+		AnnotationBase[] getAnnotations(String type) {
+			AnnotationList al = this.getAnnotationList(type, false);
+			return ((al == null) ? emptyAnnotationBaseArray : al.getAnnotations());
+		}
+		
+		AnnotationBase[] getAnnotations(AnnotationBase base, String type) {
+			AnnotationList al = this.getAnnotationList(type, false);
+			return ((al == null) ? emptyAnnotationBaseArray : al.getAnnotationsIn(base));
+		}
+		
+		AnnotationBase[] getAnnotationsSpanning(String type, int startIndex, int endIndex) {
+			AnnotationList al = this.getAnnotationList(type, false);
+			return ((al == null) ? emptyAnnotationBaseArray : al.getAnnotations(startIndex, endIndex));
+		}
+		
+		AnnotationBase[] getAnnotationsSpanning(AnnotationBase base, String type, int startIndex, int endIndex) {
+			AnnotationList al = this.getAnnotationList(type, false);
+			return ((al == null) ? emptyAnnotationBaseArray : al.getAnnotationsIn(base, startIndex, endIndex));
+		}
+		
+		AnnotationBase[] getAnnotationsOverlapping(String type, int startIndex, int endIndex) {
+			AnnotationList al = this.getAnnotationList(type, false);
+			return ((al == null) ? emptyAnnotationBaseArray : al.getAnnotations((endIndex - 1), (startIndex + 1)));
+		}
+		
+		AnnotationBase[] getAnnotationsOverlapping(AnnotationBase base, String type, int startIndex, int endIndex) {
+			AnnotationList al = this.getAnnotationList(type, false);
+			return ((al == null) ? emptyAnnotationBaseArray : al.getAnnotationsIn(base, (endIndex - 1), (startIndex + 1)));
+		}
+		
+		String[] getAnnotationTypes() {
+			TreeSet annotTypes = new TreeSet(this.annotationsByType.keySet());
+			return ((String[]) annotTypes.toArray(new String[annotTypes.size()]));
+		}
+		
+		String[] getAnnotationTypes(AnnotationBase base) {
+			AnnotationBase[] annots = this.annotations.getAnnotationsIn(base);
+			TreeSet annotTypes = new TreeSet();
+			for (int a = 0; a < annots.length; a++)
+				annotTypes.add(annots[a].type);
+			return ((String[]) annotTypes.toArray(new String[annotTypes.size()]));
+		}
+		
 		synchronized void tokenSequenceChanged(TokenSequenceEvent change) {
 			
 			//	prepare changes
 			for (int a = 0; (a < this.annotations.size()); a++)
-				((AnnotationBase) this.annotations.get(a)).tokenSequeceChanged(change);
+				this.annotations.getAnnotation(a).tokenSequeceChanged(change);
 			
 			//	commit changes
 			for (int a = 0; (a < this.annotations.size()); a++)
-				((AnnotationBase) this.annotations.get(a)).commitChange();
+				this.annotations.getAnnotation(a).commitChange();
 			
 			//	clean up
 			this.cleanup();
 		}
 		
-		/**	remove all empty Annotations from the store
-		 */
 		void cleanup() {
-			int a = 0;
-			while (a < this.annotations.size()) {
-				AnnotationBase ab = ((AnnotationBase) this.annotations.get(a));
-				if (ab.size() <= 0) {
-					//	TODO clear by-type index as well
-					this.annotations.remove(a);
-					if (AnnotationBase.DEBUG_CHANGE || ab.printDebugInfo())
-						System.out.println("REMOVED: " + ab.type + " at " + ab.absoluteStartIndex + " sized " + ab.size);
-				}
-				else a++;
-			}
+			this.annotations.cleanup();
+			for (Iterator atit = this.annotationsByType.keySet().iterator(); atit.hasNext();)
+				((AnnotationList) this.annotationsByType.get(atit.next())).cleanup();
 		}
 		
-		/**	delete all Annotations contained in this AnnotationStore
-		 */
 		void clear() {
-			//	TODO clear by-type index as well
 			this.annotations.clear();
-			this.annotationIDs.clear();
+			this.annotationsByType.clear();
+			this.annotationsByID.clear();
 		}
 	}
+//	/**	the storage for Annotations
+//	 */
+//	private class AnnotationStore {
+//		
+//		private ArrayList annotations = new ArrayList();
+//		private HashSet annotationIDs = new HashSet();
+//		
+//		/**	store an Annotation
+//		 * @param	ab	the Annotation to be stored
+//		 */
+//		synchronized void storeAnnotation(AnnotationBase ab) {
+//			
+//			//	do not insert an Annotation twice
+//			if (this.containsAnnotation(ab))
+//				return;
+//			
+//			//	add Annotation to content index
+//			this.annotationIDs.add(ab.annotationId);
+//			
+//			//	start searching insertion point at end points
+//			int left = 0;
+//			int right = this.annotations.size();
+//			
+//			//	catch special cases (head or tail insert)
+//			if (this.annotations.size() != 0) {
+//				
+//				//	larger than largest Annotation contained so far (check first, in order to save time when adding Annotations in ascending order, which happens more often than in descending order)
+//				if (((AnnotationBase) this.annotations.get(right - 1)).compareTo(ab) <= 0) {
+//					this.annotations.add(right, ab);
+//					return;
+//				}
+//				
+//				//	smaller than smallest annotation contained so far
+//				else if (((AnnotationBase) this.annotations.get(0)).compareTo(ab) > 0) {
+//					this.annotations.add(0, ab);
+//					return;
+//				}
+//			}
+//			
+//			//	narrow insertion point with binary search down to a 4 interval
+//			int c = -1;
+//			int middle;
+//			while ((right - left) > 4) {
+//				middle = ((left + right) / 2);
+//				c = ((AnnotationBase) this.annotations.get(middle)).compareTo(ab);
+//				if (c < 0)
+//					left = middle; // insertion right is left of middle
+//				else if (c == 0) { // Annotation at middle is equal to inserted Annotation, search insertion point rightward to maintain insertion order
+//					int lastC;
+//					for (int i = middle; i < right; i++) {
+//						lastC = c;
+//						c = ((AnnotationBase) this.annotations.get(i)).compareTo(ab);
+//						if (lastC <= 0 && c > 0) {
+//							this.annotations.add(i, ab);
+//							return;
+//						}
+//					}
+//					this.annotations.add(right, ab);
+//					return;
+//				}
+//				else right = middle;  // insertion point is left of middle
+//			}
+//			
+//			//	insert with linear search in order to avoid special case treatments in binary search
+//			int lastC;
+//			for (int i = left; i < right; i++) {
+//				lastC = c;
+//				c = ((AnnotationBase) this.annotations.get(i)).compareTo(ab);
+//				if (lastC <= 0 && c > 0) {
+//					this.annotations.add(i, ab);
+//					return;
+//				}
+//			}
+//			this.annotations.add(right, ab);
+//		}
+//		
+//		/**	retrieve all Annotations of a particular type contained in this AnnotationStore
+//		 * @param	type	the type of the desired Annotations (specifying null will return all Annotations, regardless of their type)
+//		 * @return all Annotations of the specified type contained in this AnnotationStore packed in an array
+//		 */
+//		AnnotationBase[] getAnnotations(String type) {
+//			ArrayList list = new ArrayList();
+//			AnnotationBase annot;
+//			for (int a = 0; a < this.annotations.size(); a++) {
+//				annot = ((AnnotationBase) this.annotations.get(a));
+//				if ((type == null) || type.equals(annot.getType()))
+//					list.add(annot);
+//			}
+//			return ((AnnotationBase[]) list.toArray(new AnnotationBase[list.size()]));
+//		}
+//		
+//		/**	retrieve all Annotations of a particular type contained in this AnnotationStore that lay inside a given range
+//		 * @param	type		the type of the desired Annotations (specifying null will return all Annotations, regardless of their type)
+//		 * @param	absoluteStartIndex	the start index of the range
+//		 * @param	size		the size of the range
+//		 * @return all Annotations of the specified type contained in this AnnotationStore that lay within the specified range, packed in an array
+//		 */
+//		AnnotationBase[] getAnnotations(AnnotationBase base, String type) {
+//			int baseAbsoluteStartIndex = base.getAbsoluteStartIndex();
+//			int start = -1;
+//			
+//			//	binary search first annotation, start searching insertion point at end points
+//			int left = 0;
+//			int right = this.annotations.size();
+//			
+//			//	narrow staring point with binary search down to a 2 interval
+//			int c = -1;
+//			int middle;
+//			while ((start == -1) && ((right - left) > 2)) {
+//				middle = ((left + right) / 2);
+//				
+//				//	start linear search if interval down to 4
+//				if ((right - left) < 4) c = 0;
+//				else c = (((AnnotationBase) this.annotations.get(middle)).absoluteStartIndex - baseAbsoluteStartIndex);
+//				
+//				if (c < 0) left = middle; // starting point is right of middle
+//				else if (c == 0) { // start of Annotation at middle is equal to base Annotation, search insertion point leftward not to miss an Annotation
+//					start = middle;
+//					while ((start != 0) && (((AnnotationBase) this.annotations.get(start)).absoluteStartIndex == baseAbsoluteStartIndex))
+//						start --; // count down to 0 at most
+//				}
+//				else right = middle;  // starting point is left of middle
+//			}
+//			
+//			//	ensure valid index
+//			start = Math.max(start, 0);
+//			
+//			//	move right to exact staring point
+//			while ((start < this.annotations.size()) && (((AnnotationBase) this.annotations.get(start)).absoluteStartIndex < baseAbsoluteStartIndex))
+//				start++;
+//			
+//			int absoluteStartIndexLimit = base.getAbsoluteStartIndex() + base.size();
+//			ArrayList annotationList = new ArrayList();
+//			AnnotationBase ab;
+//			for (int a = start; a < this.annotations.size(); a++) {
+//				ab = ((AnnotationBase) this.annotations.get(a));
+//				if (((type == null) || type.equals(ab.type)) && (ab.absoluteStartIndex >= baseAbsoluteStartIndex) && (ab.getEndIndex() <= absoluteStartIndexLimit))
+//					annotationList.add(ab);
+//				if (ab.absoluteStartIndex >= absoluteStartIndexLimit)
+//					return ((AnnotationBase[]) annotationList.toArray(new AnnotationBase[annotationList.size()]));
+//			}
+//			return ((AnnotationBase[]) annotationList.toArray(new AnnotationBase[annotationList.size()]));
+//		}
+//		
+//		/**	retrieve all Annotations contained in this AnnotationStore that lay inside a given range
+//		 * @param	absoluteStartIndex	the start index of the range
+//		 * @param	size		the size of the range
+//		 * @return all Annotations contained in this AnnotationStore that lay inside the specified range, packed in an array
+//		 */
+//		String[] getAnnotationTypes() {
+//			StringVector types = new StringVector();
+//			for (int a = 0; a < this.annotations.size(); a++)
+//				types.addElementIgnoreDuplicates(((AnnotationBase) this.annotations.get(a)).getType());
+//			types.sortLexicographically(false, false);
+//			return types.toStringArray();
+//		}
+//		
+//		/**	retrieve all Annotations contained in this AnnotationStore that lay inside a given range
+//		 * @param	absoluteStartIndex	the start index of the range
+//		 * @param	size		the size of the range
+//		 * @return all Annotations contained in this AnnotationStore that lay inside the specified range, packed in an array
+//		 */
+//		String[] getAnnotationTypes(AnnotationBase base) {
+//			int baseAbsoluteStartIndex = base.getAbsoluteStartIndex();
+//			int start = -1;
+//			
+//			//	binary search first annotation, start searching insertion point at end points
+//			int left = 0;
+//			int right = this.annotations.size();
+//			
+//			//	narrow staring point with binary search down to a 2 interval
+//			int c = -1;
+//			int middle;
+//			while ((start == -1) && ((right - left) > 2)) {
+//				middle = ((left + right) / 2);
+//				
+//				//	start linear search if interval down to 4
+//				if ((right - left) < 4) c = 0;
+//				else c = (((AnnotationBase) this.annotations.get(middle)).absoluteStartIndex - baseAbsoluteStartIndex);
+//				
+//				if (c < 0) left = middle; // starting point is right of middle
+//				else if (c == 0) { // start of Annotation at middle is equal to base Annotation, search insertion point leftward not to miss an Annotation
+//					start = middle;
+//					while ((start != 0) && (((AnnotationBase) this.annotations.get(start)).absoluteStartIndex == baseAbsoluteStartIndex))
+//						start --; // count down to 0 at most
+//				} else right = middle;  // starting point is left of middle
+//			}
+//			
+//			//	ensure valid index
+//			start = Math.max(start, 0);
+//			
+//			//	move right to exact staring point
+//			while ((start < this.annotations.size()) && (((AnnotationBase) this.annotations.get(start)).absoluteStartIndex < baseAbsoluteStartIndex))
+//				start++;
+//			
+//			//	collect types
+//			int absoluteStartIndexLimit = base.getAbsoluteStartIndex() + base.size();
+//			StringVector types = new StringVector();
+//			AnnotationBase ab;
+//			for (int a = start; a < this.annotations.size(); a++) {
+//				ab = ((AnnotationBase) this.annotations.get(a));
+//				if ((ab.absoluteStartIndex >= baseAbsoluteStartIndex) && (ab.getEndIndex() <= absoluteStartIndexLimit)) types.addElementIgnoreDuplicates(ab.type);
+//				if (ab.absoluteStartIndex >= absoluteStartIndexLimit) return types.toStringArray();
+//			}
+//			return types.toStringArray();
+//		}
+//		
+//		/**	remove an Annotation from this AnnotationStore
+//		 * @param	annotation	the Annotation to be removed
+//		 * @return the Annotation that was just removed, or null, if the Annotation was not contained in this AnnotationStore
+//		 */
+//		AnnotationBase removeAnnotation(int baseStartIndex, Annotation annotation) {
+//			
+//			//	find Annotation
+//			AnnotationBase ab = null;
+//			
+//			int absoluteStartIndex = baseStartIndex + annotation.getStartIndex(); // start index of base to remove
+//			int annotationSize = annotation.size();
+//			int start = -1;
+//			
+//			//	binary search first annotation, start searching insertion point at end points
+//			int left = 0;
+//			int right = this.annotations.size();
+//			
+//			//	narrow staring point with binary search down to a 2 interval
+//			int c = -1;
+//			int middle;
+//			while ((start == -1) && ((right - left) > 2)) {
+//				middle = ((left + right) / 2);
+//				
+//				//	start linear search if interval down to 4
+//				if ((right - left) < 4)
+//					c = 0;
+//				else c = (((AnnotationBase) this.annotations.get(middle)).absoluteStartIndex - absoluteStartIndex);
+//				
+//				if (c < 0)
+//					left = middle; // starting point is right of middle
+//				else if (c == 0) { // start of Annotation at middle is equal to base Annotation, search insertion point leftward not to miss an Annotation
+//					start = middle;
+//					while ((start != 0) && (((AnnotationBase) this.annotations.get(start)).absoluteStartIndex == absoluteStartIndex))
+//						start --; // count down to 0 at most
+//				}
+//				else right = middle;  // starting point is left of middle
+//			}
+//			
+//			//	ensure valid index
+//			start = Math.min(start, (this.annotations.size() - 1));
+//			
+//			//	move left to exact staring point
+//			while ((start > -1) && (((AnnotationBase) this.annotations.get(start)).absoluteStartIndex >= absoluteStartIndex))
+//				start--;
+//			
+//			//	ensure valid index
+//			start = Math.max(start, 0);
+//			
+//			//	move rigth to exact staring point
+//			while ((start < this.annotations.size()) && (((AnnotationBase) this.annotations.get(start)).absoluteStartIndex < absoluteStartIndex)) start++;
+//			
+//			//	find Annotation
+//			for (int a = start; a < this.annotations.size(); a++) {
+//				ab = ((AnnotationBase) this.annotations.get(a));
+//				
+//				//	annotation not found
+//				if (ab.absoluteStartIndex > absoluteStartIndex)
+//					return null;
+//				
+//				//	matching start index & size
+//				else if ((ab.absoluteStartIndex == absoluteStartIndex) && (ab.size == annotationSize)) {
+//					
+//					//	ID match, do not attempt type / attribute match
+//					if (this.annotationIDs.contains(annotation.getAnnotationID())) {
+//						
+//						//	matching IDs
+//						if (ab.annotationId.equals(annotation.getAnnotationID())) {
+//							this.annotations.remove(a);
+//							this.annotationIDs.remove(ab.annotationId);
+//							return ab;
+//						}
+//					}
+//					
+//					//	type / attribute match
+//					else if (ab.type.equals(annotation.getType()) && AttributeUtils.hasEqualAttributes(ab, annotation)) {
+//						this.annotations.remove(a);
+//						this.annotationIDs.remove(ab.annotationId);
+//						return ab;
+//					}
+//				}
+//			}
+//			
+//			//	Annotation not found
+//			return ab;
+//		}
+//		
+//		/**	check if this store contains an Annotation
+//		 * @param	ab	the Annotation to search for
+//		 * @return true if and only if this AnnotationStore contains the specified Annotation
+//		 */
+//		boolean containsAnnotation(AnnotationBase ab) {
+//			return ((ab != null) && this.annotationIDs.contains(ab.annotationId));
+//		}
+//		
+//		/* (non-Javadoc)
+//		 * @see de.gamta.TokenSequenceListener#tokenSequenceChanged(de.gamta.MutableTokenSequence.TokenSequenceEvent)
+//		 */
+//		synchronized void tokenSequenceChanged(TokenSequenceEvent change) {
+//			
+//			//	prepare changes
+//			for (int a = 0; (a < this.annotations.size()); a++)
+//				((AnnotationBase) this.annotations.get(a)).tokenSequeceChanged(change);
+//			
+//			//	commit changes
+//			for (int a = 0; (a < this.annotations.size()); a++)
+//				((AnnotationBase) this.annotations.get(a)).commitChange();
+//			
+//			//	clean up
+//			this.cleanup();
+//		}
+//		
+//		/**	remove all empty Annotations from the store
+//		 */
+//		void cleanup() {
+//			int a = 0;
+//			while (a < this.annotations.size()) {
+//				AnnotationBase ab = ((AnnotationBase) this.annotations.get(a));
+//				if (ab.size() <= 0) {
+//					this.annotations.remove(a);
+//					if (AnnotationBase.DEBUG_CHANGE || ab.printDebugInfo())
+//						System.out.println("REMOVED: " + ab.type + " at " + ab.absoluteStartIndex + " sized " + ab.size);
+//				}
+//				else a++;
+//			}
+//		}
+//		
+//		/**	delete all Annotations contained in this AnnotationStore
+//		 */
+//		void clear() {
+//			this.annotations.clear();
+//			this.annotationIDs.clear();
+//		}
+//	}
 }

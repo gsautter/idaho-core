@@ -180,9 +180,10 @@ public class AnnotationFilter {
 	public static boolean removeByContained(MutableAnnotation data, String outerType, String innerType, boolean invert) {
 		
 		//	check parameters
-		if ((data == null) || (outerType == null) || (innerType == null)) return false;
+		if ((data == null) || (outerType == null) || (innerType == null))
+			return false;
 		
-		//	merge duplicates first if inner any outer type equal
+		//	merge duplicates first if inner and outer type equal
 		if (!invert && outerType.equalsIgnoreCase(innerType))
 			removeDuplicates(data, outerType);
 		

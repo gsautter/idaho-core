@@ -29,6 +29,7 @@ package de.uka.ipd.idaho.gamta.util.gPath;
 
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Stack;
 
@@ -133,7 +134,7 @@ public class GPathParser {
 			else collector.add(token);
 		}
 		
-		if (!collector.isEmpty()) {
+		if (collector.size() != 0) {
 			if (DEBUG) System.out.print("Got final step:");
 			if (DEBUG) for (int c = 0; c < collector.size(); c++) System.out.print(" " + collector.get(c));
 			if (DEBUG) System.out.println();
@@ -147,12 +148,12 @@ public class GPathParser {
 		pg.steps = new GPathStep[stepStrings.length];
 		
 		for (int s = 0; s < stepStrings.length; s++)
-			pg.steps[s] = parseStep(stepStrings[s]);
+			pg.steps[s] = parseStep(stepStrings[s], s);
 		
 		return pg;
 	}
 	
-	private static GPathStep parseStep(String[] stepTokens) {
+	private static GPathStep parseStep(String[] stepTokens, int stepPos) {
 		
 		//	check parameter
 		if (stepTokens == null)
@@ -216,7 +217,7 @@ public class GPathParser {
 		}
 		
 		//	read annotation test if given
-		if (!"[".equals(stepTokens[index]) && !"(".equals(stepTokens[index])) {
+		if ((index < stepTokens.length) && !"[".equals(stepTokens[index]) && !"(".equals(stepTokens[index])) {
 			gps.annotationTest = stepTokens[index];
 			index++;
 		}
@@ -237,7 +238,7 @@ public class GPathParser {
 			}
 		}
 		
-		//	read eventual predicates
+		//	read any predicates
 		if (index < stepTokens.length) {
 			
 			ArrayList predicates = new ArrayList();
@@ -292,7 +293,7 @@ public class GPathParser {
 				index++;
 			}
 			
-			if (!collector.isEmpty()) {
+			if (collector.size() != 0) {
 				if (DEBUG) System.out.print("Got final predicate:");
 				if (DEBUG) for (int c = 0; c < collector.size(); c++) System.out.print(" " + collector.get(c));
 				if (DEBUG) System.out.println();
@@ -320,7 +321,8 @@ public class GPathParser {
 	public static GPathExpression parseExpression(String expression) {
 		
 		//	check parameter
-		if (expression == null) return null;
+		if (expression == null)
+			return null;
 		
 		//	do cache lookup
 		GPathExpression gpe = ((GPathExpression) expressionCache.get(expression));
@@ -330,6 +332,7 @@ public class GPathParser {
 			
 			//	tokenize expression & validate expression
 			String[] expressionTokens = tokenize(expression);
+			if (DEBUG) System.out.println("Got expression tokens: " + Arrays.toString(expressionTokens));
 			String error = validatePath(expressionTokens);
 			if (error != null)
 				throw new GPathSyntaxException("Invalid GPath expression: " + error + "\n  " + expression);
@@ -415,7 +418,7 @@ public class GPathParser {
 			}
 		}
 		
-		if (!collector.isEmpty()) {
+		if (collector.size() != 0) {
 			if (DEBUG) System.out.print("Got final OR expression part:");
 			if (DEBUG) for (int c = 0; c < collector.size(); c++) System.out.print(" " + collector.get(c));
 			if (DEBUG) System.out.println();
@@ -522,7 +525,7 @@ public class GPathParser {
 			}
 		}
 		
-		if (!collector.isEmpty()) {
+		if (collector.size() != 0) {
 			if (DEBUG) System.out.print("Got final AND expression part:");
 			if (DEBUG) for (int c = 0; c < collector.size(); c++) System.out.print(" " + collector.get(c));
 			if (DEBUG) System.out.println();
@@ -615,7 +618,7 @@ public class GPathParser {
 			else collector.add(token);
 		}
 		
-		if (!collector.isEmpty()) {
+		if (collector.size() != 0) {
 			if (DEBUG) System.out.print("Got final equality expression part:");
 			if (DEBUG) for (int c = 0; c < collector.size(); c++) System.out.print(" " + collector.get(c));
 			if (DEBUG) System.out.println();
@@ -707,7 +710,7 @@ public class GPathParser {
 			else collector.add(token);
 		}
 		
-		if (!collector.isEmpty()) {
+		if (collector.size() != 0) {
 			if (DEBUG) System.out.print("Got final relational expression part:");
 			if (DEBUG) for (int c = 0; c < collector.size(); c++) System.out.print(" " + collector.get(c));
 			if (DEBUG) System.out.println();
@@ -824,7 +827,7 @@ public class GPathParser {
 			}
 		}
 		
-		if (!collector.isEmpty()) {
+		if (collector.size() != 0) {
 			if (DEBUG) System.out.print("Got final additive expression part:");
 			if (DEBUG) for (int c = 0; c < collector.size(); c++) System.out.print(" " + collector.get(c));
 			if (DEBUG) System.out.println();
@@ -935,7 +938,7 @@ public class GPathParser {
 			}
 		}
 		
-		if (!collector.isEmpty()) {
+		if (collector.size() != 0) {
 			if (DEBUG) System.out.print("Got final multiplicative expression part:");
 			if (DEBUG) for (int c = 0; c < collector.size(); c++) System.out.print(" " + collector.get(c));
 			if (DEBUG) System.out.println();
@@ -1027,7 +1030,7 @@ public class GPathParser {
 			else collector.add(token);
 		}
 		
-		if (!collector.isEmpty()) {
+		if (collector.size() != 0) {
 			if (DEBUG) System.out.print("Got final unary expression part:");
 			if (DEBUG) for (int c = 0; c < collector.size(); c++) System.out.print(" " + collector.get(c));
 			if (DEBUG) System.out.println();
@@ -1288,7 +1291,7 @@ public class GPathParser {
 			else collector.add(token);
 		}
 		
-		if (!collector.isEmpty() && "[".equals(collector.get(0))) {
+		if (collector.size() != 0 && "[".equals(collector.get(0))) {
 			if (DEBUG) System.out.print("Got final filter expression predicate:");
 			if (DEBUG) for (int c = 0; c < collector.size(); c++) System.out.print(" " + collector.get(c));
 			if (DEBUG) System.out.println();
@@ -1376,7 +1379,7 @@ public class GPathParser {
 				else collector.add(token);
 			}
 			
-			if (!collector.isEmpty()) {
+			if (collector.size() != 0) {
 				if (DEBUG) System.out.print("Got final function call argument:");
 				if (DEBUG) for (int c = 0; c < collector.size(); c++) System.out.print(" " + collector.get(c));
 				if (DEBUG) System.out.println();
@@ -1561,7 +1564,7 @@ public class GPathParser {
 		return ((String[]) tokens.toArray(new String[tokens.size()]));
 	}
 	
-	/**	check if a GPath expression is sytactically correct
+	/**	check if a GPath expression is syntactically correct
 	 * @param	gPath	the GPath expression to check
 	 * @return null if the specified GPath expression is syntactically correct, a String describing the error if it is not
 	 */
@@ -1569,7 +1572,7 @@ public class GPathParser {
 		return validatePath(tokenize(gPath));
 	}
 	
-	/**	check if a GPath expression is sytactically correct
+	/**	check if a GPath expression is syntactically correct
 	 * @param	gPathTokens	an array of String tokens representing the GPath expression to check
 	 * @return null if the specified GPath expression is syntactically correct, a String describing the error if it is not
 	 */

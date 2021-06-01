@@ -6,6 +6,8 @@ ADD_COLUMN_FIX_LENGTH = ADD COLUMN @colName @dataType DEFAULT @default
 
 WIDEN_COLUMN = ALTER COLUMN @colName @dataType(@length)
 
+//	SET_NOT_NULL = ALTER TABLE @table ALTER COLUMN @colName NOT NULL
+
 CREATE_INDEX = CREATE INDEX @indexName ON @table (@columns)
 
 //	MySQL, MSSQL, Oracle should be OK, to test: Derby, PostgreSQL  

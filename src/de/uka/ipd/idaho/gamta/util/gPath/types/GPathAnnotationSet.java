@@ -72,7 +72,8 @@ public class GPathAnnotationSet extends GPathObject {
 	/** @see de.uka.ipd.idaho.gamta.util.gPath.types.GPathObject#asString()
 	 */
 	public GPathString asString() {
-		if (this.isEmpty()) return new GPathString("");
+		if (this.isEmpty())
+			return new GPathString("");
 		return new GPathString(this.getFirst().getValue());
 	}
 	
@@ -83,7 +84,8 @@ public class GPathAnnotationSet extends GPathObject {
 	 *         AnnotationSet that have the specified type
 	 */
 	public GPathAnnotationSet filterByType(String filterType) {
-		if (filterType == null) return this;
+		if (filterType == null)
+			return this;
 		GPathAnnotationSet result = new GPathAnnotationSet();
 		for (int n = 0; n < this.size(); n++) {
 			QueriableAnnotation annotation = this.get(n);
@@ -93,7 +95,8 @@ public class GPathAnnotationSet extends GPathObject {
 	}
 	
 	public synchronized boolean add(QueriableAnnotation annotation) {
-		if (annotation == null) return false;
+		if (annotation == null)
+			return false;
 		if (this.annotationSet == null)
 			this.annotationSet = new TreeSet(this.buildSortOrder(annotation));
 		
@@ -105,7 +108,8 @@ public class GPathAnnotationSet extends GPathObject {
 	}
 	
 	public boolean addAll(GPathAnnotationSet annotationSet) {
-		if ((annotationSet == null) || annotationSet.isEmpty()) return false;
+		if ((annotationSet == null) || annotationSet.isEmpty())
+			return false;
 		
 		if (this.annotationSet == null)
 			this.annotationSet = new TreeSet(this.buildSortOrder(annotationSet.getFirst()));
@@ -143,7 +147,8 @@ public class GPathAnnotationSet extends GPathObject {
 	}
 	
 	public boolean remove(QueriableAnnotation annotation) {
-		if (this.isEmpty()) return false;
+		if (this.isEmpty())
+			return false;
 		if (this.annotationSet.remove(annotation)) {
 			if (this.annotationList != null)
 				this.annotationList.remove(annotation);
@@ -161,14 +166,16 @@ public class GPathAnnotationSet extends GPathObject {
 	}
 	
 	public QueriableAnnotation getFirst() {
-		if (this.isEmpty()) return null;
+		if (this.isEmpty())
+			return null;
 		if (this.annotationList == null)
 			this.annotationList = new ArrayList(this.annotationSet);
 		return ((QueriableAnnotation) this.annotationList.get(0));
 	}
 	
 	public QueriableAnnotation getLast() {
-		if (this.isEmpty()) return null;
+		if (this.isEmpty())
+			return null;
 		if (this.annotationList == null)
 			this.annotationList = new ArrayList(this.annotationSet);
 		return ((QueriableAnnotation) this.annotationList.get(this.size() - 1));
@@ -206,7 +213,8 @@ public class GPathAnnotationSet extends GPathObject {
 	 *         the rules of a JAVA List, i.e. 0 ... (size() - 1)
 	 */
 	public int indexOf(QueriableAnnotation annotation) {
-		if (this.isEmpty()) return -1;
+		if (this.isEmpty())
+			return -1;
 		if (this.annotationList == null)
 			this.annotationList = new ArrayList(this.annotationSet);
 		return this.annotationList.indexOf(annotation);

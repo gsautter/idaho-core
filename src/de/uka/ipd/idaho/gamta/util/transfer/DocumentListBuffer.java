@@ -44,8 +44,8 @@ import de.uka.ipd.idaho.stringUtils.csvHandler.StringRelation;
 import de.uka.ipd.idaho.stringUtils.csvHandler.StringTupel;
 
 /**
- * List of documents in a GoldenGATE DIO, residing in memory to facilitate
- * sorting and the like in a client side document listing.
+ * List of documents residing in memory to facilitate sorting and the like in a
+ * (client side) document listing.
  * 
  * @author sautter
  */
@@ -302,9 +302,7 @@ public class DocumentListBuffer extends StringRelation implements LiteratureCons
 	}
 	
 	/**
-	 * Write the documents in this list to a given writer. This method consumes
-	 * the list, i.e., it iterates through to the last document list element it
-	 * contains.
+	 * Write the documents in this list to a given writer.
 	 * @param out the writer to write to
 	 * @throws IOException
 	 */
@@ -313,9 +311,7 @@ public class DocumentListBuffer extends StringRelation implements LiteratureCons
 	}
 	
 	/**
-	 * Write the documents in this list to a given writer. This method consumes
-	 * the list, i.e., it iterates through to the last document list element it
-	 * contains.
+	 * Write the documents in this list to a given writer.
 	 * @param out the writer to write to
 	 * @param pm a progress monitor observing output
 	 * @throws IOException

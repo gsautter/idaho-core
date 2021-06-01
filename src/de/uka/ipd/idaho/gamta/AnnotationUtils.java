@@ -683,13 +683,22 @@ public class AnnotationUtils {
 	 * @author sautter
 	 */
 	public static class XmlOutputOptions {
-		private Set includeIdTypes = null;
-		private boolean invertIncludeIdTypes = true;
 		private Set annotationTypes = null;
 		private boolean invertAnnotationTypes = false;
+		
 		private Set attributeNames = null;
 		private boolean invertAttributeNames = false;
+		
+		private Set includeIdTypes = null;
+		private boolean invertIncludeIdTypes = true;
+		
+		private Set inLineTypes = null;
+		private boolean invertInLineTypes = true;
+		
 		private boolean escape = true;
+		
+		private String space = " ";
+		private String lineBreak = "\r\n";
 		
 		/**
 		 * Set the annotation types to include in the output (positive filter).
@@ -728,12 +737,52 @@ public class AnnotationUtils {
 		}
 		
 		/**
+		 * Set the annotation types to output in-line, i.e., without line breaks
+		 * before start tags and after end tags. To use a negative filter, set
+		 * <code>invert</code> to true and provide a set of annotation types to
+		 * actually add line breaks before start tags and after end tags for.
+		 * @param inLineTypes the annotation types to output in-line
+		 * @param invert invert set containment?
+		 */
+		public void setInLineTypes(Set inLineTypes, boolean invert) {
+			this.inLineTypes = inLineTypes;
+			this.invertInLineTypes = invert;
+		}
+		
+		/**
 		 * Set to false to disable escaping attribute values and textual
 		 * content.
 		 * @param escape the escape property to set
 		 */
 		public void setEscape(boolean escape) {
 			this.escape = escape;
+		}
+		
+		/**
+		 * Set the sequence of characters to output for a space. This character
+		 * sequence does not necessarily have to exclusively consist of space
+		 * characters, and does not even need to include actual space
+		 * characters. If the argument character sequence is null, this will be
+		 * interpreted as a regular space character; if it represents any XML,
+		 * it must be valid, as it will not be escaped before output.
+		 * @param space the character sequence to output for a space
+		 */
+		public void setSpace(String space) {
+			this.space = ((space == null) ? " " : space);
+		}
+		
+		/**
+		 * Set the sequence of characters to output for a line break. This
+		 * character sequence does not necessarily have to exclusively consist
+		 * of space or line break characters, and does not even need to include
+		 * actual space characters. If the argument character sequence is null,
+		 * this will be interpreted as a cross-platform line break; if it
+		 * represents any XML, it must be valid, as it will not be escaped
+		 * before output.
+		 * @param lineBreak the character sequence to output for a line break
+		 */
+		public void setLineBreak(String lineBreak) {
+			this.lineBreak = ((lineBreak == null) ? "\r\n" : lineBreak);
 		}
 		
 		/**
@@ -787,6 +836,19 @@ public class AnnotationUtils {
 		}
 		
 		/**
+		 * Check whether or not to output the start and end tags of annotations
+		 * of a given type in-line.
+		 * @param annotType the annotation type to check
+		 * @return true if tags of annotations of the argument type should be
+		 *        output in-line
+		 */
+		public boolean writeInLine(String annotType) {
+			if (this.inLineTypes == null)
+				return !this.invertInLineTypes;
+			else return (this.inLineTypes.contains(annotType) != this.invertInLineTypes);
+		}
+		
+		/**
 		 * Check whether or not to escape textual content tokens in the output.
 		 * @return true if textual content tokens should be escaped
 		 */
@@ -800,6 +862,32 @@ public class AnnotationUtils {
 		 */
 		public boolean escapeAttributeValues() {
 			return this.escape;
+		}
+		
+		/**
+		 * Get the sequence of characters to output for a space. This character
+		 * sequence does not necessarily have to exclusively consist of space
+		 * characters, and does not even need to include actual space
+		 * characters. However, this method must not return null. If the
+		 * returned character sequence represents an XML, it must be valid, as
+		 * it will not be escaped before output.
+		 * @return the character sequence to output for a space
+		 */
+		public String getSpace() {
+			return this.space;
+		}
+		
+		/**
+		 * Get the sequence of characters to output for a line break. This
+		 * character sequence does not necessarily have to exclusively consist
+		 * of space or line break characters, and does not even need to include
+		 * actual space characters. However, this method must not return null.
+		 * If the returned character sequence represents an XML, it must be
+		 * valid, as it will not be escaped before output.
+		 * @return the character sequence to output for a line break
+		 */
+		public String getLineBreak() {
+			return this.lineBreak;
 		}
 	}
 	
@@ -838,82 +926,90 @@ public class AnnotationUtils {
 		Token token = null;
 		Token lastToken;
 		
-		boolean lastWasTag = false;
+		//boolean lastWasTag = false;
 		boolean lastWasLineBreak = true;
 		
 		HashSet lineBroken = new HashSet();
 		
 		for (int t = 0; t < data.size(); t++) {
 			
-			//	switch to next Token
+			//	switch to next token
 			lastToken = token;
 			token = data.tokenAt(t);
 			
-			//	write end tags for Annotations ending before current Token
+			//	write end tags for annotations ending before current Token
 			while ((stack.size() > 0) && (((Annotation) stack.peek()).getEndIndex() <= t)) {
 				Annotation annotation = ((Annotation) stack.pop());
 				
-				//	line break only if nested Annotations
-				if (!lastWasLineBreak && lineBroken.contains(annotation.getAnnotationID())) 
-					buf.newLine();
+				//	line break only if nested annotations
+				if (!lastWasLineBreak && lineBroken.contains(annotation.getAnnotationID()))
+					buf.write(options.getLineBreak());
 				
 				//	write tag and line break
 				buf.write(produceEndTag(annotation));
-				lastWasTag = true;
-				buf.newLine();
+				lastWasLineBreak = false;
+				//lastWasTag = true;
+				
+				//	line break (omit if in-line)
+				if (options.writeInLine(annotation.getType()))
+					continue;
+				buf.write(options.getLineBreak());
 				lastWasLineBreak = true;
 			}
 			
 			//	add line break if required
 			if (!lastWasLineBreak && (lastToken != null) && lastToken.hasAttribute(Token.PARAGRAPH_END_ATTRIBUTE)) {
-				buf.newLine();
+				buf.write(options.getLineBreak());
 				lastWasLineBreak = true;
 			}
 			
 			//	skip space character before unspaced punctuation (e.g. ','), after line breaks and tags, and if there is no whitespace in the token sequence
-			if (!lastWasTag && !lastWasLineBreak && 
-				(lastToken != null) && !lastToken.hasAttribute(Token.PARAGRAPH_END_ATTRIBUTE) && 
-				Gamta.insertSpace(lastToken, token) && (t != 0) && (data.getWhitespaceAfter(t-1).length() != 0)
-				) buf.write(" ");
+			if (/*!lastWasTag && */!lastWasLineBreak && 
+					(lastToken != null) && !lastToken.hasAttribute(Token.PARAGRAPH_END_ATTRIBUTE) && 
+					Gamta.insertSpace(lastToken, token) &&
+					(t != 0) && (data.getWhitespaceAfter(t-1).length() != 0)
+				) buf.write(options.getSpace());
 			
-			//	write start tags for Annotations beginning at current token
+			//	write start tags for annotations beginning at current token
 			while ((annotationPointer < nestedAnnotations.length) && (nestedAnnotations[annotationPointer].getStartIndex() == t)) {
 				Annotation annotation = nestedAnnotations[annotationPointer++];
 				stack.push(annotation);
 				
-				//	line break
-				if (!lastWasLineBreak)
-					buf.newLine();
+				//	line break (omit if in-line)
+				if (!lastWasLineBreak && !options.writeInLine(annotation.getType()))
+					buf.write(options.getLineBreak());
 				
 				//	add start tag
 				buf.write(produceStartTag(annotation, options));
-				lastWasTag = true;
+				//lastWasTag = true;
 				lastWasLineBreak = false;
 				
-				//	line break only if nested Annotations
+				//	line break only if nested annotations (omit if in-line)
+				if (options.writeInLine(annotation.getType()))
+					continue;
 				if ((annotationPointer < nestedAnnotations.length) && AnnotationUtils.contains(annotation, nestedAnnotations[annotationPointer])) {
-					buf.newLine();
+					buf.write(options.getLineBreak());
 					lastWasLineBreak = true;
 					lineBroken.add(annotation.getAnnotationID());
 				}
 			}
 			
-			//	append current Token
+			//	append current token
 			if (options.escapeTokes())
 				buf.write(escapeForXml(token.getValue()));
 			else buf.write(token.getValue());
 			
 			//	set status
-			lastWasTag = false;
+			//lastWasTag = false;
 			lastWasLineBreak = false;
 		}
 		
-		//	write end tags for Annotations not closed so far
+		//	write end tags for annotations not closed so far
 		while (stack.size() > 0) {
 			Annotation annotation = ((Annotation) stack.pop());
 			
 			if (!lastWasLineBreak && lineBroken.contains(annotation.getAnnotationID()))
-				buf.newLine();
+				buf.write(options.getLineBreak());
 			
 			buf.write(produceEndTag(annotation));
 			lastWasLineBreak = false;

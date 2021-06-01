@@ -25,43 +25,61 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package de.uka.ipd.idaho.gamta.util.gPath.types;
+package de.uka.ipd.idaho.htmlXmlUtil.accessories;
 
+import java.io.FilterInputStream;
+import java.io.IOException;
+import java.io.InputStream;
 
 /**
- * @author sautter
- *
- * TODO document this class
+ * This wrapper jumps over a leading byte order mark in XML files, always
+ * returning '&lt;' the first byte. This helps preventing errors in components
+ * that take input streams as a data source, but cannot handle byte order
+ * marks. For instance, this wrapper prevents the &quot;content not allowed in
+ * prolog&quot; exception thrown by Java's XML components. Using this wrapper
+ * with data other than XML or HTML is likely to cause undesired behavior.
  */
-public class GPathNumber extends GPathObject {
-	
-	public final double value;
+public class ByteOrderMarkFilterInputStream extends FilterInputStream {
+	private boolean inContent = false;
 	
 	/**
-	 * @param value
+	 * Constructor
+	 * @param in the input stream to wrap
 	 */
-	public GPathNumber(double value) {
-		this.value = value;
+	public ByteOrderMarkFilterInputStream(InputStream in) {
+		super(in);
 	}
 	
-	/** @see de.uka.ipd.idaho.gamta.util.gPath.types.GPathObject#asBoolean()
+	/* (non-Javadoc)
+	 * @see java.io.FilterInputStream#read()
 	 */
-	public GPathBoolean asBoolean() {
-		return new GPathBoolean((this.value != 0) && !Double.isNaN(this.value));
+	public int read() throws IOException {
+		int r = super.read();
+		while (!this.inContent) {
+			if (r == '<')
+				this.inContent = true;
+			else r = super.read();
+		}
+		return r;
 	}
-	
-	/** @see de.uka.ipd.idaho.gamta.util.gPath.types.GPathObject#asNumber()
+
+	/* (non-Javadoc)
+	 * @see java.io.FilterInputStream#read(byte[], int, int)
 	 */
-	public GPathNumber asNumber() {
-		return this;
-	}
-	
-	/** @see de.uka.ipd.idaho.gamta.util.gPath.types.GPathObject#asString()
-	 */
-	public GPathString asString() {
-		String asString = ("" + this.value);
-		if (asString.endsWith(".0"))
-			asString = asString.substring(0, (asString.length() - ".0".length()));
-		return new GPathString(asString);
+	public int read(byte[] b, int off, int len) throws IOException {
+		if (this.inContent)
+			return super.read(b, off, len);
+		else {
+			int r = super.read();
+			while (!this.inContent) {
+				if (r == '<')
+					this.inContent = true;
+				else if (r == -1)
+					return -1;
+				else r = super.read();
+			}
+			b[off] = ((byte) r);
+			return (1 + super.read(b, (off + 1), (len - 1)));
+		}
 	}
 }

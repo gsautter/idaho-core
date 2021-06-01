@@ -134,8 +134,12 @@ public class TokenizedMutableCharSequence extends TokenizedCharSequence implemen
 	 * @see de.gamta.MutableTokenSequence#setWhitespaceAfter(java.lang.CharSequence, int)
 	 */
 	public CharSequence setWhitespaceAfter(CharSequence whitespace, int index) throws IllegalArgumentException {
-		if (whitespace.toString().trim().length() != 0)
-			throw new IllegalArgumentException("Whitespace must not contain non-whitespace characters.");
+		if (whitespace.toString().trim().length() != 0) {
+			System.out.println("Illegal whitespace:");
+			for (int c = 0; c < whitespace.length(); c++)
+				System.out.println("- '" + whitespace.charAt(c) + "': " + ((int) whitespace.charAt(c)));
+			throw new IllegalArgumentException("Whitespace must not contain non-whitespace characters: " + whitespace);
+		}
 		
 		GamtaToken gt = this.tcsTokenAt(index);
 		

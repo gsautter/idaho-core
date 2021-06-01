@@ -185,6 +185,18 @@ public interface IoProvider {
 	 * @see de.uka.ipd.idaho.easyIO.sql.TableDefinition
 	 */
 	public abstract boolean ensureTable(TableDefinition definition, boolean create);
+//	
+//	/**
+//	 * Declare a column of a database table as not null, i.e., add a not null
+//	 * constraint. The constraint is named '&lt;table&gt;_NN_&lt;column&gt;'.
+//	 * If the table or the specified column does not exist, this method will
+//	 * not add the not null constraint and simply return false.
+//	 * @param table the name of the table
+//	 * @param column the name of the primary key column
+//	 * @return true if the not null constraint was created or existed before,
+//	 *         false otherwise
+//	 */
+//	public abstract boolean setNotNull(String table, String column);
 	
 	/**
 	 * Declare a column of a database table the primary key, i.e., add a primary
@@ -280,7 +292,7 @@ public interface IoProvider {
 //	
 //	public abstract String getCreateIndexPart(String colName, String indexType, String params);// (indexName = colName+indexType+'Index');
 //	public abstract String getDropIndexPart(String colName, String indexType);// (indexName = colName+indexType+'Index');
-		
+	
 	/**
 	 * Execute a select query on the centrally configured database.
 	 * @param query the query to execute
@@ -290,7 +302,7 @@ public interface IoProvider {
 	 * @throws SQLException
 	 */
 	public abstract SqlQueryResult executeSelectQuery(String query, boolean copy) throws SQLException;
-
+	
 	/**
 	 * Execute a select query on the centrally configured database.
 	 * @param query the query to execute
@@ -298,7 +310,7 @@ public interface IoProvider {
 	 * @throws SQLException
 	 */
 	public abstract SqlQueryResult executeSelectQuery(String query) throws SQLException;
-
+	
 	/**
 	 * Execute an update query on the centrally configured database.
 	 * @param query the query to execute
@@ -306,7 +318,7 @@ public interface IoProvider {
 	 * @throws SQLException
 	 */
 	public abstract int executeUpdateQuery(String query) throws SQLException;
-
+	
 	/**
 	 * Test whether there is a centrally configured database to work with. If
 	 * this method returns false, all JDBC related method calls are likely to
@@ -432,7 +444,7 @@ public interface IoProvider {
 //	 * @throws IOException
 //	 */
 //	public abstract String getPage(String url) throws MalformedURLException, IOException;
-
+	
 	/**
 	 * Send out an eMail message via SMTP to the centrally configured server and
 	 * using the centrally configured credentials.
@@ -442,7 +454,7 @@ public interface IoProvider {
 	 * @throws Exception
 	 */
 	public abstract void smtpSend(String subject, String message, String[] toAddresses) throws Exception;
-
+	
 	/**
 	 * Test whether or not sending eMail through this IO Provider is possible,
 	 * i.e., whether there is a centrally configured mail server and account. If
