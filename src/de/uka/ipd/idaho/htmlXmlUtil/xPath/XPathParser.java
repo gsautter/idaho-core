@@ -1517,7 +1517,7 @@ public class XPathParser {
 		return null;
 	}
 	
-	private static final String LETTERS 	= "aäáâàbcdeéêèfghiíîìjklmnoöóôòpqrstuüúûùvwxyzßAÄÁÂÀBCDEÉÊÈFGHIÍîÌJKLMNOÖÓÔÒPQRSTUÜÚÛÙVWXYZ";
+	private static final String LETTERS 	= "aÃ¤Ã¡Ã¢Ã bcdeÃ©ÃªÃ¨fghiÃ­Ã®Ã¬jklmnoÃ¶Ã³Ã´Ã²pqrstuÃ¼ÃºÃ»Ã¹vwxyzÃŸAÃ„ÃÃ‚Ã€BCDEÃ‰ÃŠÃˆFGHIÃÃ®ÃŒJKLMNOÃ–Ã“Ã”Ã’PQRSTUÃœÃšÃ›Ã™VWXYZ";
 	private static final String DIGITS		= "0123456789";
 	
 	private static final String INVALID_BEFORE_OPERATORS 		= " :: + = != < <= > >= ( [ ";

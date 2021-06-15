@@ -185,7 +185,7 @@ public class TreeTools {
 		String structuralExpression = structExpr;
 		
 		/*	- analyze Structural Expression
-		 *	 	- fix or variable lenght target (a couple of ? or a single ง)
+		 *	 	- fix or variable lenght target (a couple of ? or a single ยง)
 		 *	 	- target at beginning, at the end or in the middle
 		 *	 	- target bordered by border directly, or fix length waist in between
 		 */
@@ -198,7 +198,7 @@ public class TreeTools {
 		IntVector structExprPartMeanings = new IntVector();
 		
 		//	no target string mark
-		if (structExpr.indexOf("ง") == -1 && structExpr.indexOf("?") == -1) return "";
+		if (structExpr.indexOf("ยง") == -1 && structExpr.indexOf("?") == -1) return "";
 		
 		//	fix length target at beginning or end (keep attention for escape characters if target at end)
 		if (structExpr.startsWith("?")) return ((result.length() > (structExpr.lastIndexOf("?") + 1)) ? result.delete((structExpr.lastIndexOf("?") + 1), result.length()).toString().trim() : result.toString());
@@ -219,7 +219,7 @@ public class TreeTools {
 			}
 			
 			//	variable length target or waist
-			else if (currentChar == '*' || currentChar == 'ง') {
+			else if (currentChar == '*' || currentChar == 'ยง') {
 				if (structExprPartsAssembler.length() > 0) {
 					structExprParts.addElement(structExprPartsAssembler.toString());
 					structExprPartsAssembler = structExprPartsAssembler.delete(0, structExprPartsAssembler.length());
@@ -256,20 +256,20 @@ public class TreeTools {
 		}
 		
 		/*	- check StructExpr
-		 *		- remove duplicate * or ง
-		 *		- remove + beside * and ? beside ง
+		 *		- remove duplicate * or ยง
+		 *		- remove + beside * and ? beside ยง
 		 *		- if variable length target and waist neighboured, target is not clear
 		 */
 		while (index < (structExprParts.size()-1)) {
 			if (structExprParts.get(index).equals("*")) {
 				if (structExprParts.get(index+1).equals("*") || structExprParts.get(index+1).startsWith("+"))
 					structExprParts.removeElementAt(index+1);
-				else if (structExprParts.get(index+1).equals("ง"))
+				else if (structExprParts.get(index+1).equals("ยง"))
 					return dataString;
 				else index++;
 			}
-			else if (structExprParts.get(index).equals("ง")) {
-				if (structExprParts.get(index+1).equals("ง") || structExprParts.get(index+1).startsWith("?"))
+			else if (structExprParts.get(index).equals("ยง")) {
+				if (structExprParts.get(index+1).equals("ยง") || structExprParts.get(index+1).startsWith("?"))
 					structExprParts.removeElementAt(index+1);
 				else if (structExprParts.get(index+1).equals("*"))
 					return dataString;
@@ -281,7 +281,7 @@ public class TreeTools {
 				else index++;
 			}
 			else if (structExprParts.get(index).startsWith("?")) {
-				if (structExprParts.get(index+1).equals("ง"))
+				if (structExprParts.get(index+1).equals("ยง"))
 					structExprParts.removeElementAt(index);
 				else index++;
 			}
@@ -290,7 +290,7 @@ public class TreeTools {
 		
 		//	- mark borders
 		for (int i = 0; i < structExprParts.size(); i++) {
-			if (structExprParts.get(i).equals("*") || structExprParts.get(i).equals("ง") || structExprParts.get(i).startsWith("+") || structExprParts.get(i).startsWith("?")) {
+			if (structExprParts.get(i).equals("*") || structExprParts.get(i).equals("ยง") || structExprParts.get(i).startsWith("+") || structExprParts.get(i).startsWith("?")) {
 				structExprPartMeanings.addElement(1);
 			} else {
 				structExprPartMeanings.addElement(0);
@@ -405,7 +405,7 @@ public class TreeTools {
 			}
 			
 			//	variable length target
-			else if (structExprParts.get(0).equals("ง") && (structExprPartMeanings.get(0) == 1)) {
+			else if (structExprParts.get(0).equals("ยง") && (structExprPartMeanings.get(0) == 1)) {
 				
 				//	data string ends with variable length target ==> return result
 				if (structExprParts.size() == 1)
