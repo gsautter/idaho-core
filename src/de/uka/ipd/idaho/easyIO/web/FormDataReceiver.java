@@ -49,6 +49,7 @@ import java.util.Set;
 
 import javax.servlet.http.HttpServletRequest;
 
+import de.uka.ipd.idaho.easyIO.EasyIO;
 import de.uka.ipd.idaho.easyIO.settings.Settings;
 import de.uka.ipd.idaho.easyIO.streams.PeekInputStream;
 
@@ -1472,20 +1473,12 @@ public class FormDataReceiver {
 //		}
 //		return sb.toString();
 //	}
+	
 	private static String guessEncoding(byte[] bytes, int sampleLimit) {
-		if (bytes.length >= 2) {
-			if ((bytes[0] == -2) && (bytes[1] == -1)) {
-				System.out.println("RECOGNIZED ENCODING FROM BOM: UTF-16BE");
-				return "UTF-16BE";
-			}
-			if ((bytes[0] == -1) && (bytes[1] == -2)) {
-				System.out.println("RECOGNIZED ENCODING FROM BOM: UTF-16LE");
-				return "UTF-16LE";
-			}
-		}
-		if ((bytes.length >= 3) && (bytes[0] == -17) && (bytes[1] == -69) && (bytes[2] == -65)) {
-			System.out.println("RECOGNIZED ENCODING FROM BOM: UTF-8");
-			return "UTF-8";
+		String bomEncoding = EasyIO.getEncodingFromByteOrderMark(bytes);
+		if (bomEncoding != null) {
+			System.out.println("RECOGNIZED ENCODING FROM BOM: " + bomEncoding);
+			return bomEncoding;
 		}
 		
 		int sampleSize = bytes.length;
@@ -1509,41 +1502,18 @@ public class FormDataReceiver {
 					encodingEnd++;
 				if (encodingEnd < sampleSize) {
 					String encoding = new String(bytes, encodingStart, (encodingEnd - encodingStart));
-					System.out.println("RECOGNIZED ENCODING FROM XML: " + encoding);
+					System.out.println("RECOGNIZED ENCODING FROM XML DECLARATION: " + encoding);
 					return encoding;
 				}
 			}
 		}
 		
-		int oddZeros = 0;
-		int evenZeros = 0;
-		int negativePairs = 0;
-		int negativeBytes = 0;
-		for (int b = 0; b < sampleSize; b++) {
-			if (bytes[b] == 0) {
-				if ((b & 1) == 0)
-					evenZeros++;
-				else oddZeros++;
-			}
-			else if (((bytes[b] == -61) || (bytes[b] == -62)) && ((b+1) < bytes.length) && (bytes[b+1] < 0)) {
-				negativePairs++;
-				b++;
-			}
-			else if (bytes[b] < 0)
-				negativeBytes++;
+		String byteEncoding = EasyIO.inferEncoding(bytes, sampleSize);
+		if (byteEncoding != null) {
+			System.out.println("INFERRED ENCODING FROM BYTE PATTERNS: " + byteEncoding);
+			return byteEncoding;
 		}
-		if ((oddZeros * 3) > sampleSize) {
-			System.out.println("GUESSED ENCODING FROM " + oddZeros + " ODD ZEROS: UTF-16LE");
-			return "UTF-16LE";
-		}
-		if ((evenZeros * 3) > sampleSize) {
-			System.out.println("GUESSED ENCODING FROM " + evenZeros + " EVEN ZEROS: UTF-16BE");
-			return "UTF-16BE";
-		}
-		if (negativePairs > negativeBytes) {
-			System.out.println("GUESSED ENCODING FROM " + negativePairs + " NEG-PAIRS OUT OF " + negativeBytes + " NEG-BYTES: UTF-8");
-			return "UTF-8";
-		}
+		
 		System.out.println("FALLING BACK TO DEFAULT: ISO-8859-1");
 		return "ISO-8859-1";
 	}
@@ -1584,10 +1554,10 @@ public class FormDataReceiver {
 		if (bytes.length < str.length())
 			return false;
 		
-		int actualByteCount = bytes.length;
-		while ((actualByteCount > 0) && ((bytes[actualByteCount-1] == '\n') || (bytes[actualByteCount-1] == '\r')))
-			actualByteCount--;
-		if (actualByteCount != str.length())
+		int lineDataByteCount = bytes.length;
+		while ((lineDataByteCount > 0) && ((bytes[lineDataByteCount-1] == '\n') || (bytes[lineDataByteCount-1] == '\r')))
+			lineDataByteCount--;
+		if (lineDataByteCount != str.length())
 			return false;
 		
 		for (int c = 0; c < str.length(); c++) {

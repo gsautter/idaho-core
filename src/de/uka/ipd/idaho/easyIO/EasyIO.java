@@ -1740,4 +1740,123 @@ public class EasyIO {
 	public static String escape(String data, char toEscape[], char escaper) {
 		return StringUtils.escapeChars(data, toEscape, escaper);
 	}
+	
+	/**
+	 * Inspect a byte array and infer the character encoding. Specifically,
+	 * this method checks for byte groupings characteristic for the Unicode
+	 * encodings <code>UTF-8</code>, <code>UTF-16BE</code>, and
+	 * <code>UTF-16LE</code>. If no characteristic byte groupings for either
+	 * one of the three encodings are found, this method returns null.
+	 * @param bytes the bytes to inspect
+	 * @return the presumable encoding, provided it is either one of the three
+	 *            mentioned above
+	 */
+	public static String inferEncoding(byte[] bytes) {
+		return inferEncoding(bytes, bytes.length);
+	}
+	
+	/**
+	 * Inspect a byte array and infer the character encoding. Specifically,
+	 * this method checks for byte groupings characteristic for the Unicode
+	 * encodings <code>UTF-8</code>, <code>UTF-16BE</code>, and
+	 * <code>UTF-16LE</code>. If no characteristic byte groupings for either
+	 * one of the three encodings are found, this method returns null. The
+	 * argument sample limit allows to specify how many bytes of the argument
+	 * array to actually inspect, e.g. if a buffer array has not been filled
+	 * completely in an IO operation.
+	 * @param bytes the bytes to inspect
+	 * @param limit the number of bytes to actually consider
+	 * @return the presumable encoding, provided it is either one of the three
+	 *            mentioned above
+	 */
+	public static String inferEncoding(byte[] bytes, int limit) {
+		int sampleSize = bytes.length;
+		if (limit > 1)
+			sampleSize = Math.min(sampleSize, limit);
+		
+		int oddZeros = 0;
+		int evenZeros = 0;
+		int negativeGroups = 0;
+		int negativeBytes = 0;
+		for (int b = 0; b < sampleSize; b++) {
+			if (bytes[b] == 0) {
+				if ((b & 1) == 0)
+					evenZeros++;
+				else oddZeros++;
+			}
+			//	UTF-8: first byte 0xC2-0xDF ==> 2 bytes, second byte 0x80-0xBF ==> values 0x0080-0x07FF
+			else if ((-62 /* 0xC2-256 */ <= bytes[b]) && (bytes[b] <= -33 /* 0xDF-256 */) && ((b+1) < sampleSize) && (bytes[b+1] <= -65 /* 0xBF-256 */)) {
+				negativeGroups++;
+				b++;
+			}
+			//	UTF-8: first byte 0xE0 ==> 3 bytes, second byte 0xA0-0xBF, third byte 0x80-0xBF ==> values 0x0800-0x0FFF
+			else if ((-32 /* 0xE0-256 */ == bytes[b]) && ((b+2) < sampleSize) && (-96 /* 0xA0-256 */ <= bytes[b+1]) && (bytes[b+1] <= -65 /* 0xBF-256 */) && (bytes[b+2] <= -65 /* 0xBF-256 */)) {
+				negativeGroups++;
+				b+=2;
+			}
+			//	UTF-8: first byte 0xE1-0xEF ==> 3 bytes, second byte 0x80-0xBF, third byte 0x80-0xBF ==> values 0x1000-0xFFFF
+			else if ((-31 /* 0xE1-256 */ <= bytes[b]) && (bytes[b] <= -17 /* 0xEF-256 */) && ((b+2) < sampleSize) && (bytes[b+1] <= -65 /* 0xBF-256 */) && (bytes[b+2] <= -65 /* 0xBF-256 */)) {
+				negativeGroups++;
+				b+=2;
+			}
+			else if (bytes[b] < 0)
+				negativeBytes++;
+		}
+		if ((oddZeros * 3) > sampleSize)
+			return "UTF-16LE";
+		if ((evenZeros * 3) > sampleSize)
+			return "UTF-16BE";
+		if (negativeGroups > negativeBytes)
+			return "UTF-8";
+		return null;
+	}
+	
+	/**
+	 * Recognize a character encoding from a byte order mark. Specifically,
+	 * this method inspects the first three bytes of the argument byte array
+	 * and recognizes the byte order marks for <code>UTF-8</code> (3 bytes),
+	 * <code>UTF-16BE</code> (2 bytes), and <code>UTF-16LE</code> (2 bytes).
+	 * If the argument byte array doesn't start with either of these three
+	 * byte order marks, this method returns null.
+	 * @param bytes the bytes to check
+	 * @return the detected encoding, or null
+	 */
+	public static String getEncodingFromByteOrderMark(byte[] bytes) {
+		if ((bytes.length >= 3) && (bytes[0] == -17 /* 0xEF-256 */) && (bytes[1] == -69 /* 0xBB-256 */) && (bytes[2] == -65 /* 0xBF-256 */))
+			return "UTF-8";
+		if (bytes.length >= 2) {
+			if ((bytes[0] == -2 /* 0xFE */) && (bytes[1] == -1 /* 0xFF */)) {
+				System.out.println("RECOGNIZED ENCODING FROM BOM: UTF-16BE");
+				return "UTF-16BE";
+			}
+			if ((bytes[0] == -1 /* 0xFF */) && (bytes[1] == -2 /* 0xFE */)) {
+				System.out.println("RECOGNIZED ENCODING FROM BOM: UTF-16LE");
+				return "UTF-16LE";
+			}
+		}
+		return null;
+	}
+	
+	/**
+	 * Get the end of the byte order mark in an array of bytes. Specifically,
+	 * this method inspects the first three bytes of the argument byte array
+	 * and recognizes the byte order marks for <code>UTF-8</code> (3 bytes),
+	 * <code>UTF-16BE</code> (2 bytes), and <code>UTF-16LE</code> (2 bytes),
+	 * and then returns the respective number of bytes. If the argument byte
+	 * array doesn't start with either of these three byte order marks, this
+	 * method returns 0.
+	 * @param bytes the bytes to check
+	 * @return the length of the detected byte order mark
+	 */
+	public static int getByteOrderMarkEnd(byte[] bytes) {
+		if (bytes.length >= 2) {
+			if ((bytes[0] == -2) && (bytes[1] == -1))
+				return 2;
+			if ((bytes[0] == -1) && (bytes[1] == -2))
+				return 2;
+		}
+		if ((bytes.length >= 3) && (bytes[0] == -17) && (bytes[1] == -69) && (bytes[2] == -65))
+			return 3;
+		return 0;
+	}
 }

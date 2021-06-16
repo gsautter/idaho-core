@@ -19,12 +19,82 @@
 	</path>
 	
 	<!-- The task off all tasks -->
-	<target name="compile" description="Compile IDAHO core Java sources">
+	<target name="compile" depends="compileMain,compileSunJdk,compileBouncyCastle" />
 	
+	<!-- The task off all tasks -->
+	<target name="compileMain" description="Compile IDAHO core Java sources">
+		
 	    <!-- Compile Java classes as necessary -->
 	    <javac  destdir="${build.home}/classes" includeantruntime="false" target="1.5" debug="true" debuglevel="lines,vars,source">
 	    	<src path="${src.home}" />
+			<exclude name="**/idaho/easyIO/utilities/SunJdkSeedCertificateGenerator.java" />
+			<exclude name="**/idaho/easyIO/utilities/BouncyCastleSeedCertificateGenerator.java" />
 	        <classpath refid="compile.classpath" />
 	    </javac>
+	</target>
+	
+	<target name="check-jdkVersion" unless="jdk.isBelow9">
+		<condition property="jdk.isBelow9">
+			<or>
+				<equals arg1="${ant.java.version}" arg2="1.0"/>
+				<equals arg1="${ant.java.version}" arg2="1.1"/>
+				<equals arg1="${ant.java.version}" arg2="1.2"/>
+				<equals arg1="${ant.java.version}" arg2="1.3"/>
+				<equals arg1="${ant.java.version}" arg2="1.4"/>
+				<equals arg1="${ant.java.version}" arg2="1.5"/>
+				<equals arg1="${ant.java.version}" arg2="1.6"/>
+				<equals arg1="${ant.java.version}" arg2="1.7"/>
+				<equals arg1="${ant.java.version}" arg2="1.8"/>
+			</or>
+		</condition>
+	</target>
+	<target name="compileSunJdk" depends="check-jdkVersion" if="${jdk.isBelow9}" description="Compile Sun JDK dependent seed certificate generator">
+		<!-- Compile Java classes as necessary -->
+		<!-- trycatch property="error">
+			<try>
+				<javac destdir="${build.home}/classes" includeantruntime="false" target="1.5" debug="true" debuglevel="lines,vars,source">
+					<src path="${src.home}" />
+					<include name="**/idaho/easyIO/utilities/SunJdkSeedCertificateGenerator.java" />
+					<classpath refid="compile.classpath" />
+				</javac>
+			</try>
+			<catch>
+				<warning>Failed to build Sun JDK based seed certificate generator: ${error}</warning>
+			</catch>
+		</trycatch -->
+		<javac destdir="${build.home}/classes" includeantruntime="false" target="1.5" debug="true" debuglevel="lines,vars,source">
+			<src path="${src.home}" />
+			<include name="**/idaho/easyIO/utilities/SunJdkSeedCertificateGenerator.java" />
+			<classpath refid="compile.classpath" />
+		</javac>
+	</target>
+	
+	<target name="check-bouncyCastle" unless="bouncyCastle.exists">
+		<condition property="bouncyCastle.exists">
+			<and>
+				<available file="./lib/bcprov-jdk15on-160.jar"/>
+				<available file="./lib/bcpkix-jdk15on-160.jar"/>
+			</and>
+		</condition>
+	</target>
+	<target name="compileBouncyCastle" depends="check-bouncyCastle" if="${bouncyCastle.exists}" description="Compile BouncyCastle dependent seed certificate generator">
+		<!-- Compile Java classes as necessary -->
+		<!-- trycatch>
+			<try>
+				<javac destdir="${build.home}/classes" includeantruntime="false" target="1.5" debug="true" debuglevel="lines,vars,source">
+					<src path="${src.home}" />
+					<include name="**/idaho/easyIO/utilities/BouncyCastleSeedCertificateGenerator.java" />
+					<classpath refid="compile.classpath" />
+				</javac>
+			</try>
+			<catch>
+				<warning>Failed to build BouncyCastle based seed certificate generator</warning>
+			</catch>
+		</trycatch -->
+		<javac destdir="${build.home}/classes" includeantruntime="false" target="1.5" debug="true" debuglevel="lines,vars,source">
+			<src path="${src.home}" />
+			<include name="**/idaho/easyIO/utilities/BouncyCastleSeedCertificateGenerator.java" />
+			<classpath refid="compile.classpath" />
+		</javac>
 	</target>
 </project>
