@@ -124,14 +124,18 @@ public class RegExUtils {
 	 *         escaped in a regular expression
 	 */
 	public static String escapeForRegEx(String string) {
-		if ((string == null) || (string.length() == 0)) return string;
+		if ((string == null) || (string.length() == 0))
+			return string;
 		StringBuffer assembler = new StringBuffer();
-		for (int s = 0; s < string.length(); s++) {
-			char c = string.charAt(s);
-			if (StringUtils.LETTERS.indexOf(c) != -1) assembler.append(c);
-			else if (StringUtils.DIGITS.indexOf(c) != -1) assembler.append(c);
-			else if (c < 33) assembler.append("\\s");
-			else assembler.append("\\" + c);
+		for (int c = 0; c < string.length(); c++) {
+			char ch = string.charAt(c);
+			if (StringUtils.LATIN_LETTERS.indexOf(ch) != -1)
+				assembler.append(ch);
+			else if (StringUtils.DIGITS.indexOf(ch) != -1)
+				assembler.append(ch);
+			else if (ch < 33)
+				assembler.append("\\s");
+			else assembler.append("\\" + ch);
 		}
 		return assembler.toString();
 	}

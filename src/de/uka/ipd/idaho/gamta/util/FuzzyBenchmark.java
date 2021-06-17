@@ -422,11 +422,12 @@ public class FuzzyBenchmark {
 //	}
 //	
 	private static boolean isWordDevided(Token firstToken, Token secondToken) {
-		if (firstToken == null) return false;
-		if (firstToken.length() < 2) return false;
-		
+		if (firstToken == null)
+			return false;
+		if (firstToken.length() < 2)
+			return false;
 		String firstValue = firstToken.getValue();
-		boolean is = (firstValue.endsWith("-") && (Gamta.LOWER_CASE_LETTERS.indexOf(firstValue.charAt(firstValue.length() - 2)) != -1) && isWordContinued(secondToken));
+		boolean is = (firstValue.endsWith("-") && (Character.isLetter(firstValue.charAt(firstValue.length() - 2)) && Character.isLowerCase(firstValue.charAt(firstValue.length() - 2))) && isWordContinued(secondToken));
 		return is;
 	}
 	

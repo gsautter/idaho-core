@@ -28,7 +28,6 @@
 package de.uka.ipd.idaho.htmlXmlUtil.grammars;
 
 
-import java.util.HashSet;
 import java.util.Vector;
 
 /**
@@ -337,15 +336,15 @@ public abstract class Grammar {
 	 * @return the translated tag name
 	 */
 	public abstract String translateTag(String tag);
-
-	/**
-	 * get all possible parent tags to the specified tag in the context of this
-	 * grammar
-	 * @param tag the child tag
-	 * @return all possible parent tags to the specified tag in the context of
-	 *         this grammar
-	 */
-	public abstract HashSet getParentTags(String tag);
+//
+//	/**
+//	 * get all possible parent tags to the specified tag in the context of this
+//	 * grammar
+//	 * @param tag the child tag
+//	 * @return all possible parent tags to the specified tag in the context of
+//	 *         this grammar
+//	 */
+//	public abstract HashSet getParentTags(String tag);
 
 	/**
 	 * check if a tag can be child of another tag in the context of this grammar

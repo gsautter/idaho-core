@@ -163,19 +163,20 @@ public class TableDefinition {
 		public boolean correctErrors() {
 			return false;
 		}
-		
-		/** @see de.htmlXmlUtil.grammars.Grammar#getParentTags(java.lang.String)
-		 */
-		public HashSet getParentTags(String tag) {
-			HashSet parents = new HashSet();
-			if ((tag != null) && tag.equalsIgnoreCase(TableDefinition.COLUMN_TAG)) parents.add(TableDefinition.TABLE_TAG);
-			return parents;
-		}
+//		
+//		/** @see de.htmlXmlUtil.grammars.Grammar#getParentTags(java.lang.String)
+//		 */
+//		public HashSet getParentTags(String tag) {
+//			HashSet parents = new HashSet();
+//			if ((tag != null) && TableDefinition.COLUMN_TAG.equalsIgnoreCase(tag))
+//				parents.add(TableDefinition.TABLE_TAG);
+//			return parents;
+//		}
 		
 		/** @see de.htmlXmlUtil.grammars.Grammar#canBeChildOf(java.lang.String, java.lang.String)
 		 */
 		public boolean canBeChildOf(String child, String parent) {
-			return ((parent != null) && parent.equalsIgnoreCase(TableDefinition.TABLE_TAG) && (child != null) && child.equalsIgnoreCase(TableDefinition.COLUMN_TAG));
+			return ((parent != null) && TableDefinition.TABLE_TAG.equalsIgnoreCase(parent) && (child != null) && TableDefinition.COLUMN_TAG.equalsIgnoreCase(child));
 		}
 	});
 	

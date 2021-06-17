@@ -539,9 +539,9 @@ public class TokenSource {
 //		//	Tokenizes OK
 ////		TokenSource ts = getTokenSource(new StringReader("<t a=\"value with \"invalid\" chars\">text</t>"), new StandardGrammar());
 //		//	Tokenizes OK
-////		TokenSource ts = getTokenSource(new StringReader("<t a=\"Stop­Bowitz, C. (1992) Polychetes pelagiques des Campagnes de \" L'ombango \" dans les eaux equatoriales et tropicales ouest­africaines. Editions de l'ORSTOM. Coll. Etudes et Theses. Paris, 115 pp.\">text</t>"), new StandardGrammar());
+////		TokenSource ts = getTokenSource(new StringReader("<t a=\"Stop-Bowitz, C. (1992) Polychetes pelagiques des Campagnes de \" L'ombango \" dans les eaux equatoriales et tropicales ouest-africaines. Editions de l'ORSTOM. Coll. Etudes et Theses. Paris, 115 pp.\">text</t>"), new StandardGrammar());
 //		//	Tokenizes BULLSHIT ==> TODO improve it !!!
-////		TokenSource ts = getTokenSource(new StringReader("<t a=\"Stop­Bowitz, C. (1992) Polychetes pelagiques des Campagnes de \" L'ombango \" dans les eaux equatoriales et tropicales ouest­africaines. Editions de l'ORSTOM. Coll. Etudes et Theses. Paris, 115 pp.\">text</t>"), new StandardGrammar());
+////		TokenSource ts = getTokenSource(new StringReader("<t a=\"Stop-Bowitz, C. (1992) Polychetes pelagiques des Campagnes de \" L'ombango \" dans les eaux equatoriales et tropicales ouest-africaines. Editions de l'ORSTOM. Coll. Etudes et Theses. Paris, 115 pp.\">text</t>"), new StandardGrammar());
 //		while (ts.hasMoreTokens()) {
 ////			String token = ts.retrieveToken();
 //			Token token = ts.retrieveToken();

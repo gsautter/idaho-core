@@ -317,10 +317,12 @@ public class EasyIO {
 				String url;
 				
 				//	get DB specific libraries
-				String[] driverClassPathParts = this.jdbcDriverClassPath.split("\\s");
+				String[] driverClassPathParts = this.jdbcDriverClassPath.trim().split("\\s+");
 				ArrayList urlList = new ArrayList();
 				for (int p = 0; p < driverClassPathParts.length; p++) {
-					if (driverClassPathParts[p].length() != 0) try {
+					if (driverClassPathParts[p].length() == 0)
+						continue;
+					try {
 						System.out.println("StandardIoProvider: adding '" + driverClassPathParts[p] + "' to class path for JDBC driver");
 						if (driverClassPathParts[p].indexOf("://") == -1)
 							urlList.add(new File(driverClassPathParts[p]).toURL());

@@ -1312,15 +1312,16 @@ public class XPathParser {
 	}
 	
 	private static String[] tokenize(String string) {
+		
 		//	check parameter
 		if ((string == null) || (string.trim().length() == 0)) return new String[0];
 		
 		//	normalize whitespace
 		StringBuffer assembler = new StringBuffer();
-		char c;
+		char ch;
 		for (int i = 0; i < string.length(); i++) {
-			c = string.charAt(i);
-			assembler.append((c < 33) ? ' ' : c);
+			ch = string.charAt(i);
+			assembler.append((ch < 33) ? ' ' : ch);
 		}
 		String normalizedString = assembler.toString().trim();
 		
@@ -1334,12 +1335,12 @@ public class XPathParser {
 		char next = normalizedString.charAt(0);
 		int i = 0;
 		while (next != NULLCHAR) {
-			c = normalizedString.charAt(i);
+			ch = normalizedString.charAt(i);
 			next = (((i + 1) < normalizedString.length()) ? normalizedString.charAt(i + 1) : NULLCHAR);
 			
 			//	end of quoted part
-			if (c == quoter) {
-				assembler.append(c);
+			if (ch == quoter) {
+				assembler.append(ch);
 				i++;
 				quoter = NULLCHAR;
 				
@@ -1349,20 +1350,20 @@ public class XPathParser {
 			
 			//	in quotes
 			else if (quoter != NULLCHAR) {
-				assembler.append(c);
+				assembler.append(ch);
 				i++;
 			}
 			
 			//	start of quotas
-			else if ((c == '"') || (c == '\'')) {
+			else if ((ch == '"') || (ch == '\'')) {
 				if (assembler.length() != 0) {
 					tokens.add(assembler.toString());
 					assembler = new StringBuffer();
 				}
 
-				assembler.append(c);
+				assembler.append(ch);
 				i++;
-				quoter = c;
+				quoter = ch;
 			}
 			
 			//	explicit expression token
@@ -1382,15 +1383,15 @@ public class XPathParser {
 				tokens.add("..");
 				i += 2;
 			}
-			else if ("()[]@,".indexOf(c) != -1) {
+			else if ("()[]@,".indexOf(ch) != -1) {
 				if (assembler.length() != 0) {
 					tokens.add(assembler.toString());
 					assembler = new StringBuffer();
 				}
-				tokens.add("" + c);
+				tokens.add("" + ch);
 				i ++;
 			}
-			else if ((c == '.') && !isDigit(last) && !isDigit(next)) {
+			else if ((ch == '.') && !isDigit(last) && !isDigit(next)) {
 				if (assembler.length() != 0) {
 					tokens.add(assembler.toString());
 					assembler = new StringBuffer();
@@ -1400,7 +1401,6 @@ public class XPathParser {
 			}
 			
 			//	operators
-			
 			else if (normalizedString.startsWith("!=", i)) {
 				if (assembler.length() != 0) {
 					tokens.add(assembler.toString());
@@ -1425,7 +1425,7 @@ public class XPathParser {
 				tokens.add(">=");
 				i += 2;
 			}
-			else if ((c == '-') && !inName) {
+			else if ((ch == '-') && !inName) {
 				if (assembler.length() != 0) {
 					tokens.add(assembler.toString());
 					assembler = new StringBuffer();
@@ -1433,17 +1433,17 @@ public class XPathParser {
 				tokens.add("-");
 				i ++;
 			}
-			else if ("/|+=<>*".indexOf(c) != -1) {
+			else if ("/|+=<>*".indexOf(ch) != -1) {
 				if (assembler.length() != 0) {
 					tokens.add(assembler.toString());
 					assembler = new StringBuffer();
 				}
-				tokens.add("" + c);
+				tokens.add("" + ch);
 				i ++;
 			}
 			
 			//	whitespace
-			else if (c < 33) {
+			else if (ch < 33) {
 				if (assembler.length() != 0) {
 					tokens.add(assembler.toString());
 					assembler = new StringBuffer();
@@ -1453,15 +1453,16 @@ public class XPathParser {
 			
 			//	other char
 			else {
-				assembler.append(c);
+				assembler.append(ch);
 				i ++;
 			}
 			
-			inName = isNameStartChar(c) || (inName && isNameChar(c));
-			last = c;
+			inName = isNameStartChar(ch) || (inName && isNameChar(ch));
+			last = ch;
 		}
 		
-		if (assembler.length() != 0) tokens.add(assembler.toString());
+		if (assembler.length() != 0)
+			tokens.add(assembler.toString());
 		
 		//for (int t = 0; t < tokens.size(); t++) System.out.println(tokens.get(t));
 		
@@ -1511,14 +1512,12 @@ public class XPathParser {
 		}
 		
 		//	check if any brackets remained open
-		if (!openBrackets.isEmpty()) return ("Unmatched opening bracket '" + openBrackets.peek() + "'");
+		if (!openBrackets.isEmpty())
+			return ("Unmatched opening bracket '" + openBrackets.peek() + "'");
 		
 		//	checks passed
 		return null;
 	}
-	
-	private static final String LETTERS 	= "aäáâàbcdeéêèfghiíîìjklmnoöóôòpqrstuüúûùvwxyzßAÄÁÂÀBCDEÉÊÈFGHIÍîÌJKLMNOÖÓÔÒPQRSTUÜÚÛÙVWXYZ";
-	private static final String DIGITS		= "0123456789";
 	
 	private static final String INVALID_BEFORE_OPERATORS 		= " :: + = != < <= > >= ( [ ";
 	private static final String OPERATORS 						= " + = != < <= > >= ";
@@ -1527,16 +1526,42 @@ public class XPathParser {
 	private static final String OPERATOR_KILLERS				= " @ :: ( [ , / // | + - = != < <= > >= ";
 	private static final String CONDITIONAL_OPERATOR_KILLERS	= " and or mod div * ";
 	
-	private static boolean isDigit(char c) {
-		return (DIGITS.indexOf(c) != -1);
+	private static boolean isDigit(char ch) {
+		return (('0' <= ch) && (ch <= '9'));
 	}
 	
-	private static boolean isNameStartChar(char c) {
-		return ((c == '_') || (LETTERS.indexOf(c) != -1));
+	private static boolean isNameStartChar(char ch) {
+		return (false
+			|| (('A' <= ch) && (ch <= 'Z'))
+			|| (ch == '_')
+			|| (('a' <= ch) && (ch <= 'z'))
+			|| (('\u00C0' <= ch) && (ch <= '\u00D6'))
+			|| (('\u00D8' <= ch) && (ch <= '\u00F6'))
+			|| (('\u00F8' <= ch) && (ch <= '\u02FF'))
+			|| (('\u0370' <= ch) && (ch <= '\u037D'))
+			|| (('\u037F' <= ch) && (ch <= '\u1FFF'))
+			|| (ch == '\u200C')
+			|| (ch == '\u200D')
+			|| (('\u2070' <= ch) && (ch <= '\u218F'))
+			|| (('\u2C00' <= ch) && (ch <= '\u2FEF'))
+			|| (('\u3001' <= ch) && (ch <= '\uD7FF'))
+			|| (('\uF900' <= ch) && (ch <= '\uFDCF'))
+			|| (('\uFDF0' <= ch) && (ch <= '\uFFFD'))
+		);
 	}
 	
-	private static boolean isNameChar(char c) {
-		return (isNameStartChar(c) || isDigit(c) || (c == '.') || (c == '-'));
+	private static boolean isNameChar(char ch) {
+		return (false
+			|| isNameStartChar(ch)
+			|| isDigit(ch)
+			|| (ch == '-')
+			|| (ch == '.')
+			|| (ch == '\u00B7')
+			|| (('\u0300' <= ch) && (ch <= '\u036F'))
+			|| (('\u203F' <= ch) && (ch <= '\u2140'))
+			|| (ch == '\u203F')
+			|| (ch == '\u2040')
+		);
 	}
 	
 	private static boolean canBeOperator(String token) {
