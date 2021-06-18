@@ -25,7 +25,7 @@
 	<target name="compileMain" description="Compile IDAHO core Java sources">
 		
 	    <!-- Compile Java classes as necessary -->
-	    <javac  destdir="${build.home}/classes" includeantruntime="false" target="1.5" debug="true" debuglevel="lines,vars,source">
+	    <javac  destdir="${build.home}/classes" includeantruntime="false" debug="true" debuglevel="lines,vars,source">
 	    	<src path="${src.home}" />
 			<exclude name="**/idaho/easyIO/utilities/SunJdkSeedCertificateGenerator.java" />
 			<exclude name="**/idaho/easyIO/utilities/BouncyCastleSeedCertificateGenerator.java" />
@@ -52,7 +52,7 @@
 		<!-- Compile Java classes as necessary -->
 		<!-- trycatch property="error">
 			<try>
-				<javac destdir="${build.home}/classes" includeantruntime="false" target="1.5" debug="true" debuglevel="lines,vars,source">
+				<javac destdir="${build.home}/classes" includeantruntime="false" debug="true" debuglevel="lines,vars,source">
 					<src path="${src.home}" />
 					<include name="**/idaho/easyIO/utilities/SunJdkSeedCertificateGenerator.java" />
 					<classpath refid="compile.classpath" />
@@ -62,7 +62,7 @@
 				<warning>Failed to build Sun JDK based seed certificate generator: ${error}</warning>
 			</catch>
 		</trycatch -->
-		<javac destdir="${build.home}/classes" includeantruntime="false" target="1.5" debug="true" debuglevel="lines,vars,source">
+		<javac destdir="${build.home}/classes" includeantruntime="false" debug="true" debuglevel="lines,vars,source">
 			<src path="${src.home}" />
 			<include name="**/idaho/easyIO/utilities/SunJdkSeedCertificateGenerator.java" />
 			<classpath refid="compile.classpath" />
@@ -81,7 +81,7 @@
 		<!-- Compile Java classes as necessary -->
 		<!-- trycatch>
 			<try>
-				<javac destdir="${build.home}/classes" includeantruntime="false" target="1.5" debug="true" debuglevel="lines,vars,source">
+				<javac destdir="${build.home}/classes" includeantruntime="false" debug="true" debuglevel="lines,vars,source">
 					<src path="${src.home}" />
 					<include name="**/idaho/easyIO/utilities/BouncyCastleSeedCertificateGenerator.java" />
 					<classpath refid="compile.classpath" />
@@ -91,10 +91,11 @@
 				<warning>Failed to build BouncyCastle based seed certificate generator</warning>
 			</catch>
 		</trycatch -->
-		<javac destdir="${build.home}/classes" includeantruntime="false" target="1.5" debug="true" debuglevel="lines,vars,source">
+		<javac destdir="${build.home}/classes" includeantruntime="false" debug="true" debuglevel="lines,vars,source">
 			<src path="${src.home}" />
 			<include name="**/idaho/easyIO/utilities/BouncyCastleSeedCertificateGenerator.java" />
 			<classpath refid="compile.classpath" />
 		</javac>
 	</target>
 </project>
+

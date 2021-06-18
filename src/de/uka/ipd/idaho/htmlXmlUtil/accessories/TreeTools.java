@@ -44,7 +44,7 @@ import de.uka.ipd.idaho.htmlXmlUtil.TreeNode;
  */
 public class TreeTools {
 	
-	/**
+  /**
 	 * get all nodes of the the specified type
 	 * @param root the root node of the tree to search in
 	 * @param searchTag the node type to search
