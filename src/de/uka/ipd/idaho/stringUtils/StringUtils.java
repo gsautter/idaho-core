@@ -75,34 +75,11 @@ public class StringUtils {
 	/** string constant containing all Latin letters in lower case */
 	public static final String LATIN_LOWER_CASE_LETTERS = "abcdefghijklmnopqrstuvwxyz";
 	
-	/** string constant containing all Latin letters in upper and lower case, plus derived characters with accents and the like, ligatures, etc.
-	 * @deprecated this covers ANSI only, use <code>Character.isLetter()</code> instead */
-	public static final String LETTERS = "abcdefghijklmnopqrstuvwxyzßàáâãäåæçèéêëìíîïñòóôõöœøùúûüýÿABCDEFGHIJKLMNOPQRSTUVWXYZÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖØŒÙÚÛÜÝ";
-	
-	/** string constant containing all Latin vowels in upper and lower case, plus derived characters with accents and the like, ligatures, etc.
-	 * @deprecated this covers ANSI only, use <code>getBaseChar()</code> before lookup */
-	public static final String VOWELS = "aeiouAEIOUàáâãäåæèéêëìíîïòóôõöøœùúûüÀÁÂÃÄÅÆÈÉÊËÌÍÎÏÒÓÔÕÖØŒÙÚÛÜ";
-	
-	/** string constant containing all Latin consonants in upper and lower case, plus derived language specifc characters like the German 'ß', the Spanish 'ñ', and the French 'ç'
-	 * @deprecated this covers ANSI only, use <code>getBaseChar()</code> before lookup */
-	public static final String CONSONANTS = "bcdfghjklmnpqrstvwxyzçñßBCDFGHJKLMNPQRSTVWXYZÇÑ";
-	
-	/** string constant containing all Latin letters in upper case, plus derived characters with accents and the like, ligatures, etc.
-	 * @deprecated this covers ANSI only, use <code>Character.isUpperCase()</code> instead */
-	public static final String UPPER_CASE_LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖØŒÙÚÛÜÝ";
-	
-	/** string constant containing all Latin letters in lower case, plus derived characters with accents and the like, ligatures, etc.
-	 * @deprecated this covers ANSI only, use <code>Character.isLowerCase()</code> instead */
-	public static final String LOWER_CASE_LETTERS = "abcdefghijklmnopqrstuvwxyzßàáâãäåæçèéêëìíîïñòóôõöøœùúûüýÿ";
-	
 	/** string constant containing all digits 0 through 9 */
 	public static final String DIGITS = "0123456789";
 	
-	/** string constant containing common currency symbols */
-	public static final String CURRENCY_SYMBOLS = "€$£¥";
-	
 	/** string constant containing all ASCII punctuation marks */
-	public static final String PUNCTUATION = "°!\"§$%&/()=¿?{[]}\\@€£+*~#'´`<>|,;.:-_^";
+	public static final String PUNCTUATION = "\u00B0!\"\u00A7$%&/()=\u00BF?{[]}\\@\u20AC\u00A3\u00A5+*~#'\u00B4`<>|,;.:-_^";
 	
 	/*
 \u0020 --> ASCII space
@@ -192,8 +169,6 @@ public class StringUtils {
 	public static final String DOUBLE_QUOTES = "\"\u00AB\u00BB\u02BA\u02DD\u02EE\u02F5\u02F6\u201C\u201D\u201E\u201F\u2033\u2036\u301D\u301E\u301F";
 	
 	/** string constant containing punctuation marks that may appear within words, namely hyphens and apostrophes (in their various forms) */
-//	public static final String IN_WORD_PUNCTUATION = "-'­——’‘";
-//	public static final String IN_WORD_PUNCTUATION = (DASHES + SINGLE_QUOTES);
 	public static final String IN_WORD_PUNCTUATION = (HYPHENS + APOSTROPHES);
 	
 	/** string constant containing punctuation marks that may appear in numbers, namely ',' and '.' */
@@ -214,11 +189,11 @@ public class StringUtils {
 	/** string constant containing all punctuation marks that end a sentence, namely '!', '?', and '.' */
 	public static final String SENTENCE_ENDINGS	= "!?.";
 	
-	/** string constant containing all punctuation marks usually having no space before them, namely closing brackets, and '!', '?', ',', ';', '.', ':', '´', and '`' */
-	public static final String UNSPACED_BEFORE = "!)?]}>,;.:´`";
+	/** string constant containing all punctuation marks usually having no space before them, namely closing brackets, and '!', '?', ',', ';', '.', ':', '&acute;', and '`' */
+	public static final String UNSPACED_BEFORE = "!)?]}>,;.:\u00B4`";
 	
-	/** string constant containing all punctuation marks usually having no space after them, namely opening brackets, '´', and '`' */
-	public static final String UNSPACED_AFTER = "([{<´`";
+	/** string constant containing all punctuation marks usually having no space after them, namely opening brackets, '&acute;', and '`' */
+	public static final String UNSPACED_AFTER = "([{<\u00B4`";
 	
 	/** string constant containing common abbreviations, like 'Mr.' or 'Jun.' */
 	public static final String COMMON_ABBREVIATIONS = "No.Prof.Dr.Mr.Mrs.Ms.Jun.Sen.Mt.A.B.C.D.E.F.G.H.I.J.K.L.M.N.O.P.Q.R.S.T.U.V.W.X.Y.Z.";
@@ -449,10 +424,10 @@ public class StringUtils {
 		
 		PorterBox(String string) {
 			StringBuffer buffer = new StringBuffer();
-			for (int i = 0; i < string.length(); i++) {
-				String s = string.substring(i, (i+1)).toLowerCase();
-				if ((LOWER_CASE_LETTERS.indexOf(s) != -1) || (IN_WORD_PUNCTUATION.indexOf(s) != -1))
-					buffer.append(s);
+			for (int c = 0; c < string.length(); c++) {
+				char ch = Character.toLowerCase(getBaseChar(string.charAt(c)));
+				if ((LATIN_LOWER_CASE_LETTERS.indexOf(ch) != -1) || (IN_WORD_PUNCTUATION.indexOf(ch) != -1))
+					buffer.append(ch);
 			}
 			this.wordBuffer = buffer.toString().toCharArray();
 			this.bufferLevel = buffer.length();
@@ -945,7 +920,7 @@ public class StringUtils {
 			return false;
 		for (int c = 0; c < string.length(); c++) {
 			char ch = getBaseChar(string.charAt(c));
-			if (VOWELS.indexOf(ch) != -1)
+			if (LATIN_VOWELS.indexOf(ch) != -1)
 				return true;
 			else if (yIsVowel && "yY".indexOf(ch) != -1)
 				return true;
@@ -979,7 +954,7 @@ public class StringUtils {
 			return false;
 		for (int c = 0; c < string.length(); c++) {
 			char ch = getBaseChar(string.charAt(c));
-			if (CONSONANTS.indexOf(ch) != -1)
+			if (LATIN_CONSONANTS.indexOf(ch) != -1)
 				return true;
 			else if (yIsConsonant && "yY".indexOf(ch) != -1)
 				return true;
@@ -2088,8 +2063,8 @@ public class StringUtils {
 		}
 		
 		//	initialize self-based chars, including Greek chars
-		selfBasedChars.add(new Character('µ'));
-		selfBasedChars.add(new Character('°'));
+		selfBasedChars.add(new Character('\u00B5')); // micro sign, ANSI mu
+		selfBasedChars.add(new Character('\u00B0')); // degree symbol
 		for (int gc = 945; gc <= 969; gc++) // lower case Greek character range
 			selfBasedChars.add(new Character((char) gc));
 		for (int gc = 913; gc <= 937; gc++) // upper case Greek character range
@@ -2119,7 +2094,7 @@ public class StringUtils {
 		baseCharMappings.put("emdash", new Character('-'));
 		baseCharMappings.put("minus", new Character('-'));
 		baseCharMappings.put("horizontalbar", new Character('-'));
-		baseCharMappings.put("openbullet", new Character('°'));
+		baseCharMappings.put("openbullet", new Character('\u00B0'));
 		baseCharMappings.put("minute", new Character('\''));
 		baseCharMappings.put("guillemotleft", new Character('"'));
 		baseCharMappings.put("guillemotright", new Character('"'));

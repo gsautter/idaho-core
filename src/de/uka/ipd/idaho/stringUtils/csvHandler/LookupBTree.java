@@ -32,11 +32,9 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.security.AccessController;
 import java.util.ArrayList;
 import java.util.HashMap;
 
-import sun.security.action.GetPropertyAction;
 import de.uka.ipd.idaho.stringUtils.StringVector;
 
 /**
@@ -65,8 +63,8 @@ public class LookupBTree {
 	
 	private boolean writeOnly = false;
 	private StringVector writeKeys = new StringVector();
-	private int maxCacheTupels; 
-	private String lineSeparator = ((String) AccessController.doPrivileged(new GetPropertyAction("line.separator")));
+	private int maxCacheTupels;
+	private String lineSeparator = System.getProperty("line.separator", "\r\n");
 	
 	/** Constructor
 	 * @param	basePath			the root folder of the file-based BTree
@@ -293,7 +291,8 @@ public class LookupBTree {
 			BTreeNode child = ((BTreeNode) this.childNodes.get(localKey));
 			
 			//	child node exists
-			if (child != null) return child;
+			if (child != null)
+				return child;
 			
 			//	create file and node representing it
 			File childFile = new File(this.dataFile, localKey);
@@ -301,18 +300,21 @@ public class LookupBTree {
 				child = new BTreeNode(childFile, (this.treeDepth + 1));
 				this.childNodes.put(localKey, child);
 				return child;
-			} else if (create) {
+			}
+			else if (create) {
 				try {
 					if (childFile.createNewFile()) {
 						child = new BTreeNode(childFile, (this.treeDepth + 1));
 						this.childNodes.put(localKey, child);
 						return child;
 					} else return null;
-				} catch (IOException ioe) {
+				}
+				catch (IOException ioe) {
 					System.out.println("BTreeNode: " + ioe.getClass() + ": " + ioe.getMessage() + " while creating child node for " + dataFile.getAbsolutePath());
 					return null;
 				}
-			} else return null;
+			}
+			else return null;
 		}
 		
 		/**	@return	a StringRelation holding the data represented by thei BTreeNode
@@ -335,22 +337,27 @@ public class LookupBTree {
 		private boolean storeData(StringTupel data) {
 			
 			//	in write only mode, avoid loading data
-			if (writeOnly && (this.data == null)) this.data = new StringRelation();
+			if (writeOnly && (this.data == null))
+				this.data = new StringRelation();
 			
 			//	make sure data is loaded
 			this.loadData();
 			
 			//	data could not be loaded
-			if (this.data == null) return false;
+			if (this.data == null)
+				return false;
 			
 			//	store tuple
 			this.data.addElement(data);
 			this.dirty = true;
 			
 			//	split node if necessary
-			if (this.data.size() > maxNodeTupels) this.split();
-			else if (writeOnly && ((this.data.size() + this.fileDataCount) > maxNodeTupels)) this.split();
-			else if (writeOnly && (this.data.size() > maxCacheTupels)) this.writeData();
+			if (this.data.size() > maxNodeTupels)
+				this.split();
+			else if (writeOnly && ((this.data.size() + this.fileDataCount) > maxNodeTupels))
+				this.split();
+			else if (writeOnly && (this.data.size() > maxCacheTupels))
+				this.writeData();
 			
 			//	report success
 			return true;
@@ -375,9 +382,10 @@ public class LookupBTree {
 					for (int d = 0; d < cacheData.size(); d++)
 						this.data.addElement(cacheData.get(d));
 					this.dirty = true;
-					
+				}
+				
 				//	make sure data is in memory
-				} else this.loadData();
+				else this.loadData();
 				
 				//	create child node keys and re-distribute data
 				StringVector childNodeKeys = new StringVector();
@@ -405,7 +413,8 @@ public class LookupBTree {
 				
 				//	transform data file to folder
 				String fileName = this.dataFile.getAbsolutePath();
-				if (this.dataFile.length() == 0) this.dataFile.delete();
+				if (this.dataFile.length() == 0)
+					this.dataFile.delete();
 				else {
 					File oldFile = new File(fileName + ".old");
 					if (oldFile.exists()) oldFile.delete();
@@ -434,9 +443,10 @@ public class LookupBTree {
 						
 						//	force write data
 						this.writeData();
-						
+					}
+					
 					//	child node data
-					} else {
+					else {
 						
 						BTreeNode child = this.getChildNode(localChildKey, true);
 						if (child != null) {
@@ -512,12 +522,14 @@ public class LookupBTree {
 					dataWriter.flush();
 					dataWriter.close();
 					
-				} catch (IOException ioe) {
+				}
+				catch (IOException ioe) {
 					System.out.println("BTreeNode: " + ioe.getClass() + ": " + ioe.getMessage() + " while appending data to " + file.getAbsolutePath());
 				}
-				
+			}
+			
 			//	regular mode
-			} else {
+			else {
 				
 				//	clean up old file if existent
 				if (file.exists() && (file.length() != 0)) {
@@ -536,9 +548,10 @@ public class LookupBTree {
 					writer.flush();
 					writer.close();
 					
-					//	remember file and local data structure are synchonous now
+					//	remember file and local data structure are in sync now
 					this.dirty = false;
-				} catch (IOException ioe) {
+				}
+				catch (IOException ioe) {
 					System.out.println("BTreeNode: " + ioe.getClass() + ": " + ioe.getMessage() + " while writing data to " + file.getAbsolutePath());
 				}
 			}

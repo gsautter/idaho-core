@@ -158,12 +158,12 @@ public class StandardGrammar extends Grammar {
 	public String translateTag(String tag) {
 		return tag;
 	}
-
-	/** @see de.uka.ipd.idaho.htmlXmlUtil.grammars.Grammar#getParentTags(java.lang.String)
-	 */
-	public HashSet getParentTags(String tag) {
-		return new HashSet();
-	}
+//
+//	/** @see de.uka.ipd.idaho.htmlXmlUtil.grammars.Grammar#getParentTags(java.lang.String)
+//	 */
+//	public HashSet getParentTags(String tag) {
+//		return new HashSet();
+//	}
 
 	/** @see de.uka.ipd.idaho.htmlXmlUtil.grammars.Grammar#canBeChildOf(java.lang.String, java.lang.String)
 	 */

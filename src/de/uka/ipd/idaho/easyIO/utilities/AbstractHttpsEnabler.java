@@ -33,28 +33,22 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.math.BigInteger;
 import java.net.InetAddress;
 import java.net.Socket;
-import java.security.InvalidKeyException;
 import java.security.KeyManagementException;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
-import java.security.NoSuchProviderException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
-import java.security.SecureRandom;
-import java.security.SignatureException;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateEncodingException;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Date;
 import java.util.Enumeration;
 
 import javax.net.SocketFactory;
@@ -67,18 +61,6 @@ import javax.net.ssl.TrustManagerFactory;
 import javax.net.ssl.X509TrustManager;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
-
-import sun.security.x509.AlgorithmId;
-import sun.security.x509.CertificateAlgorithmId;
-import sun.security.x509.CertificateIssuerName;
-import sun.security.x509.CertificateSerialNumber;
-import sun.security.x509.CertificateSubjectName;
-import sun.security.x509.CertificateValidity;
-import sun.security.x509.CertificateVersion;
-import sun.security.x509.CertificateX509Key;
-import sun.security.x509.X500Name;
-import sun.security.x509.X509CertImpl;
-import sun.security.x509.X509CertInfo;
 
 /**
  * Abstract implementation of an HTTPS enabler. This class handles all aspects
@@ -163,7 +145,9 @@ public abstract class AbstractHttpsEnabler extends SSLSocketFactory implements X
 					X509Certificate seedCert;
 					try {
 						seedCert = createSeedCertificate();
-						System.out.println("Seed certificate created");
+						if (seedCert == null)
+							System.out.println("Could not create seed certificate");
+						else System.out.println("Seed certificate created");
 					}
 					catch (Throwable t) {
 						System.out.println("Could not create seed certificate: " + t.getMessage());
@@ -266,6 +250,32 @@ public abstract class AbstractHttpsEnabler extends SSLSocketFactory implements X
 	//	method code courtesy https://www.mayrhofer.eu.org/create-x509-certs-in-java
 	private static X509Certificate createSeedCertificate() throws IOException {
 		
+		//	get certificate generator
+		SeedCertificateGenerator seedCertGen;
+		try {
+			seedCertGen = getSeedCertificateGenerator();
+			if (seedCertGen == null) {
+				System.out.println("Could not create seed certificate generator");
+				return null;
+			}
+			System.out.println("Got seed certificate generator: " + seedCertGen.getClass().getName());
+		}
+		catch (ClassNotFoundException cnfe) {
+			System.out.println("Could not create seed certificate generator: " + cnfe.getMessage());
+			cnfe.printStackTrace(System.out);
+			throw new IOException(cnfe);
+		}
+		catch (NoClassDefFoundError ncdfe) {
+			System.out.println("Could not create seed certificate generator: " + ncdfe.getMessage());
+			ncdfe.printStackTrace(System.out);
+			throw new IOException(ncdfe);
+		}
+		catch (Exception e) {
+			System.out.println("Could not create seed certificate generator: " + e.getMessage());
+			e.printStackTrace(System.out);
+			throw new IOException(e);
+		}
+		
 		//	generate key pair
 		PublicKey pubKey;
 		PrivateKey privKey;
@@ -284,96 +294,130 @@ public abstract class AbstractHttpsEnabler extends SSLSocketFactory implements X
 		
 		//	create certificate under heavy guard (this will throw all sorts of exceptions in non-Sun JVM)
 		try {
-			return createSeedCertificate(pubKey, privKey);
+			return seedCertGen.createSeedCertificate(pubKey, privKey);
 		}
-		catch (ClassNotFoundException cnfe) {
-			System.out.println("Could not create certificate: " + cnfe.getMessage());
-			cnfe.printStackTrace(System.out);
-			throw new IOException(cnfe);
-		}
-		catch (NoClassDefFoundError ncdfe) {
-			System.out.println("Could not create certificate: " + ncdfe.getMessage());
-			ncdfe.printStackTrace(System.out);
-			throw new IOException(ncdfe);
+		catch (Exception e) {
+			System.out.println("Could not create seed certificate: " + e.getMessage());
+			e.printStackTrace(System.out);
+			throw new IOException(e);
 		}
 	}
 	
-	private static X509Certificate createSeedCertificate(PublicKey pubKey, PrivateKey privKey) throws IOException, ClassNotFoundException {
-		
-		//	get Java version
-		String javaVersionStr = System.getProperty("java.version", "");
-		String[] javaVersion = javaVersionStr.split("\\.");
-		boolean isBelowJava8 = ((javaVersion.length < 2) || ((Integer.parseInt(javaVersion[0]) == 1) && (Integer.parseInt(javaVersion[1]) < 8)));
-		
-		//	assemble certificate info
-		X509CertInfo info = new X509CertInfo();
-		AlgorithmId algorithmId = new AlgorithmId(AlgorithmId.sha1WithRSAEncryption_oid);
-		try {
-			Date from = new Date();
-			Date to = new Date(from.getTime() + (3650 * 86400000));
-			CertificateValidity interval = new CertificateValidity(from, to);
-			BigInteger serialNumber = new BigInteger(64, new SecureRandom());
-			X500Name owner = new X500Name("CN=ApplicationPrivateSeedKey");
-			info.set(X509CertInfo.VALIDITY, interval);
-			info.set(X509CertInfo.SERIAL_NUMBER, new CertificateSerialNumber(serialNumber));
-			if (isBelowJava8) {
-				info.set(X509CertInfo.SUBJECT, new CertificateSubjectName(owner));
-				info.set(X509CertInfo.ISSUER, new CertificateIssuerName(owner));
-			}
-			else {
-				info.set(X509CertInfo.SUBJECT, owner);
-				info.set(X509CertInfo.ISSUER, owner);
-			}
-			info.set(X509CertInfo.KEY, new CertificateX509Key(pubKey));
-			info.set(X509CertInfo.VERSION, new CertificateVersion(CertificateVersion.V3));
-			info.set(X509CertInfo.ALGORITHM_ID, new CertificateAlgorithmId(algorithmId));
-		}
-		catch (CertificateException ce) {
-			System.out.println("Could not create certificate: " + ce.getMessage());
-			ce.printStackTrace(System.out);
-			throw new IOException(ce);
-		}
-		
-		//	sign the certificate to identify the algorithm that's used
-		X509CertImpl cert = new X509CertImpl(info);
-		try {
-			cert.sign(privKey, algorithmId.getName());
-			   
-			//	update the algorithm, and resign
-			algorithmId = ((AlgorithmId) cert.get(X509CertImpl.SIG_ALG));
-			info.set(CertificateAlgorithmId.NAME + "." + CertificateAlgorithmId.ALGORITHM, algorithmId);
-			cert = new X509CertImpl(info);
-			cert.sign(privKey, algorithmId.getName());
-		}
-		catch (InvalidKeyException ike) {
-			System.out.println("Could not sign certificate: " + ike.getMessage());
-			ike.printStackTrace(System.out);
-			throw new IOException(ike);
-		}
-		catch (CertificateException ce) {
-			System.out.println("Could not sign certificate: " + ce.getMessage());
-			ce.printStackTrace(System.out);
-			throw new IOException(ce);
-		}
-		catch (NoSuchAlgorithmException nsae) {
-			System.out.println("Could not sign certificate: " + nsae.getMessage());
-			nsae.printStackTrace(System.out);
-			throw new IOException(nsae);
-		}
-		catch (NoSuchProviderException nspe) {
-			System.out.println("Could not sign certificate: " + nspe.getMessage());
-			nspe.printStackTrace(System.out);
-			throw new IOException(nspe);
-		}
-		catch (SignatureException se) {
-			System.out.println("Could not sign certificate: " + se.getMessage());
-			se.printStackTrace(System.out);
-			throw new IOException(se);
-		}
-		
-		//	finally ...
-		return cert;
+	static abstract class SeedCertificateGenerator {
+		abstract X509Certificate createSeedCertificate(PublicKey pubKey, PrivateKey privKey) throws Exception;
 	}
+	
+	private static String[] seedCertificateGeneratorClassNames = {
+		"de.uka.ipd.idaho.easyIO.utilities.SunJdkSeedCertificateGenerator",
+		"de.uka.ipd.idaho.easyIO.utilities.BouncyCastleSeedCertificateGenerator",
+		"de.uka.ipd.idaho.easyIO.utilities.DefaultSeedCertificateGenerator",
+	};
+	
+	//	we need this kind of wild construct to make build independent of JDK version or cryptography library installed
+	private static SeedCertificateGenerator getSeedCertificateGenerator() throws Exception {
+		for (int cn = 0; cn < seedCertificateGeneratorClassNames.length; cn++) try {
+			Class seedCertGenClass = Class.forName(seedCertificateGeneratorClassNames[cn]);
+			return ((SeedCertificateGenerator) seedCertGenClass.newInstance());
+		}
+		catch (ClassNotFoundException cnfe) {
+			System.out.println("Could not create certificate generator: " + cnfe.getMessage());
+			cnfe.printStackTrace(System.out);
+//			throw cnfe;
+		}
+		catch (InstantiationException ie) {
+			System.out.println("Could not create certificate generator: " + ie.getMessage());
+			ie.printStackTrace(System.out);
+//			throw ie;
+		}
+		catch (IllegalAccessException iae) {
+			System.out.println("Could not create certificate generator: " + iae.getMessage());
+			iae.printStackTrace(System.out);
+//			throw iae;
+		}
+		catch (Exception e) {
+			System.out.println("Could not create certificate generator: " + e.getMessage());
+			e.printStackTrace(System.out);
+//			throw e;
+		}
+		return null;
+	}
+//	
+//	private static X509Certificate createSeedCertificate(PublicKey pubKey, PrivateKey privKey) throws IOException, ClassNotFoundException {
+//		
+//		//	get Java version
+//		String javaVersionStr = System.getProperty("java.version", "");
+//		String[] javaVersion = javaVersionStr.split("\\.");
+//		boolean isBelowJava8 = ((javaVersion.length < 2) || ((Integer.parseInt(javaVersion[0]) == 1) && (Integer.parseInt(javaVersion[1]) < 8)));
+//		
+//		//	assemble certificate info
+//		X509CertInfo info = new X509CertInfo();
+//		AlgorithmId algorithmId = new AlgorithmId(AlgorithmId.sha1WithRSAEncryption_oid);
+//		try {
+//			Date from = new Date();
+//			Date to = new Date(from.getTime() + (3650 * 86400000));
+//			CertificateValidity interval = new CertificateValidity(from, to);
+//			BigInteger serialNumber = new BigInteger(64, new SecureRandom());
+//			X500Name owner = new X500Name("CN=ApplicationPrivateSeedKey");
+//			info.set(X509CertInfo.VALIDITY, interval);
+//			info.set(X509CertInfo.SERIAL_NUMBER, new CertificateSerialNumber(serialNumber));
+//			if (isBelowJava8) {
+//				info.set(X509CertInfo.SUBJECT, new CertificateSubjectName(owner));
+//				info.set(X509CertInfo.ISSUER, new CertificateIssuerName(owner));
+//			}
+//			else {
+//				info.set(X509CertInfo.SUBJECT, owner);
+//				info.set(X509CertInfo.ISSUER, owner);
+//			}
+//			info.set(X509CertInfo.KEY, new CertificateX509Key(pubKey));
+//			info.set(X509CertInfo.VERSION, new CertificateVersion(CertificateVersion.V3));
+//			info.set(X509CertInfo.ALGORITHM_ID, new CertificateAlgorithmId(algorithmId));
+//		}
+//		catch (CertificateException ce) {
+//			System.out.println("Could not create certificate: " + ce.getMessage());
+//			ce.printStackTrace(System.out);
+//			throw new IOException(ce);
+//		}
+//		
+//		//	sign the certificate to identify the algorithm that's used
+//		X509CertImpl cert = new X509CertImpl(info);
+//		try {
+//			cert.sign(privKey, algorithmId.getName());
+//			
+//			//	update the algorithm, and resign
+//			algorithmId = ((AlgorithmId) cert.get(X509CertImpl.SIG_ALG));
+//			info.set(CertificateAlgorithmId.NAME + "." + CertificateAlgorithmId.ALGORITHM, algorithmId);
+//			cert = new X509CertImpl(info);
+//			cert.sign(privKey, algorithmId.getName());
+//		}
+//		catch (InvalidKeyException ike) {
+//			System.out.println("Could not sign certificate: " + ike.getMessage());
+//			ike.printStackTrace(System.out);
+//			throw new IOException(ike);
+//		}
+//		catch (CertificateException ce) {
+//			System.out.println("Could not sign certificate: " + ce.getMessage());
+//			ce.printStackTrace(System.out);
+//			throw new IOException(ce);
+//		}
+//		catch (NoSuchAlgorithmException nsae) {
+//			System.out.println("Could not sign certificate: " + nsae.getMessage());
+//			nsae.printStackTrace(System.out);
+//			throw new IOException(nsae);
+//		}
+//		catch (NoSuchProviderException nspe) {
+//			System.out.println("Could not sign certificate: " + nspe.getMessage());
+//			nspe.printStackTrace(System.out);
+//			throw new IOException(nspe);
+//		}
+//		catch (SignatureException se) {
+//			System.out.println("Could not sign certificate: " + se.getMessage());
+//			se.printStackTrace(System.out);
+//			throw new IOException(se);
+//		}
+//		
+//		//	finally ...
+//		return cert;
+//	}
 	
 	/**
 	 * Get an input stream for loading a previously created key store from,
