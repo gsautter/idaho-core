@@ -68,7 +68,8 @@ public class ParagraphStructureNormalizer extends AbstractAnalyzer implements Li
 	/** @see de.uka.ipd.idaho.gamta.util.Analyzer#process(de.uka.ipd.idaho.gamta.MutableAnnotation, Properties)
 	 */
 	public void process(MutableAnnotation data, Properties parameters) {
-		if ((data == null) || (data.length() == 0)) return;
+		if ((data == null) || (data.length() == 0))
+			return;
 		
 		//	get paragraphs
 		MutableAnnotation[] paragraphs = data.getMutableAnnotations(MutableAnnotation.PARAGRAPH_TYPE);

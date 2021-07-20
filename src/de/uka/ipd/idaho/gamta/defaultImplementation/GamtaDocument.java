@@ -752,7 +752,7 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 	private AnnotationBase addAnnotationAbsolute(String type, int startIndex, int size) {
 		
 		//	check parameters
-		if ((startIndex < 0) || (size < 1))
+		if ((startIndex < 0) || (size < 1) || (this.size() < (startIndex + size)))
 			return null;
 		
 		//	create Annotation
@@ -1896,13 +1896,11 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 		
 		private Change change = null; // the change originating from the current update to the underlying token sequence (will be null unless a change is in progress)
 		
-//		private Vector views = new Vector(); // the views currently referring to this AbbotationBase, for event notification purposes
 		private ArrayList views = new ArrayList(2); // the views currently referring to this AbbotationBase, for event notification purposes
 		
 		final AnnotationCache subAnnotationsByType = new AnnotationCache(16);
 		
 		AnnotationBase(String type, int startIndex, int size) {
-//			if ((type == null) || (type.trim().length() == 0))
 			if ((type == null) || !AnnotationUtils.isValidAnnotationType(type))
 				throw new IllegalArgumentException("'" + type + "' is not a valid Annotation type");
 			this.type = type;
@@ -1922,20 +1920,12 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 		
 		void clearCaches() {
 			this.subAnnotationsByType.clear();
-//			this.subAnnotationsByTypeAndRange.clear();
 		}
 		
 		/* (non-Javadoc)
 		 * @see de.gamta.defaultImplementation.AbstractAttributed#getAttribute(java.lang.String)
 		 */
 		public Object getAttribute(String name) {
-//			if (SIZE_ATTRIBUTE.equals(name))
-//				return new Integer(this.size);
-//			else if (ANNOTATION_VALUE_ATTRIBUTE.equals(name))
-//				return this.getValue();
-//			else if (ANNOTATION_ID_ATTRIBUTE.equals(name))
-//				return this.annotationId;
-//			else return super.getAttribute(name);
 			return this.getAttribute(name, null);
 		}
 		
@@ -1969,8 +1959,6 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 				if ((value != null) && (value instanceof String) && (value.toString().trim().length() == this.annotationId.length())) {
 					String oldId = this.annotationId;
 					this.annotationId = value.toString();
-//					annotations.annotationIDs.remove(oldId);
-//					annotations.annotationIDs.add(this.annotationId);
 					annotations.annotationIdChanged(this, oldId);
 					return oldId;
 				}
@@ -2241,10 +2229,7 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 			if (ab.getEndIndex() > this.getEndIndex())
 				return false;
 			if ((ab.absoluteStartIndex == this.absoluteStartIndex) && (ab.size == this.size)) {
-//				int ano = annotationNestingOrder.getNestingOrder(this.type, ab.type);
 				int ano = typeNestingOrder.compare(this.type, ab.type);
-//				if (ano == 0)
-//					return (this.timestamp < ab.timestamp);
 				if (ano == 0)
 					return (this.createOrderNumber < ab.createOrderNumber);
 				else return (ano < 0);
@@ -2279,7 +2264,6 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 			}
 		}
 		String changeTypeTo(String newType) {
-//			if ((newType == null) || (newType.trim().length() == 0))
 			if ((newType == null) || !AnnotationUtils.isValidAnnotationType(newType))
 				throw new IllegalArgumentException("'" + newType + "' is not a valid Annotation type");
 			String oldType = this.type;
@@ -2340,7 +2324,7 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 			//	clear attributes
 			this.clearAttributes();
 			
-			//	discart views
+			//	discard views
 			this.views.clear();
 		}
 		Token firstToken() {
@@ -2562,7 +2546,7 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 		AnnotationBase addAnnotationAbsolute(String type, int startIndex, int size) {
 			
 			//	check parameters
-			if ((startIndex < 0) || (size < 1))
+			if ((startIndex < 0) || (size < 1) || (this.size < (startIndex + size)))
 				return null;
 			
 			//	create Annotation
@@ -2573,7 +2557,6 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 			return ab;
 		}
 		AnnotationBase removeAnnotation(Annotation annotation) {
-//			return annotations.removeAnnotation(this.absoluteStartIndex, annotation);
 			return annotations.removeAnnotation(annotation);
 		}
 		TokenSequence removeTokens(Annotation annotation) {
@@ -2589,13 +2572,11 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 			c = (ab.size - this.size);
 			if (c != 0)
 				return c;
-//			c = annotationNestingOrder.getNestingOrder(this.type, ab.type);
 			if (!this.type.equals(ab.type)) {
 				c = typeNestingOrder.compare(this.type, ab.type);
 				if (c != 0)
 					return c;
 			}
-//			return ((int) (this.timestamp - ab.timestamp));
 			return ((int) (this.createOrderNumber - ab.createOrderNumber));
 		}
 	}

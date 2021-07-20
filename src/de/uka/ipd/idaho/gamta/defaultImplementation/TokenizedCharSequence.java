@@ -238,7 +238,8 @@ public class TokenizedCharSequence implements TokenSequence {
 			subSequence.append(this.leadingWhitespace.subSequence(start, Math.min(end, this.leadingWhitespace.length())).toString());
 			to = 0;
 		}
-		if (to == this.tokens.size()) return "";
+		if (to == this.tokens.size())
+			return "";
 		
 		GamtaToken gt = this.tcsTokenAt(to);
 		while ((subSequence.length() < (end - start)) && (gt != null)) {

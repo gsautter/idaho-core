@@ -554,7 +554,8 @@ public class TokenizedMutableCharSequence extends TokenizedCharSequence implemen
 			if (lti < this.tokens.size()) {
 				newValue.append(this.tcsTokenAt(lti).value);
 				newValue.append(this.tcsTokenAt(lti).whitespace);
-			} else lti--;
+			}
+			else lti--;
 			if (DEBUG) System.out.println("- last affected token is " + lti);
 			
 			//	do actual replacement
@@ -563,7 +564,7 @@ public class TokenizedMutableCharSequence extends TokenizedCharSequence implemen
 			
 			TokenSequence ots = this.getSubsequence(fti, (lti - fti + 1));
 			TokenizedCharSequence nts = new TokenizedCharSequence(this.tokenizer, newValue);
-			if (DEBUG) System.out.println("- original token sequence is '" + ots + "'");
+			if (DEBUG) System.out.println("- original token sequence is '" + ots + this.getWhitespaceAfter(lti) /* also included in new token sequence */ + "'");
 			if (DEBUG) System.out.println("- new token sequence is '" + nts + "'");
 			
 			if (nts.leadingWhitespace.length() != 0) {
