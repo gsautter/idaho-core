@@ -65,21 +65,6 @@ import de.uka.ipd.idaho.easyIO.settings.Settings;
 import de.uka.ipd.idaho.easyIO.sql.TableDefinition;
 import de.uka.ipd.idaho.stringUtils.StringUtils;
 
-///**
-// * Utility library for multiple IO purposes. In particular, this library can:
-// * <ul>
-// * <li>read, write, and rename files</li>
-// * <li>download web pages</li>
-// * <li>escape and un-escape string values with arbitrary escape and to-escape
-// * characters</li>
-// * <li>prepare strings for being used in SQL queries</li>
-// * <li>produce IoProvider objects</li>
-// * <li>send e-mails via SMTP (this is why this class depends on mail.jar to be
-// * present on the class path)</li>
-// * </ul>
-// * 
-// * @author Guido Sautter
-// */
 /**
  * Utility library for various IO purposes. In particular, this library can:
  * <ul>
@@ -208,6 +193,9 @@ public class EasyIO {
 		private boolean jdbcTerminalSemicolon = true;
 		private boolean jdbcKeyConstraints = true;
 		
+		//	time JDBC actions?
+		private boolean jdbcLogTime = false;
+		
 		//	local objects for instant use
 		private Connection jdbcCon = null;
 		
@@ -281,6 +269,7 @@ public class EasyIO {
 			this.jdbcUrl = this.configuration.getSetting("JDBC.Url");
 			this.jdbcTerminalSemicolon = "YES".equalsIgnoreCase(this.configuration.getSetting("JDBC.TerminalSemicolon", "YES"));
 			this.jdbcKeyConstraints = "YES".equalsIgnoreCase(this.configuration.getSetting("JDBC.KeyConstraints", "YES"));
+			this.jdbcLogTime = "YES".equalsIgnoreCase(this.configuration.getSetting("JDBC.LogTime", "NO"));
 			this.jdbcCon = this.getJdbcConnection();
 			
 			//	check if jdbc is valid
@@ -1078,16 +1067,23 @@ public class EasyIO {
 		
 		private SqlQueryResult executeSelectQuery(String query, boolean copy, boolean isOriginalRequest) throws SQLException {
 			if (this.jdbcValid && (query != null) && query.toLowerCase().startsWith("select")) try {
+				long time = (this.jdbcLogTime ? System.currentTimeMillis() : 0);
 				Statement st = null;
 				SqlQueryResult sqr = null;
 				try {
 					st = (copy ? this.jdbcCon.createStatement() : this.jdbcCon.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY));
-					sqr = new SqlQueryResult(query, st.executeQuery(this.prepareQuery(query)), copy);
+					if (this.jdbcLogTime)
+						System.out.println("IoProvider: got statement after " + (System.currentTimeMillis() - time) + "ms");
+					sqr = new SqlQueryResult(query, this.jdbcLogTime, st.executeQuery(this.prepareQuery(query)), copy);
+					if (this.jdbcLogTime)
+						System.out.println("IoProvider: statement wrapped" + (copy ? " and copied" : "") + " after " + (System.currentTimeMillis() - time) + "ms");
 					return sqr;
 				}
 				finally {
 					if ((copy || (sqr == null)) && (st != null))
 						st.close();
+					if (this.jdbcLogTime)
+						System.out.println("IoProvider: done after " + (System.currentTimeMillis() - time) + "ms");
 				}
 			}
 			catch (SQLException sqle) {

@@ -35,6 +35,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Properties;
 import java.util.Random;
 import java.util.Set;
@@ -1704,7 +1705,12 @@ public class Gamta extends StringUtils {
 	private static Pattern xRangePattern = Pattern.compile("\\\\x([0-9A-Fa-f]{2})\\-\\\\x([0-9A-Fa-f]{2})");
 	private static Pattern uCharPattern = Pattern.compile("\\\\u([0-9A-Fa-f]{4})");
 	private static Pattern uRangePattern = Pattern.compile("\\\\u([0-9A-Fa-f]{4})\\-\\\\u([0-9A-Fa-f]{4})");
-	private static Map patternCache = Collections.synchronizedMap(new HashMap());
+//	private static Map patternCache = Collections.synchronizedMap(new HashMap());
+	private static Map patternCache = Collections.synchronizedMap(new LinkedHashMap(16, 0.9f, true) {
+		protected boolean removeEldestEntry(Entry eldest) {
+			return (this.size() > 256);
+		}
+	});
 //	
 //	public static void main(String[] args) throws Exception {
 //		TokenSequence ts = newTokenSequence("This is a test, with punctuation, and with spaces!", null);

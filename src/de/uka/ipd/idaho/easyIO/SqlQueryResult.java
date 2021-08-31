@@ -76,8 +76,8 @@ public class SqlQueryResult {
 	 * @param	query	the query res resulted from
 	 * @param	resultSet		the SQL resultArray set containing the data
 	 */
-	public SqlQueryResult(String query, ResultSet resultSet) {
-		this(query, resultSet, false);
+	public SqlQueryResult(String query, boolean logTime, ResultSet resultSet) {
+		this(query, logTime, resultSet, false);
 	}
 	
 	/**	Constructor retrieving data from an SQL resultArray set retrieved from some database via JDBC
@@ -85,79 +85,73 @@ public class SqlQueryResult {
 	 * @param	resultSet		the SQL resultArray set containing the data
 	 * @param	copy	if set to true, the entire resultArray table will be copied to an array for faster access (high memory cost!)
 	 */
-	public SqlQueryResult(String query, ResultSet resultSet, boolean copy) {
+	public SqlQueryResult(String query, boolean logTime, ResultSet resultSet, boolean copy) {
+		long time = (logTime ? System.currentTimeMillis() : 0);
 		this.query = query;
 		if (resultSet == null)
 			this.success = false;
-		else {
-			try {
-				//	read meta data
-				ResultSetMetaData meta = resultSet.getMetaData();
-				this.columnCount = meta.getColumnCount();
-				this.columnTitles = new String[this.columnCount];
-				this.dataTypeNames = new String[this.columnCount];
-				this.dataTypeCodes = new int[this.columnCount];
-				this.columnLengths = new int[this.columnCount];
-				for (int i = 0; i < this.columnCount; i++) {
-					this.columnTitles[i] = meta.getColumnName(i+1);
-					this.dataTypeNames[i] = meta.getColumnTypeName(i+1);
-					this.dataTypeCodes[i] = meta.getColumnType(i+1);
-					this.columnLengths[i] = meta.getPrecision(i+1);
-				}
+		else try {
+			//	read meta data
+			ResultSetMetaData meta = resultSet.getMetaData();
+			this.columnCount = meta.getColumnCount();
+			this.columnTitles = new String[this.columnCount];
+			this.dataTypeNames = new String[this.columnCount];
+			this.dataTypeCodes = new int[this.columnCount];
+			this.columnLengths = new int[this.columnCount];
+			for (int i = 0; i < this.columnCount; i++) {
+				this.columnTitles[i] = meta.getColumnName(i+1);
+				this.dataTypeNames[i] = meta.getColumnTypeName(i+1);
+				this.dataTypeCodes[i] = meta.getColumnType(i+1);
+				this.columnLengths[i] = meta.getPrecision(i+1);
+			}
+			if (logTime)
+				System.out.println("SqlQueryResult: metadata done after " + (System.currentTimeMillis() - time) + "ms");
+			
+			//	copy result data to array if desired
+			if (copy) {
+				int rows = 0;
+				ArrayList[] columns = new ArrayList[this.columnCount];
+				for (int i = 0; i < this.columnCount; i++)
+					columns[i] = new ArrayList();
 				
-				//	copy result data to array if desired
-				if (copy) {
-					int rows = 0;
-					ArrayList[] columns = new ArrayList[this.columnCount];
-					for (int i = 0; i < this.columnCount; i++)
-						columns[i] = new ArrayList();
-					
-					while (resultSet.next()) {
-						for (int i = 0; i < this.columnCount; i++) {
-							String s = resultSet.getString(i+1);
-							columns[i].add(s);
-						}
-						rows ++;
+				while (resultSet.next()) {
+					for (int i = 0; i < this.columnCount; i++) {
+						String s = resultSet.getString(i+1);
+						columns[i].add(s);
 					}
-					this.rowCount = rows;
-					this.resultArray = new String[this.columnCount][this.rowCount];
-					for (int i = 0; i < this.columnCount; i++)
-						this.resultArray[i] = ((String[]) columns[i].toArray(new String[rows]));
-//					StringVector[] columns = new StringVector[this.columnCount];
-//					for (int i = 0; i < this.columnCount; i++)
-//						columns[i] = new StringVector();
-//					
-//					while (resultSet.next()) {
-//						for (int i = 0; i < this.columnCount; i++) {
-//							String s = resultSet.getString(i+1);
-//							columns[i].addElement(s);
-//						}
-//						rows ++;
-//					}
-//					this.rowCount = rows;
-//					this.resultArray = new String[this.columnCount][this.rowCount];
-//					for (int i = 0; i < this.columnCount; i++)
-//						this.resultArray[i] = columns[i].toStringArray();
-					
-					resultSet.close();
-					System.gc();
+					rows ++;
 				}
+				this.rowCount = rows;
+				this.resultArray = new String[this.columnCount][this.rowCount];
+				for (int i = 0; i < this.columnCount; i++)
+					this.resultArray[i] = ((String[]) columns[i].toArray(new String[rows]));
 				
-				//	put up logistics for standard ResultSet handling otherwise
-				else {
-					this.resultSet = resultSet;
-					this.resultSet.last();
-					this.rowCount = this.resultSet.getRow();
-					this.resultSet.beforeFirst();
-					this.currentRow = -1;
-					this.copied = false;
-				}
+				if (logTime)
+					System.out.println("SqlQueryResult: data copied after " + (System.currentTimeMillis() - time) + "ms");
+				resultSet.close();
+				if (logTime)
+					System.out.println("SqlQueryResult: result set closed after " + (System.currentTimeMillis() - time) + "ms");
+//				System.gc();
+//				if (logTime)
+//					System.out.println("SqlQueryResult: GC done after " + (System.currentTimeMillis() - time) + "ms");
 			}
-			catch (SQLException e) {
-				System.out.println("SqlQueryResult: " + e.getMessage() + " while initializing");
-				this.exception = e;
-				this.success = false;
+			
+			//	put up logistics for standard ResultSet handling otherwise
+			else {
+				this.resultSet = resultSet;
+				this.resultSet.last();
+				this.rowCount = this.resultSet.getRow();
+				this.resultSet.beforeFirst();
+				this.currentRow = -1;
+				this.copied = false;
 			}
+			if (logTime)
+				System.out.println("SqlQueryResult: done after " + (System.currentTimeMillis() - time) + "ms");
+		}
+		catch (SQLException sqle) {
+			System.out.println("SqlQueryResult: " + sqle.getMessage() + " while initializing");
+			this.exception = sqle;
+			this.success = false;
 		}
 	}
 	
@@ -200,11 +194,9 @@ public class SqlQueryResult {
 	/** @see java.sql.ResultSet#isFirst()
 	 */
 	public boolean isBeforeFirst() throws SQLException {
-		if (this.copied) {
+		if (this.copied)
 			return (this.currentRow == -1);
-		} else {
-			return this.resultSet.isBeforeFirst();
-		}
+		else return this.resultSet.isBeforeFirst();
 	}
 
 	/** @see java.sql.ResultSet#isFirst()
@@ -291,7 +283,8 @@ public class SqlQueryResult {
 	 */
 	public boolean next() {
 		boolean isAfterLast = (this.currentRow == this.rowCount);
-		if (!isAfterLast) this.currentRow ++;
+		if (!isAfterLast)
+			this.currentRow++;
 		if (this.copied)
 			return (this.currentRow < this.rowCount);
 		else {
@@ -310,7 +303,8 @@ public class SqlQueryResult {
 	 */
 	public boolean previous() {
 		boolean isBeforeFirst = (this.currentRow == -1);
-		if (!isBeforeFirst) this.currentRow --;
+		if (!isBeforeFirst)
+			this.currentRow--;
 		if (this.copied)
 			return (this.currentRow > -1);
 		else {
@@ -328,15 +322,12 @@ public class SqlQueryResult {
 	/** @see java.sql.ResultSet#absolute(int)
 	 */
 	public boolean goToRow(int rowIndex) {
-		//System.out.println("StandardIoProvider: jumping to " + rowIndex);
 		if (rowIndex == this.currentRow)
 			return true;
 		
 		else if (this.success && (rowIndex >= 0) && (rowIndex < this.rowCount)) {
-			//System.out.println("StandardIoProvider: trying to jump to " + rowIndex);
 			try {
 				if (this.copied || this.resultSet.absolute(rowIndex + 1)) {
-					//System.out.println("StandardIoProvider: arrived at " + rowIndex);
 					this.currentRow = rowIndex;
 					return true;
 				}
@@ -357,7 +348,6 @@ public class SqlQueryResult {
 				this.currentRow = this.resultSet.getRow() - 1;
 			}
 			catch (SQLException sqle) {}
-		
 		return this.currentRow;
 	}
 	
@@ -487,7 +477,6 @@ public class SqlQueryResult {
 	public int findColumn(String columnName) {
 		for (int i = 0; i < this.columnTitles.length; i++)
 			if (this.columnTitles[i].equalsIgnoreCase(columnName)) return i;
-		
 		return -1;
 	}
 	
@@ -576,20 +565,6 @@ public class SqlQueryResult {
 		}
 		else return null;
 	}
-//	public StringVector getColumnData(int columnIndex) {
-//		if (this.success && (columnIndex >= 0) && (columnIndex < this.columnCount)) {
-//			StringVector ret = new StringVector();
-//			int indexStore = this.getCurrentRowIndex();
-//			if (this.beforeFirst()) {
-//				while (this.next()) {
-//					ret.addElement(this.getString(columnIndex));
-//				}
-//				this.goToRow(indexStore);
-//			}
-//			return ret;
-//		}
-//		else return null;
-//	}
 	
 	/**	get all entries of a resultArray record in a StringVector object
 	 * @param	rowIndex	the index of the requested record
@@ -604,14 +579,4 @@ public class SqlQueryResult {
 		}
 		else return null;
 	}
-//	public StringVector getRowData(int rowIndex) {
-//		if (this.success && (rowIndex >= 0) && (rowIndex < this.rowCount)) {
-//			StringVector ret = new StringVector();
-//			for (int i = 0; i < this.columnCount; i++) {
-//				ret.addElement(this.getString(rowIndex, i));
-//			}
-//			return ret;
-//		}
-//		else return null;
-//	}
 }

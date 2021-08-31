@@ -30,7 +30,11 @@ package de.uka.ipd.idaho.gamta.util.gPath;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Stack;
 
 import de.uka.ipd.idaho.gamta.util.gPath.exceptions.GPathSyntaxException;
@@ -82,7 +86,12 @@ public class GPathParser {
 		//	return path
 		return gp;
 	}
-	private static HashMap pathCache = new HashMap();
+//	private static HashMap pathCache = new HashMap();
+	private static Map pathCache = Collections.synchronizedMap(new LinkedHashMap(16, 0.9f, true) {
+		protected boolean removeEldestEntry(Entry eldest) {
+			return (this.size() > 256);
+		}
+	});
 	
 	private static GPath parsePath(String[] pathTokens) {
 		

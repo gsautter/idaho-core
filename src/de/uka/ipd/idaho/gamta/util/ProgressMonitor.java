@@ -52,6 +52,22 @@ public interface ProgressMonitor {
 	};
 	
 	/**
+	 * Dummy implementation printing steps to <code>System.out</code>, but
+	 * silencing infos
+	 */
+	public static final ProgressMonitor quiet = new ProgressMonitor() {
+		public void setBaseProgress(int baseProgress) {}
+		public void setMaxProgress(int maxProgress) {}
+		public void setProgress(int progress) {}
+		public void setStep(String importStep) {
+			System.out.println(importStep);
+		}
+		public void setInfo(String text) {
+			System.out.println(text);
+		}
+	};
+	
+	/**
 	 * Dummy implementation swallowing all updates
 	 */
 	public static final ProgressMonitor silent = new ProgressMonitor() {

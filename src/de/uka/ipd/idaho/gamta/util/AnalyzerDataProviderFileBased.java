@@ -56,21 +56,21 @@ public class AnalyzerDataProviderFileBased extends AbstractAnalyzerDataProvider 
 		this.basePath = basePath;
 		this.basePathLength = this.basePath.getAbsolutePath().length();
 	}
-
+	
 	/* (non-Javadoc)
 	 * @see de.gamta.util.AnalyzerDataProvider#isDataAvailable(java.lang.String)
 	 */
 	public boolean isDataAvailable(String dataName) {
 		return this.getFile(dataName).exists();
 	}
-
+	
 	/* (non-Javadoc)
 	 * @see de.gamta.util.AnalyzerDataProvider#getInputStream(java.lang.String)
 	 */
 	public InputStream getInputStream(String dataName) throws IOException {
 		return new FileInputStream(this.getFile(dataName));
 	}
-
+	
 	/* (non-Javadoc)
 	 * @see de.gamta.util.AnalyzerDataProvider#getURL(java.lang.String)
 	 */
@@ -79,14 +79,14 @@ public class AnalyzerDataProviderFileBased extends AbstractAnalyzerDataProvider 
 			return this.getFile(dataName).toURI().toURL();
 		else return new URL(dataName);
 	}
-
+	
 	/* (non-Javadoc)
 	 * @see de.gamta.util.AnalyzerDataProvider#isDataEditable(java.lang.String)
 	 */
 	public boolean isDataEditable(String dataName) {
 		return true;
 	}
-
+	
 	/* (non-Javadoc)
 	 * @see de.gamta.util.AnalyzerDataProvider#getOutputStream(java.lang.String)
 	 */

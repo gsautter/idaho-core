@@ -208,7 +208,6 @@ public class AttributeEditor extends JPanel {
 		return ((AttributeValueProvider[]) attributeValueProviders.toArray(new AttributeValueProvider[attributeValueProviders.size()]));
 	}
 	
-	
 	private static final String DUMMY_ATTRIBUTE_NAME = "Attribute Name";
 	private static final String DUMMY_ATTRIBUTE_VALUE = "Attribute Value";
 	

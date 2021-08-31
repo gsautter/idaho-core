@@ -59,6 +59,9 @@ public abstract class WebServlet extends HttpServlet implements WebConstants {
 	/** the surrounding web-app's WEB-INF path */
 	protected File webInfFolder;
 	
+	/** the folder to place caches in path */
+	protected File cacheRootFolder;
+	
 	/** the surrounding web-app's host object */
 	protected WebAppHost webAppHost;
 	
@@ -240,9 +243,10 @@ public abstract class WebServlet extends HttpServlet implements WebConstants {
 		//	get local environment
 		this.rootFolder = this.webAppHost.getRootFolder();
 		this.webInfFolder = this.webAppHost.getWebInfFolder();
+		this.cacheRootFolder = this.webAppHost.getCacheRootFolder();
 		
 		this.dataPath = this.getInitParameter("dataPath");
-		if (dataPath == null) {
+		if (this.dataPath == null) {
 			this.dataPath = "";
 			this.dataFolder = this.webInfFolder;
 		}

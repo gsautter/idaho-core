@@ -29,6 +29,7 @@ package de.uka.ipd.idaho.gamta.defaultImplementation;
 
 
 import java.lang.ref.SoftReference;
+import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -57,7 +58,6 @@ import de.uka.ipd.idaho.gamta.TokenSequence;
 import de.uka.ipd.idaho.gamta.TokenSequenceListener;
 import de.uka.ipd.idaho.gamta.Tokenizer;
 import de.uka.ipd.idaho.gamta.util.ImmutableAnnotation;
-//import java.util.Vector;
 
 /**
  * Markup overlay for MutableTokenSequence instances
@@ -82,6 +82,112 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 	private int orderModCount = 0;
 	
 	private ArrayList annotationListeners = null;
+	
+	//	TODO remove this after server clean !!!
+	static final boolean TRACK_INSTANCES = false;
+	final AccessHistory accessHistory = (TRACK_INSTANCES ? new AccessHistory(this) : null);
+	private static class AccessHistory {
+		final GamtaDocument doc;
+		final long created;
+		final StackTraceElement[] createStack;
+		long lastAccessed;
+//		StackTraceElement[] lastAccessStack; ==> causes too much debris
+		final int staleAge = (1000 * 60 * 10);
+		private final boolean untracked;
+		private boolean printed = false;
+		AccessHistory(GamtaDocument doc) {
+			this.doc = doc;
+			this.created = System.currentTimeMillis();
+			this.createStack = Thread.currentThread().getStackTrace();
+			this.lastAccessed = this.created;
+//			this.lastAccessStack = this.createStack;
+			boolean untracked = false;
+			for (int e = 0; e < this.createStack.length; e++) {
+				String ses = this.createStack[e].toString();
+				if (ses.indexOf(".<clinit>(") != -1) {
+					untracked = true; // no tracking for static constants
+					break;
+				}
+				if (ses.indexOf(".main(") != -1) {
+					untracked = true; // no tracking in slaves
+					break;
+				}
+				if (ses.startsWith("java.awt.EventDispatchThread.")) {
+					untracked = true; // no tracking in UIs
+					break;
+				}
+			}
+			this.untracked = untracked;
+			if (this.untracked)
+				return;
+			synchronized (accessHistories) {
+				accessHistories.add(new WeakReference(this));
+			}
+		}
+		void accessed() {
+			if (this.untracked)
+				return;
+			this.lastAccessed = System.currentTimeMillis();
+//			this.lastAccessStack = Thread.currentThread().getStackTrace();
+			this.printed = false;
+		}
+		boolean printData(long time, boolean newOnly) {
+			if (this.printed && newOnly)
+				return false;
+			System.err.println("Stale GamtaDocument (" + (time - this.created) + "ms ago, last accessed " + (time - this.lastAccessed) + "ms ago)");
+			for (int e = 0; e < this.createStack.length; e++)
+				System.err.println("CR\tat " + this.createStack[e].toString());
+//			StackTraceElement[] las = this.lastAccessStack; // let's be super safe here
+//			for (int e = 0; e < las.length; e++)
+//				System.err.println("LA\tat " + las[e].toString());
+			this.printed = true;
+			return true;
+		}
+	}
+	private static ArrayList accessHistories = (TRACK_INSTANCES ? new ArrayList() : null);
+	static {
+		if (TRACK_INSTANCES) {
+			Thread deadInstanceChecker = new Thread("GamtaDocumentGuard") {
+				public void run() {
+					int reclaimed = 0;
+					WeakReference gcDetector = new WeakReference(new Object());
+					while (true) {
+						try {
+							sleep(1000 * 60 * 2);
+						} catch (InterruptedException ie) {}
+						int stale = 0;
+						if (accessHistories.size() != 0) try {
+							long time = System.currentTimeMillis();
+							boolean noGc;
+							if (gcDetector.get() == null) {
+								gcDetector = new WeakReference(new Object());
+								noGc = false;
+							}
+							else noGc = true;
+							for (int h = 0; h < accessHistories.size(); h++)
+								synchronized (accessHistories) {
+									WeakReference ahr = ((WeakReference) accessHistories.get(h));
+									AccessHistory ah = ((AccessHistory) ahr.get());
+									if (ah == null) /* cleared out by GC as supposed to */ {
+										accessHistories.remove(h--);
+										reclaimed++;
+									}
+									else if ((ah.lastAccessed + ah.staleAge) < time) {
+										if (ah.printData(time, noGc))
+											stale++;
+									}
+								}
+							System.err.println("GamtaDocumentGuard: " + accessHistories.size() + " extant, " + reclaimed + " reclaimed, " + stale + (noGc ? " newly gone" : "") + " stale");
+						}
+						catch (Exception e) {
+							System.err.println("GamtaDocumentGuard: error checking instances: " + e.getMessage());
+						}
+					}
+				}
+			};
+			deadInstanceChecker.start();
+		}
+	}
 	
 	/**
 	 * Constructor creating an annotation overlay for a mutable token sequence
@@ -1923,6 +2029,14 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 		}
 		
 		/* (non-Javadoc)
+		 * @see de.uka.ipd.idaho.gamta.defaultImplementation.AbstractAttributed#getAttributeNames()
+		 */
+		public String[] getAttributeNames() {
+			if (TRACK_INSTANCES) accessHistory.accessed();
+			return super.getAttributeNames();
+		}
+		
+		/* (non-Javadoc)
 		 * @see de.gamta.defaultImplementation.AbstractAttributed#getAttribute(java.lang.String)
 		 */
 		public Object getAttribute(String name) {
@@ -1933,6 +2047,7 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 		 * @see de.gamta.defaultImplementation.AbstractAttributed#getAttribute(java.lang.String, java.lang.Object)
 		 */
 		public Object getAttribute(String name, Object def) {
+			if (TRACK_INSTANCES) accessHistory.accessed();
 			if (SIZE_ATTRIBUTE.equals(name))
 				return new Integer(this.size);
 			else if (ANNOTATION_VALUE_ATTRIBUTE.equals(name))
@@ -1946,6 +2061,7 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 		 * @see de.gamta.defaultImplementation.AbstractAttributed#hasAttribute(java.lang.String)
 		 */
 		public boolean hasAttribute(String name) {
+			if (TRACK_INSTANCES) accessHistory.accessed();
 			return (START_INDEX_ATTRIBUTE.equals(name) || SIZE_ATTRIBUTE.equals(name) || END_INDEX_ATTRIBUTE.equals(name) || ANNOTATION_VALUE_ATTRIBUTE.equals(name) || ANNOTATION_ID_ATTRIBUTE.equals(name) || super.hasAttribute(name));
 		}
 		
@@ -1953,6 +2069,7 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 		 * @see de.gamta.defaultImplementation.AbstractAttributed#setAttribute(java.lang.String, java.lang.Object)
 		 */
 		public Object setAttribute(String name, Object value) {
+			if (TRACK_INSTANCES) accessHistory.accessed();
 			if (START_INDEX_ATTRIBUTE.equals(name) || SIZE_ATTRIBUTE.equals(name) || END_INDEX_ATTRIBUTE.equals(name) || ANNOTATION_VALUE_ATTRIBUTE.equals(name))
 				return value;
 			else if (ANNOTATION_ID_ATTRIBUTE.equals(name)) {
@@ -2790,6 +2907,7 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 			this.cacheClearingTrigger = new SoftReference(new CacheClearingTrigger(this));
 		}
 		void addAnnotation(AnnotationBase ab) {
+			if (TRACK_INSTANCES) accessHistory.accessed();
 			if (ab == null)
 				return;
 			this.removed.remove(ab);
@@ -2806,6 +2924,7 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 			this.cacheClearingTrigger.get(); // touch clearing trigger, so cleaning trigger gets reclaimed first
 		}
 		void removeAnnotation(AnnotationBase ab) {
+			if (TRACK_INSTANCES) accessHistory.accessed();
 			if (ab == null)
 				return;
 			this.removed.add(ab);
@@ -2949,6 +3068,7 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 			this.cleanOrderModCount = orderModCount;
 		}
 		private void ensureClean() {
+			if (TRACK_INSTANCES) accessHistory.accessed();
 			this.cacheClearingTrigger.get(); // touch clearing trigger, so cleaning trigger gets reclaimed first
 			if (this.removed.isEmpty())
 				return;
@@ -3023,6 +3143,7 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 		private HashMap annotationsByID = new HashMap();
 		
 		private AnnotationList getAnnotationList(String type, boolean create) {
+			if (TRACK_INSTANCES) accessHistory.accessed();
 			if (type == null)
 				return this.annotations;
 			AnnotationList al = ((AnnotationList) this.annotationsByType.get(type));
@@ -3060,6 +3181,7 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 		}
 		
 		void annotationIdChanged(AnnotationBase ab, String oldId) {
+			if (TRACK_INSTANCES) accessHistory.accessed();
 			this.annotationsByID.remove(oldId);
 			this.annotationsByID.put(ab.annotationId, ab);
 		}
@@ -3073,6 +3195,7 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 		}
 		
 		AnnotationBase getAnnotation(String id) {
+			if (TRACK_INSTANCES) accessHistory.accessed();
 			return ((AnnotationBase) this.annotationsByID.get(id));
 		}
 		
@@ -3107,6 +3230,7 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 		}
 		
 		String[] getAnnotationTypes() {
+			if (TRACK_INSTANCES) accessHistory.accessed();
 			TreeSet annotTypes = new TreeSet(this.annotationsByType.keySet());
 			return ((String[]) annotTypes.toArray(new String[annotTypes.size()]));
 		}

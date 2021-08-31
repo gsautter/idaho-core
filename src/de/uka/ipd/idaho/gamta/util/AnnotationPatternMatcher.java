@@ -37,8 +37,11 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.LinkedList;
+import java.util.Map;
 import java.util.TreeSet;
+import java.util.Map.Entry;
 import java.util.regex.PatternSyntaxException;
 
 import de.uka.ipd.idaho.gamta.Annotation;
@@ -1098,16 +1101,12 @@ public class AnnotationPatternMatcher {
 		}
 	}
 	
-//	private static ArrayList indents = new ArrayList();
-//	private static String getIndent(int depth) {
-//		if (indents.isEmpty())
-//			indents.add("");
-//		while (indents.size() <= depth)
-//			indents.add(((String) indents.get(indents.size()-1)) + "  ");
-//		return ((String) indents.get(depth));
-//	}
-//	
-	private static HashMap patternCache = new HashMap();
+//	private static HashMap patternCache = new HashMap();
+	private static Map patternCache = Collections.synchronizedMap(new LinkedHashMap(16, 0.9f, true) {
+		protected boolean removeEldestEntry(Entry eldest) {
+			return (this.size() > 256);
+		}
+	});
 	private static AnnotationPattern getPattern(Tokenizer tokenizer, String pattern) {
 		AnnotationPattern ap = ((AnnotationPattern) patternCache.get(pattern));
 		if (ap == null) try {

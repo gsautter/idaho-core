@@ -1890,7 +1890,7 @@ public class StringUtils {
 	 * @param str the string to normalize
 	 * @return the normalized string
 	 */
-	public static final String normalizeString(String str) {
+	public static String normalizeString(String str) {
 		if (str == null)
 			return null;
 		StringBuffer nStr = new StringBuffer();
@@ -1902,7 +1902,7 @@ public class StringUtils {
 				nStr.append(' ');
 			else if (SPACES.indexOf(ch) != -1)
 				nStr.append(' ');
-			else nStr.append(StringUtils.getNormalForm(ch));
+			else nStr.append(getNormalForm(ch));
 		}
 		return nStr.toString();
 	}
@@ -2233,6 +2233,219 @@ public class StringUtils {
 //		}
 //	}
 //	
+	/**
+	 * Latinize a string. This method replaces Greek and Cyrillic homoglyphs of
+	 * Latin characters with the corresponding Latin forms. This method retains
+	 * any diacritic markers, use <code>normalizeString()</code> to remove the
+	 * latter from the results of this method.<br/>
+	 * <b>Beware:</b> using this method on non-Latin text might be destructive.
+	 * @param str the string to latinize
+	 * @return the latinized string
+	 */
+	public static String latinizeString(String str) {
+		if (str == null)
+			return null;
+		StringBuffer lStr = new StringBuffer();
+		for (int c = 0; c < str.length(); c++)
+			lStr.append(latinize(str.charAt(c)));
+		return lStr.toString();
+	}
+	
+	private static char latinize(char ch) {
+		int low = 0;
+		int high = ((latinizationMappings.length / 2) - 1);
+		while (low <= high) {
+			int mid = ((low + high) / 2);
+			char cch = latinizationMappings[mid * 2]; // binary search over even indices ...
+			if (cch < ch)
+				low = (mid + 1);
+			else if (cch > ch)
+				high = (mid - 1);
+			else return latinizationMappings[(mid * 2) + 1]; // ... returning subsequent odd index on match
+		}
+		return ch;
+	}
+	private static final char[] latinizationMappings = {
+		//	Greek
+		'\u0386', 'A', // GREEK CAPITAL LETTER ALPHA WITH TONOS
+		'\u0388', 'E', // GREEK CAPITAL LETTER EPSILON WITH TONOS
+		'\u0389', 'H', // GREEK CAPITAL LETTER ETA WITH TONOS
+		'\u038A', 'I', // GREEK CAPITAL LETTER IOTA WITH TONOS
+		'\u038C', 'O', // GREEK CAPITAL LETTER OMICRON WITH TONOS
+		'\u038E', 'Y', // GREEK CAPITAL LETTER UPSILON WITH TONOS
+		'\u0390', 'I', // GREEK SMALL LETTER IOTA WITH DIALYTIKA AND TONOS
+		'\u0391', 'A', // GREEK CAPITAL LETTER ALPHA
+		'\u0392', 'B', // GREEK CAPITAL LETTER BETA
+		'\u0395', 'E', // GREEK CAPITAL LETTER EPSILON
+		'\u0396', 'Z', // GREEK CAPITAL LETTER ZETA
+		'\u0397', 'H', // GREEK CAPITAL LETTER ETA
+		'\u0398', 'O', // GREEK CAPITAL LETTER THETA
+		'\u0399', 'I', // GREEK CAPITAL LETTER IOTA
+		'\u039A', 'K', // GREEK CAPITAL LETTER KAPPA
+		'\u039C', 'M', // GREEK CAPITAL LETTER MU
+		'\u039D', 'N', // GREEK CAPITAL LETTER NU
+		'\u039F', 'O', // GREEK CAPITAL LETTER OMICRON
+		'\u03A1', 'P', // GREEK CAPITAL LETTER RHO
+		'\u03A4', 'T', // GREEK CAPITAL LETTER TAU
+		'\u03A5', 'Y', // GREEK CAPITAL LETTER UPSILON
+		'\u03A7', 'X', // GREEK CAPITAL LETTER CHI
+		'\u03AA', '\u00CF', // GREEK CAPITAL LETTER IOTA WITH DIALYTIKA (mapped to I with dieresis)
+		'\u03AB', '\u0178', // GREEK CAPITAL LETTER UPSILON WITH DIALYTIKA (mapped to Y with dieresis)
+		'\u03AC', '\u00E1', // GREEK SMALL LETTER ALPHA WITH TONOS (mapped to a with acute)
+		'\u03AF', '\u00ED', // GREEK SMALL LETTER IOTA WITH TONOS (mapped to i with acute)
+		'\u03B1', 'a', // GREEK SMALL LETTER ALPHA
+		'\u03B2', 'b', // GREEK SMALL LETTER BETA
+		'\u03B3', 'y', // GREEK SMALL LETTER GAMMA
+		'\u03BA', 'k', // GREEK SMALL LETTER KAPPA
+		'\u03BD', 'v', // GREEK SMALL LETTER NU
+		'\u03BF', 'o', // GREEK SMALL LETTER OMICRON
+		'\u03C1', 'p', // GREEK SMALL LETTER RHO
+		'\u03C5', 'u', // GREEK SMALL LETTER UPSILON
+		'\u03C7', 'x', // GREEK SMALL LETTER CHI
+		'\u03CA', '\u00EF', // GREEK SMALL LETTER IOTA WITH DIALYTIKA (mapped to i with dieresis)
+		'\u03CB', '\u00FC', // GREEK SMALL LETTER UPSILON WITH DIALYTIKA (mapped to u with dieresis)
+		'\u03CC', '\u00F3', // GREEK SMALL LETTER OMICRON WITH TONOS (mapped to o with acute)
+		'\u03CD', '\u00FA', // GREEK SMALL LETTER UPSILON WITH TONOS (mapped to u with acute)
+		'\u03CE', 'w', // GREEK SMALL LETTER OMEGA WITH TONOS
+		'\u03D2', 'Y', // GREEK UPSILON WITH HOOK SYMBOL
+		'\u03D3', 'Y', // GREEK UPSILON WITH ACUTE AND HOOK SYMBOL
+		'\u03D4', '\u0178', // GREEK UPSILON WITH DIAERESIS AND HOOK SYMBOL (mapped to Y with dieresis)
+
+		//	Cyrillic
+		'\u0400', '\u00C8', // CYRILLIC CAPITAL LETTER IE WITH GRAVE (mapped to E with grave)
+		'\u0401', '\u00CB', // CYRILLIC CAPITAL LETTER IO (mapped to E with dieresis)
+		'\u0405', 'S', // CYRILLIC CAPITAL LETTER DZE
+		'\u0406', 'I', // CYRILLIC CAPITAL LETTER BYELORUSSIAN-UKRAINIAN I
+		'\u0407', '\u00CF', // CYRILLIC CAPITAL LETTER YI (mapped to I with dieresis)
+		'\u0408', 'J', // CYRILLIC CAPITAL LETTER JE
+		'\u0410', 'A', // CYRILLIC CAPITAL LETTER A
+		'\u0412', 'B', // CYRILLIC CAPITAL LETTER VE
+		'\u0415', 'E', // CYRILLIC CAPITAL LETTER IE
+		'\u041A', 'K', // CYRILLIC CAPITAL LETTER KA
+		'\u041C', 'M', // CYRILLIC CAPITAL LETTER EM
+		'\u041D', 'H', // CYRILLIC CAPITAL LETTER EN
+		'\u041E', 'O', // CYRILLIC CAPITAL LETTER O
+		'\u0420', 'P', // CYRILLIC CAPITAL LETTER ER
+		'\u0421', 'C', // CYRILLIC CAPITAL LETTER ES
+		'\u0422', 'T', // CYRILLIC CAPITAL LETTER TE
+		'\u0423', 'Y', // CYRILLIC CAPITAL LETTER U
+		'\u0425', 'X', // CYRILLIC CAPITAL LETTER HA
+		'\u0430', 'a', // CYRILLIC SMALL LETTER A
+		'\u0432', 'B', // CYRILLIC SMALL LETTER VE
+		'\u0433', 'r', // CYRILLIC SMALL LETTER GHE
+		'\u0435', 'e', // CYRILLIC SMALL LETTER IE
+		'\u043A', 'k', // CYRILLIC SMALL LETTER KA
+		'\u043C', 'm', // CYRILLIC SMALL LETTER EM
+		'\u043D', 'h', // CYRILLIC SMALL LETTER EN
+		'\u043E', 'o', // CYRILLIC SMALL LETTER O
+		'\u043F', 'n', // CYRILLIC SMALL LETTER PE
+		'\u0440', 'p', // CYRILLIC SMALL LETTER ER
+		'\u0441', 'c', // CYRILLIC SMALL LETTER ES
+		'\u0443', 'y', // CYRILLIC SMALL LETTER U
+		'\u0445', 'x', // CYRILLIC SMALL LETTER HA
+		'\u044A', 'b', // CYRILLIC SMALL LETTER HARD SIGN
+		'\u044C', 'b', // CYRILLIC SMALL LETTER SOFT SIGN
+		'\u0450', '\u00E8', // CYRILLIC SMALL LETTER IE WITH GRAVE (mapped to e with grave)
+		'\u0451', '\u00EB', // CYRILLIC SMALL LETTER IO (mapped to e with dieresis)
+		'\u0455', 's', // CYRILLIC SMALL LETTER DZE
+		'\u0456', 'i', // CYRILLIC SMALL LETTER BYELORUSSIAN-UKRAINIAN I
+		'\u0457', '\u00EF', // CYRILLIC SMALL LETTER YI (mapped to i with dieresis)
+		'\u0458', 'j', // CYRILLIC SMALL LETTER JE
+		'\u0461', 'w', // CYRILLIC SMALL LETTER OMEGA
+		'\u047F', 'w', // CYRILLIC SMALL LETTER OT
+	};
+//	
+//	private static HashMap latinizationMappings = new HashMap();
+//	static {
+//		//	Cyrillic
+//		latinizationMappings.put(new Character('\u0400'), new Character('\u00C8')); // CYRILLIC CAPITAL LETTER IE WITH GRAVE (mapped to E with grave)
+//		latinizationMappings.put(new Character('\u0401'), new Character('\u00CB')); // CYRILLIC CAPITAL LETTER IO (mapped to E with dieresis)
+//		latinizationMappings.put(new Character('\u0405'), new Character('S')); // CYRILLIC CAPITAL LETTER DZE
+//		latinizationMappings.put(new Character('\u0406'), new Character('I')); // CYRILLIC CAPITAL LETTER BYELORUSSIAN-UKRAINIAN I
+//		latinizationMappings.put(new Character('\u0407'), new Character('\u00CF')); // CYRILLIC CAPITAL LETTER YI (mapped to I with dieresis)
+//		latinizationMappings.put(new Character('\u0408'), new Character('J')); // CYRILLIC CAPITAL LETTER JE
+//		latinizationMappings.put(new Character('\u0410'), new Character('A')); // CYRILLIC CAPITAL LETTER A
+//		latinizationMappings.put(new Character('\u0412'), new Character('B')); // CYRILLIC CAPITAL LETTER VE
+//		latinizationMappings.put(new Character('\u0415'), new Character('E')); // CYRILLIC CAPITAL LETTER IE
+//		latinizationMappings.put(new Character('\u041A'), new Character('K')); // CYRILLIC CAPITAL LETTER KA
+//		latinizationMappings.put(new Character('\u041C'), new Character('M')); // CYRILLIC CAPITAL LETTER EM
+//		latinizationMappings.put(new Character('\u041D'), new Character('H')); // CYRILLIC CAPITAL LETTER EN
+//		latinizationMappings.put(new Character('\u041E'), new Character('O')); // CYRILLIC CAPITAL LETTER O
+//		latinizationMappings.put(new Character('\u0420'), new Character('P')); // CYRILLIC CAPITAL LETTER ER
+//		latinizationMappings.put(new Character('\u0421'), new Character('C')); // CYRILLIC CAPITAL LETTER ES
+//		latinizationMappings.put(new Character('\u0422'), new Character('T')); // CYRILLIC CAPITAL LETTER TE
+//		latinizationMappings.put(new Character('\u0423'), new Character('Y')); // CYRILLIC CAPITAL LETTER U
+//		latinizationMappings.put(new Character('\u0425'), new Character('X')); // CYRILLIC CAPITAL LETTER HA
+//		latinizationMappings.put(new Character('\u0430'), new Character('a')); // CYRILLIC SMALL LETTER A
+//		latinizationMappings.put(new Character('\u0432'), new Character('B')); // CYRILLIC SMALL LETTER VE
+//		latinizationMappings.put(new Character('\u0433'), new Character('r')); // CYRILLIC SMALL LETTER GHE
+//		latinizationMappings.put(new Character('\u0435'), new Character('e')); // CYRILLIC SMALL LETTER IE
+//		latinizationMappings.put(new Character('\u043A'), new Character('k')); // CYRILLIC SMALL LETTER KA
+//		latinizationMappings.put(new Character('\u043C'), new Character('m')); // CYRILLIC SMALL LETTER EM
+//		latinizationMappings.put(new Character('\u043D'), new Character('h')); // CYRILLIC SMALL LETTER EN
+//		latinizationMappings.put(new Character('\u043E'), new Character('o')); // CYRILLIC SMALL LETTER O
+//		latinizationMappings.put(new Character('\u043F'), new Character('n')); // CYRILLIC SMALL LETTER PE
+//		latinizationMappings.put(new Character('\u0440'), new Character('p')); // CYRILLIC SMALL LETTER ER
+//		latinizationMappings.put(new Character('\u0441'), new Character('c')); // CYRILLIC SMALL LETTER ES
+//		latinizationMappings.put(new Character('\u0443'), new Character('y')); // CYRILLIC SMALL LETTER U
+//		latinizationMappings.put(new Character('\u0445'), new Character('x')); // CYRILLIC SMALL LETTER HA
+//		latinizationMappings.put(new Character('\u044A'), new Character('b')); // CYRILLIC SMALL LETTER HARD SIGN
+//		latinizationMappings.put(new Character('\u044C'), new Character('b')); // CYRILLIC SMALL LETTER SOFT SIGN
+//		latinizationMappings.put(new Character('\u0450'), new Character('\u00E8')); // CYRILLIC SMALL LETTER IE WITH GRAVE (mapped to e with grave)
+//		latinizationMappings.put(new Character('\u0451'), new Character('\u00EB')); // CYRILLIC SMALL LETTER IO (mapped to e with dieresis)
+//		latinizationMappings.put(new Character('\u0455'), new Character('s')); // CYRILLIC SMALL LETTER DZE
+//		latinizationMappings.put(new Character('\u0456'), new Character('i')); // CYRILLIC SMALL LETTER BYELORUSSIAN-UKRAINIAN I
+//		latinizationMappings.put(new Character('\u0457'), new Character('\u00EF')); // CYRILLIC SMALL LETTER YI (mapped to i with dieresis)
+//		latinizationMappings.put(new Character('\u0458'), new Character('j')); // CYRILLIC SMALL LETTER JE
+//		latinizationMappings.put(new Character('\u0461'), new Character('w')); // CYRILLIC SMALL LETTER OMEGA
+//		latinizationMappings.put(new Character('\u047F'), new Character('w')); // CYRILLIC SMALL LETTER OT
+//
+//		//	Greek
+//		latinizationMappings.put(new Character('\u0386'), new Character('A')); // GREEK CAPITAL LETTER ALPHA WITH TONOS
+//		latinizationMappings.put(new Character('\u0388'), new Character('E')); // GREEK CAPITAL LETTER EPSILON WITH TONOS
+//		latinizationMappings.put(new Character('\u0389'), new Character('H')); // GREEK CAPITAL LETTER ETA WITH TONOS
+//		latinizationMappings.put(new Character('\u038A'), new Character('I')); // GREEK CAPITAL LETTER IOTA WITH TONOS
+//		latinizationMappings.put(new Character('\u038C'), new Character('O')); // GREEK CAPITAL LETTER OMICRON WITH TONOS
+//		latinizationMappings.put(new Character('\u038E'), new Character('Y')); // GREEK CAPITAL LETTER UPSILON WITH TONOS
+//		latinizationMappings.put(new Character('\u0390'), new Character('I')); // GREEK SMALL LETTER IOTA WITH DIALYTIKA AND TONOS
+//		latinizationMappings.put(new Character('\u0391'), new Character('A')); // GREEK CAPITAL LETTER ALPHA
+//		latinizationMappings.put(new Character('\u0392'), new Character('B')); // GREEK CAPITAL LETTER BETA
+//		latinizationMappings.put(new Character('\u0395'), new Character('E')); // GREEK CAPITAL LETTER EPSILON
+//		latinizationMappings.put(new Character('\u0396'), new Character('Z')); // GREEK CAPITAL LETTER ZETA
+//		latinizationMappings.put(new Character('\u0397'), new Character('H')); // GREEK CAPITAL LETTER ETA
+//		latinizationMappings.put(new Character('\u0398'), new Character('O')); // GREEK CAPITAL LETTER THETA
+//		latinizationMappings.put(new Character('\u0399'), new Character('I')); // GREEK CAPITAL LETTER IOTA
+//		latinizationMappings.put(new Character('\u039A'), new Character('K')); // GREEK CAPITAL LETTER KAPPA
+//		latinizationMappings.put(new Character('\u039C'), new Character('M')); // GREEK CAPITAL LETTER MU
+//		latinizationMappings.put(new Character('\u039D'), new Character('N')); // GREEK CAPITAL LETTER NU
+//		latinizationMappings.put(new Character('\u039F'), new Character('O')); // GREEK CAPITAL LETTER OMICRON
+//		latinizationMappings.put(new Character('\u03A1'), new Character('P')); // GREEK CAPITAL LETTER RHO
+//		latinizationMappings.put(new Character('\u03A4'), new Character('T')); // GREEK CAPITAL LETTER TAU
+//		latinizationMappings.put(new Character('\u03A5'), new Character('Y')); // GREEK CAPITAL LETTER UPSILON
+//		latinizationMappings.put(new Character('\u03A7'), new Character('X')); // GREEK CAPITAL LETTER CHI
+//		latinizationMappings.put(new Character('\u03AA'), new Character('\u00CF')); // GREEK CAPITAL LETTER IOTA WITH DIALYTIKA (mapped to I with dieresis)
+//		latinizationMappings.put(new Character('\u03AB'), new Character('\u0178')); // GREEK CAPITAL LETTER UPSILON WITH DIALYTIKA (mapped to Y with dieresis)
+//		latinizationMappings.put(new Character('\u03AC'), new Character('\u00E1')); // GREEK SMALL LETTER ALPHA WITH TONOS (mapped to a with acute)
+//		latinizationMappings.put(new Character('\u03AF'), new Character('\u00ED')); // GREEK SMALL LETTER IOTA WITH TONOS (mapped to i with acute)
+//		latinizationMappings.put(new Character('\u03B1'), new Character('a')); // GREEK SMALL LETTER ALPHA
+//		latinizationMappings.put(new Character('\u03B2'), new Character('b')); // GREEK SMALL LETTER BETA
+//		latinizationMappings.put(new Character('\u03B3'), new Character('y')); // GREEK SMALL LETTER GAMMA
+//		latinizationMappings.put(new Character('\u03BA'), new Character('k')); // GREEK SMALL LETTER KAPPA
+//		latinizationMappings.put(new Character('\u03BD'), new Character('v')); // GREEK SMALL LETTER NU
+//		latinizationMappings.put(new Character('\u03BF'), new Character('o')); // GREEK SMALL LETTER OMICRON
+//		latinizationMappings.put(new Character('\u03C1'), new Character('p')); // GREEK SMALL LETTER RHO
+//		latinizationMappings.put(new Character('\u03C5'), new Character('u')); // GREEK SMALL LETTER UPSILON
+//		latinizationMappings.put(new Character('\u03C7'), new Character('x')); // GREEK SMALL LETTER CHI
+//		latinizationMappings.put(new Character('\u03CA'), new Character('\u00EF')); // GREEK SMALL LETTER IOTA WITH DIALYTIKA (mapped to i with dieresis)
+//		latinizationMappings.put(new Character('\u03CB'), new Character('\u00FC')); // GREEK SMALL LETTER UPSILON WITH DIALYTIKA (mapped to u with dieresis)
+//		latinizationMappings.put(new Character('\u03CC'), new Character('\u00F3')); // GREEK SMALL LETTER OMICRON WITH TONOS (mapped to o with acute)
+//		latinizationMappings.put(new Character('\u03CD'), new Character('\u00FA')); // GREEK SMALL LETTER UPSILON WITH TONOS (mapped to u with acute)
+//		latinizationMappings.put(new Character('\u03CE'), new Character('w')); // GREEK SMALL LETTER OMEGA WITH TONOS
+//		latinizationMappings.put(new Character('\u03D2'), new Character('Y')); // GREEK UPSILON WITH HOOK SYMBOL
+//		latinizationMappings.put(new Character('\u03D3'), new Character('Y')); // GREEK UPSILON WITH ACUTE AND HOOK SYMBOL
+//		latinizationMappings.put(new Character('\u03D4'), new Character('\u0178')); // GREEK UPSILON WITH DIAERESIS AND HOOK SYMBOL (mapped to Y with dieresis)
+//	}
+	
 	/**
 	 * Estimate the Levenshtein distance of two strings. This method returns a
 	 * lower bound of the actual Levenshtein distance of the two argument

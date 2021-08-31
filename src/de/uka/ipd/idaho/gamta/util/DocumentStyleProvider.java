@@ -214,7 +214,7 @@ public class DocumentStyleProvider implements DocumentStyle.Provider {
 				docStyleFile.renameTo(new File(docStyleFile.getAbsolutePath() + "." + docStyleLastMod + ".old"));
 				docStyleFile = new File(this.docStyleFolder, docStyleFileName);
 			}
-			BufferedWriter dsdBw = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(new File(this.docStyleFolder, docStyleFileName))));
+			BufferedWriter dsdBw = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(new File(this.docStyleFolder, docStyleFileName)), "UTF-8"));
 			this.writeDocumentStyleData(docStyleData, dsdBw);
 			dsdBw.flush();
 			dsdBw.close();
@@ -325,15 +325,20 @@ public class DocumentStyleProvider implements DocumentStyle.Provider {
 			DocumentStyleTray docStyleTray = ((DocumentStyleTray) this.docStylesByName.get(docStyleName));
 			System.out.println("Testing " + docStyleName + " with " + docStyleTray.anchors.length + " anchors");
 			DocumentStyleMatch docStyleMatch = docStyleTray.matchAgainst(doc);
-			if (docStyleMatch != null)
+			if (docStyleMatch != null) {
 				docStyleMatches.add(docStyleMatch);
+				System.out.println(" ==> matched " + docStyleMatch.anchorsMatched + " of " + docStyleMatch.anchorsTested + " anchors");
+			}
 		}
 		if (docStyleMatches.isEmpty())
 			return null; // nothing to work with ...
 		
 		//	return best matching style
 		Collections.sort(docStyleMatches);
-		return ((DocumentStyleMatch) docStyleMatches.get(0)).docStyle;
+//		return ((DocumentStyleMatch) docStyleMatches.get(0)).docStyle;
+		DocumentStyle docStyle = ((DocumentStyleMatch) docStyleMatches.get(0)).docStyle;
+		System.out.println("Found " + docStyle);
+		return docStyle;
 	}
 	
 	/* (non-Javadoc)
@@ -354,10 +359,16 @@ public class DocumentStyleProvider implements DocumentStyle.Provider {
 		DocumentStyleMatch matchAgainst(Attributed doc) {
 			int anchorsMatched = 0;
 			for (int a = 0; a < this.anchors.length; a++) {
-				if (this.anchors[a].matches(doc))
+				System.out.println(" - " + this.anchors[a].name);
+				if (this.anchors[a].matches(doc)) {
+					System.out.println("   ==> match");
 					anchorsMatched++;
-				else if (this.anchors[a].isRequired)
+				}
+				else if (this.anchors[a].isRequired) {
+					System.out.println("   ==> mismatch on required");
 					return null;
+				}
+				else System.out.println("   ==> mismatch");
 			}
 			return ((anchorsMatched == 0) ? null : new DocumentStyleMatch(this.docStyle, this.anchors.length, anchorsMatched));
 		}

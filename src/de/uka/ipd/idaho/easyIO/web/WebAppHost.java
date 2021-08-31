@@ -104,6 +104,7 @@ public class WebAppHost {
 	private String path;
 	private File rootFolder;
 	private File webInfFolder;
+	private File cacheRootFolder;
 	private Settings settings;
 	private HashMap servletRegistry = new HashMap();
 	private TreeMap reinitializableServletsByName = new TreeMap();
@@ -115,6 +116,11 @@ public class WebAppHost {
 		this.webInfFolder = new File(this.rootFolder, "WEB-INF");
 		
 		this.settings = Settings.loadSettings(new File(this.webInfFolder, "web.cnfg"));
+		
+		String cacheRootFolder = this.settings.getSetting("cacheRootFolder", "caches");
+		if (cacheRootFolder.startsWith("/") || (cacheRootFolder.indexOf(":") != -1))
+			this.cacheRootFolder = new File(cacheRootFolder);
+		else this.cacheRootFolder = new File(this.webInfFolder, cacheRootFolder);
 		
 		this.authenticationProviderAttribute = ("authenticationProvider" + this.path.hashCode());
 		this.authenticatedUserNameAttribute = ("authenticatedUserName" + this.path.hashCode());
@@ -146,6 +152,14 @@ public class WebAppHost {
 	 */
 	public File getWebInfFolder() {
 		return this.webInfFolder;
+	}
+	
+	/**
+	 * Retrieve the cache folder of the web application.
+	 * @return the cache root folder of the web application
+	 */
+	public File getCacheRootFolder() {
+		return this.cacheRootFolder;
 	}
 	
 	/**
