@@ -462,11 +462,11 @@ public class JsonParser {
 		writeValueData(out, obj, quot, indent, "");
 	}
 	
-	private static void writeValueData(Writer out, Object obj, char quot, String levelIndent, String indent) throws IOException {
+	private static void writeValueData(Writer out, Object obj, char quot, String perLevelIndent, String currentLevelInden) throws IOException {
 		if (obj instanceof Map)
-			writeObject(out, ((Map) obj), quot, levelIndent, indent);
+			writeObject(out, ((Map) obj), quot, perLevelIndent, currentLevelInden);
 		else if (obj instanceof List)
-			writeArray(out, ((List) obj), quot, levelIndent, indent);
+			writeArray(out, ((List) obj), quot, perLevelIndent, currentLevelInden);
 		else if (obj instanceof String)
 			writeString(out, ((String) obj), quot);
 		else if (obj instanceof Number)
@@ -477,8 +477,8 @@ public class JsonParser {
 			writeNull(out);
 	}
 	
-	private static void writeObject(Writer out, Map object, char quot, String levelIndent, String indent) throws IOException {
-		String valueIndent = ((indent == null) ? null : (indent + levelIndent));
+	private static void writeObject(Writer out, Map object, char quot, String perLevelIndent, String currentLevelInden) throws IOException {
+		String objectContentIndent = ((perLevelIndent == null) ? null : (currentLevelInden + perLevelIndent));
 		int outValueCount = 0;
 		out.write("{");
 		for (Iterator kit = object.keySet().iterator(); kit.hasNext();) {
@@ -490,27 +490,27 @@ public class JsonParser {
 				continue;
 			if (outValueCount != 0)
 				out.write(",");
-			if (indent == null)
-				out.write(" ");
+			if (perLevelIndent == null)
+				out.write((outValueCount == 0) ? "" : " ");
 			else {
 				out.write("\r\n");
-				out.write(valueIndent);
+				out.write(objectContentIndent);
 			}
 			out.write(toString(((String) key), quot));
-			out.append(": ");
-			writeValueData(out, value, quot, levelIndent, valueIndent);
+			out.write(": ");
+			writeValueData(out, value, quot, perLevelIndent, objectContentIndent);
 			outValueCount++;
 			
 		}
-		if ((outValueCount != 0) && (indent != null)) {
+		if ((outValueCount != 0) && (perLevelIndent != null)) {
 			out.write("\r\n");
-			out.write(indent);
+			out.write(currentLevelInden);
 		}
 		out.write("}");
 	}
 	
-	private static void writeArray(Writer out, List array, char quot, String levelIndent, String indent) throws IOException {
-		String valueIndent = ((indent == null) ? null : (indent + levelIndent));
+	private static void writeArray(Writer out, List array, char quot, String perLevelIndent, String currentLevelInden) throws IOException {
+		String arrayContentIndent = ((perLevelIndent == null) ? null : (currentLevelInden + perLevelIndent));
 		int outValueCount = 0;
 		out.write("[");
 		for (int i = 0; i < array.size(); i++) {
@@ -519,18 +519,18 @@ public class JsonParser {
 				continue;
 			if (outValueCount != 0)
 				out.write(",");
-			if (indent == null)
-				out.write(" ");
+			if (perLevelIndent == null)
+				out.write((outValueCount == 0) ? "" : " ");
 			else {
 				out.write("\r\n");
-				out.write(valueIndent);
+				out.write(arrayContentIndent);
 			}
-			writeValueData(out, value, quot, levelIndent, valueIndent);
+			writeValueData(out, value, quot, perLevelIndent, arrayContentIndent);
 			outValueCount++;
 		}
-		if ((outValueCount != 0) && (indent != null)) {
+		if ((outValueCount != 0) && (perLevelIndent != null)) {
 			out.write("\r\n");
-			out.write(indent);
+			out.write(currentLevelInden);
 		}
 		out.write("]");
 	}
@@ -653,9 +653,6 @@ public class JsonParser {
 			this.position += ((int) (skipped & 0x7FFFFFF));
 			return skipped;
 		}
-//		public int skipSpace() throws IOException {
-//			return super.skipSpace(); // uses read(), no need to count here
-//		}
 	}
 	
 	private static Object cropNext(JsonReader jr, boolean inArrayOrObject, JsonReceiver receiver) throws IOException {
