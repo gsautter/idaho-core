@@ -522,7 +522,7 @@ public class StringRelation {
 		StringRelation inverse = new StringRelation();
 		
 		for (int k = 0; k < keys.size(); k++)
-			inverse.addElement(new StringTupel());
+			inverse.addElement(new StringTupel(data.size() + 1));
 		
 		int keyLength = ((int) Math.floor(Math.log10(data.size() - 1)) + 1);
 		for (int t = 0; t < data.size(); t++) {
@@ -1789,7 +1789,7 @@ public class StringRelation {
 						tupelValues = new StringVector();
 					}
 					else {
-						StringTupel st = new StringTupel();
+						StringTupel st = new StringTupel(effectiveKeys.size());
 						for (int i = 0; (i < tupelValues.size()) || (i < effectiveKeys.size()); i++)
 							st.setValue(((i < effectiveKeys.size()) ? effectiveKeys.get(i) : ("" + i)), ((i < tupelValues.size()) ? tupelValues.get(i) : ""));
 						if ((filter == null) || filter.matches(st))

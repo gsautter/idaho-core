@@ -42,8 +42,23 @@ import de.uka.ipd.idaho.stringUtils.StringVector;
  * @author sautter
  */
 public class StringTupel {
-	private LinkedHashMap data = new LinkedHashMap();
+	private LinkedHashMap data;
 	private int hash = 0;
+	
+	/**
+	 * Constructor using default initial capacity
+	 */
+	public StringTupel() {
+		this(16); // see java.util.HashMap
+	}
+	
+	/**
+	 * Constructor using custom initial capacity
+	 * @param initialCapacity the initial capacity for the string tupel
+	 */
+	public StringTupel(int initialCapacity) {
+		this.data = new LinkedHashMap(((initialCapacity * 4) + 2) / 3); // account for default load factor 0.75 (we want as many elements to actually fit before expansion)
+	}
 	
 	/**	add a key/value pair to this StringTupel
 	 * @param	key		the key to add the specified value for (must not be null)
@@ -53,10 +68,8 @@ public class StringTupel {
 	public String setValue(String key, String value) {
 		if (key == null)
 			return value;
-//		if (value == null) // we cannot do this, as otherwise we'd lose empty columns
-//			return this.removeValue(key);
+		//	need to hold on even to null values, as otherwise we'd lose empty columns
 		String old = ((String) this.data.put(key, value));
-//		return ((old == null) ? null : old.toString());
 		if (notEqual(value, old))
 			this.hash = 0;
 		return old;
@@ -110,11 +123,6 @@ public class StringTupel {
 	 * @param	newKey	the String to replace the key with
 	 */
 	public void renameKey(String key, String newKey) {
-//		if ((key != null) && (newKey != null)) {
-//			String value = this.removeValue(key);
-//			if (value != null)
-//				this.setValue(newKey, value);
-//		}
 		if (key == null)
 			return;
 		String value = this.removeValue(key);
@@ -128,7 +136,6 @@ public class StringTupel {
 	 */
 	public String removeValue(String key) {
 		Object old = this.data.remove(key);
-//		return ((old == null) ? null : old.toString());
 		if (old != null)
 			this.hash = 0;
 		return ((String) old);
@@ -152,12 +159,7 @@ public class StringTupel {
 	 * @return a new StringTupel containing only the values of the specified keys
 	 */
 	public StringTupel project(StringVector keys) {
-//		StringVector remainingKeys = this.getKeys().intersect(keys);
-//		StringTupel st = new StringTupel();
-//		for (int k = 0; k < remainingKeys.size(); k++)
-//			st.setValue(remainingKeys.get(k), this.getValue(remainingKeys.get(k)));
-//		return st;
-		StringTupel st = new StringTupel();
+		StringTupel st = new StringTupel(keys.size());
 		for (int k = 0; k < keys.size(); k++) {
 			String key = keys.get(k);
 			if (this.data.containsKey(key))
@@ -171,7 +173,7 @@ public class StringTupel {
 	 * @return a new StringTupel containing only the values of the specified keys
 	 */
 	public StringTupel project(String[] keys) {
-		StringTupel st = new StringTupel();
+		StringTupel st = new StringTupel(keys.length);
 		for (int k = 0; k < keys.length; k++) {
 			if (this.data.containsKey(keys[k]))
 				st.data.put(keys[k], this.data.get(keys[k]));
@@ -184,16 +186,6 @@ public class StringTupel {
 	 * @return true if and only if this StringTupel contains the same values as the filter for all keys contained in the filter
 	 */
 	public boolean matches(StringTupel filter) {
-//		if ((filter == null) || (filter.size() == 0)) return true;
-//		StringVector ownKeys = this.getKeys();
-//		StringVector filterKeys = filter.getKeys();
-//		if (!ownKeys.contains(filterKeys)) return false;
-//		for (int k = 0; k < filterKeys.size(); k++) {
-//			String ownValue = this.getValue(filterKeys.get(k), "");
-//			String filterValue = filter.getValue(filterKeys.get(k), "");
-//			if (!ownValue.equals(filterValue)) return false;
-//		}
-//		return true;
 		if ((filter == null) || (filter.size() == 0))
 			return true;
 		for (Iterator kit = filter.data.keySet().iterator(); kit.hasNext();) {
@@ -212,15 +204,9 @@ public class StringTupel {
 	 * Note: if the values for a key differ, the new StringTupel will contain the value from this StringTupel
 	 */
 	public StringTupel join(StringTupel toJoin) {
-//		if ((toJoin == null) || (toJoin == this)) return this;
-//		StringVector joinKeys = this.getKeys().union(toJoin.getKeys());
-//		StringTupel st = new StringTupel();
-//		for (int k = 0; k < joinKeys.size(); k++)
-//			st.setValue(joinKeys.get(k), this.getValue(joinKeys.get(k), toJoin.getValue(joinKeys.get(k))));
-//		return st;
 		if ((toJoin == null) || (toJoin == this))
 			return this;
-		StringTupel st = new StringTupel();
+		StringTupel st = new StringTupel(this.data.size() + toJoin.data.size());
 		st.data.putAll(toJoin.data);
 		st.data.putAll(this.data); // own values replace ones from argument
 		return st;
@@ -229,11 +215,6 @@ public class StringTupel {
 	/** @see java.lang.Object#toString()
 	 */
 	public String toString() {
-//		StringVector keys = this.getKeys();
-//		StringVector values = new StringVector();
-//		for (int k = 0; k < keys.size(); k++)
-//			values.addElement(this.getValue(keys.get(k), ""));
-//		return values.concatStrings("; ");
 		String[] keys = this.getKeyArray();
 		StringBuffer string = new StringBuffer();
 		for (int k = 0; k < keys.length; k++) {
@@ -376,15 +357,6 @@ public class StringTupel {
 	/** @see java.lang.Object#equals(java.lang.Object)
 	 */
 	public boolean equals(Object obj) {
-//		if (obj == null) return false;
-//		if (obj == this) return true;
-//		if (!(obj instanceof StringTupel))
-//			return super.equals(obj);
-//		StringTupel st = ((StringTupel) obj);
-//		if (st.size() != this.size())
-//			return false;
-//		StringVector keys = this.getKeys().union(st.getKeys());
-//		return this.toCsvString(keys).equals(st.toCsvString(keys));
 		if (obj == null)
 			return false;
 		if (obj == this)
@@ -407,10 +379,6 @@ public class StringTupel {
 	/** @see java.lang.Object#hashCode()
 	 */
 	public int hashCode() {
-//		StringVector keys = this.getKeys();
-//		keys.sortLexicographically();
-//		String csv = this.toCsvString(keys);
-//		return csv.hashCode();
 		if (this.data.isEmpty())
 			return 0;
 		if (this.hash == 0) {
