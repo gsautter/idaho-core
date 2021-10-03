@@ -348,6 +348,76 @@ public class AnnotationUtils {
 	}
 	private static Map comparatorCache = Collections.synchronizedMap(new HashMap());
 	
+	/**
+	 * Clean XML namespace declarations of a document and the annotations
+	 * contained in it. In particular, this method removes attributes declaring
+	 * XML namespaces that are not used in any annotation type or attribute
+	 * name anywhere in the document.
+	 * @param doc the document whose namespace declarations to clean
+	 * @return true if the argument document was modified as a result of this
+	 *            method, false otherwise
+	 */
+	public static boolean cleanNamespaceDeclarations(QueriableAnnotation doc) {
+		
+		//	collect XML namespace declarations actually used in document ...
+		HashSet docXmlns = new HashSet();
+		
+		//	... from document attributes ...
+		String[] docAns = doc.getAttributeNames();
+		for (int n = 0; n < docAns.length; n++) {
+			if (docAns[n].startsWith("xmlns:"))
+				continue;
+			if (docAns[n].indexOf(':') != -1)
+				docXmlns.add(docAns[n].substring(0, docAns[n].indexOf(':')));
+		}
+		
+		//	... to annotation types ...
+		Annotation[] docAnnots = doc.getAnnotations();
+		for (int a = 0; a < docAnnots.length; a++) {
+			String annotType = docAnnots[a].getType();
+			if (annotType.indexOf(':') != -1)
+				docXmlns.add(annotType.substring(0, annotType.indexOf(':')));
+			
+			//	... and annotation attributes
+			String[] annotAns = docAnnots[a].getAttributeNames();
+			for (int n = 0; n < annotAns.length; n++) {
+				if (annotAns[n].startsWith("xmlns:"))
+					continue;
+				if (annotAns[n].indexOf(':') != -1)
+					docXmlns.add(annotAns[n].substring(0, annotAns[n].indexOf(':')));
+			}
+		}
+		
+		//	track namespace declaration removals
+		boolean docModified = false;
+		
+		//	remove unused XML namespace declarations so XSLTs can define their own, from the document proper ...
+		for (int n = 0; n < docAns.length; n++) {
+			if (!docAns[n].startsWith("xmlns:"))
+				continue;
+			if (!docXmlns.contains(docAns[n].substring("xmlns:".length()))) {
+				doc.removeAttribute(docAns[n]);
+				docModified = true;
+			}
+		}
+		
+		//	... as well as from its annotations
+		for (int a = 0; a < docAnnots.length; a++) {
+			String[] annotAns = docAnnots[a].getAttributeNames();
+			for (int n = 0; n < annotAns.length; n++) {
+				if (!annotAns[n].startsWith("xmlns:"))
+					continue;
+				if (!docXmlns.contains(annotAns[n].substring("xmlns:".length()))) {
+					docAnnots[a].removeAttribute(annotAns[n]);
+					docModified = true;
+				}
+			}
+		}
+		
+		//	did we change anything?
+		return docModified;
+	}
+	
 	private static final XmlOutputOptions startTagOptionsNoId = new XmlOutputOptions() {
 		public boolean writeAttribute(String name) {
 			return true;
