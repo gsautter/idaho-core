@@ -47,6 +47,7 @@ import java.sql.SQLException;
 import java.sql.SQLFeatureNotSupportedException;
 import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.Properties;
 import java.util.logging.Logger;
@@ -80,6 +81,30 @@ import de.uka.ipd.idaho.stringUtils.StringUtils;
  * @author Guido Sautter
  */
 public class EasyIO {
+	
+	/**
+	 * Factory for IO provider implementations.
+	 * @author sautter
+	 */
+	public static interface IoProviderFactory {
+		
+		/**
+		 * Create an IO Provider configured based upon the specified settings.
+		 * @param configuration the Properties object containing the settings
+		 * @return an IO Provider configured based upon the argument settings
+		 */
+		public abstract IoProvider getIoProvider(Settings configuration);
+	}
+	
+	/**
+	 * Add an IO provider factory to provide a custom implementation of the
+	 * <code>IoProvider</code> interface.
+	 * @param ipf the IO provider factory to use
+	 */
+	public static synchronized void setIoProviderFactory(IoProviderFactory ipf) {
+		ioProviderFactory = ipf;
+	}
+	private static IoProviderFactory ioProviderFactory = null;
 	
 	/**
 	 * Create an IO Provider configured according to the specified settings. The
@@ -149,7 +174,9 @@ public class EasyIO {
 	 * @return an IO Provider configured according to the specified settings
 	 */
 	public static IoProvider getIoProvider(Settings configuration) {
-		return ((configuration == null) ? null : new StandardIoProvider(configuration));
+		if (ioProviderFactory == null)
+			return ((configuration == null) ? null : new StandardIoProvider(configuration));
+		else return ioProviderFactory.getIoProvider(configuration);
 	}
 	
 	private static class StandardIoProvider implements IoProvider {
@@ -160,9 +187,6 @@ public class EasyIO {
 		private boolean smtpValid = false;
 		private boolean jdbcValid = false;
 		
-//		//	settings for file io
-//		private String fileHomeDir;
-//	
 		//	settings for www io
 		private boolean wwwProxyNeeded;
 		private String wwwProxy;
@@ -177,7 +201,6 @@ public class EasyIO {
 		private String smtpLogin;
 		private String smtpPassword;
 		private String smtpFromAddress;
-//		private boolean smtpServerIsLocal = false;
 		
 		//	settings for jdbc io
 		private String jdbcDriverClassName;
@@ -303,85 +326,50 @@ public class EasyIO {
 		//	create a JDBC connection according to the settings
 		private Connection getJdbcConnection() {
 			try {
-				String url;
 				
-				//	get DB specific libraries
-				String[] driverClassPathParts = this.jdbcDriverClassPath.trim().split("\\s+");
-				ArrayList urlList = new ArrayList();
-				for (int p = 0; p < driverClassPathParts.length; p++) {
-					if (driverClassPathParts[p].length() == 0)
-						continue;
-					try {
-						System.out.println("StandardIoProvider: adding '" + driverClassPathParts[p] + "' to class path for JDBC driver");
-						if (driverClassPathParts[p].indexOf("://") == -1)
-							urlList.add(new File(driverClassPathParts[p]).toURL());
-						else urlList.add(new URL(driverClassPathParts[p]));
-					} catch (Exception e) {}
-				}
-				
-				//	load JDBC driver
-				Class driverClass;
-				if (urlList.isEmpty())
-					driverClass = this.getClass().getClassLoader().loadClass(this.jdbcDriverClassName);
-				else {
-					URL[] urls = ((URL[]) urlList.toArray(new URL[urlList.size()]));
-					ClassLoader driverClassLoader = new URLClassLoader(urls, this.getClass().getClassLoader());
-					driverClass = driverClassLoader.loadClass(this.jdbcDriverClassName);
-				}
-				System.out.println("StandardIoProvider: got JDBC driver class '" + this.jdbcDriverClassName + "'");
-				
-				//	wrap and register driver instance
-				DriverManager.registerDriver(new GenericDriver((Driver) driverClass.newInstance()));
-				System.out.println("StandardIoProvider: JDBC driver instance wrapped");
+				//	make sure JDBC driver loaded and registered
+				ensureJdbcDriverLoaded(this.jdbcDriverClassName, this.jdbcDriverClassPath);
 				
 				//	using user/password authentication
+				String url;
 				if (this.jdbcUseHostUserPassword) {
 					
-					//	connection url given --> simply use it
-					if (this.jdbcUrl != null)
-						url = this.jdbcUrl;
-					
 					//	connection url not given --> assemble it
-					else {
+					if (this.jdbcUrl == null) {
 						url = this.jdbcDriver + ":" + this.jdbcHost;
-						
 						if (this.jdbcPort != null)
 							url = url + ":" + this.jdbcPort;
-						
 						if (this.jdbcDefaultDbSetting != null)
 							url = url + this.jdbcDefaultDbSetting;
 					}
 					
+					//	connection url given --> simply use it
+					else url = this.jdbcUrl;
+					
 					//	get connection and return it
-					Connection con = DriverManager.getConnection(url, this.jdbcUser, this.jdbcPassword);
-					return con;
+					return DriverManager.getConnection(url, this.jdbcUser, this.jdbcPassword);
 				}
 				
 				//	using URL authentication
 				else {
 					
-					//	connection url given --> simply use it
-					if (this.jdbcUrl != null)
-						url = this.jdbcUrl;
-						
 					//	connection url not given --> assemble it
-					else {
+					if (this.jdbcUrl == null) {
 						url = this.jdbcDriver + ":" + this.jdbcHost;
 						if (this.jdbcPort != null)
 							url = url + ":" + this.jdbcPort;
-						
 						if (this.jdbcDefaultDbSetting != null)
 							url = url + this.jdbcDefaultDbSetting;
-						
 						url = url + "?" + this.jdbcUser;
-						
 						if (this.jdbcPassword != null)
 							url = url + "&" + this.jdbcPassword;
 					}
 					
+					//	connection url given --> simply use it
+					else url = this.jdbcUrl;
+					
 					//	get connection and return it
-					Connection con = DriverManager.getConnection(url);
-					return con;
+					return DriverManager.getConnection(url);
 				}
 			}
 			
@@ -407,6 +395,47 @@ public class EasyIO {
 			}
 		}
 		
+		private static HashSet loadedJdbcDriverClasses = new HashSet(4);
+		private static synchronized void ensureJdbcDriverLoaded(String className, String classPath) throws Exception {
+			classPath = classPath.trim();
+			String classKey = (className + "@" + classPath);
+			if (loadedJdbcDriverClasses.contains(classKey)) {
+				System.out.println("StandardIoProvider: JDBC driver " + classKey + " loaded before");
+				return;
+			}
+			
+			//	parse class path
+			String[] classPathParts = classPath.split("\\s+");
+			ArrayList urlList = new ArrayList();
+			for (int p = 0; p < classPathParts.length; p++) try {
+				System.out.println("StandardIoProvider: adding '" + classPathParts[p] + "' to JDBC driver class path");
+				if (classPathParts[p].indexOf("://") == -1)
+					urlList.add(new File(classPathParts[p]).toURL());
+				else urlList.add(new URL(classPathParts[p]));
+			}
+			catch (IOException ioe) {
+				System.out.println("StandardIoProvider: error adding '" + classPathParts[p] + "' to JDBC driver class path - " + ioe.getMessage());
+				ioe.printStackTrace(System.out);
+			}
+			
+			//	create class loader
+			ClassLoader classLoader;
+			if (urlList.isEmpty())
+				classLoader = StandardIoProvider.class.getClassLoader();
+			else classLoader = new URLClassLoader(((URL[]) urlList.toArray(new URL[urlList.size()])), StandardIoProvider.class.getClassLoader());
+			
+			//	load JDBC driver
+			Class driverClass = classLoader.loadClass(className);
+			System.out.println("StandardIoProvider: got JDBC driver class '" + className + "'");
+			
+			//	wrap and register driver instance
+			DriverManager.registerDriver(new GenericDriver((Driver) driverClass.newInstance()));
+			System.out.println("StandardIoProvider: JDBC driver instance wrapped");
+			
+			//	remember loading this one
+			loadedJdbcDriverClasses.add(classKey);
+		}
+		
 		private void reGetJdbcConnection() {
 			Connection oldJdbcCon = this.jdbcCon; // need to hold on to this so we recognize whether or not some other thread beat us to re-connecting
 			synchronized (this) {
@@ -419,12 +448,12 @@ public class EasyIO {
 		
 		/**
 		 * Wrapper for JDBC drivers that are loaded at runtime (DriverManager
-		 * requires drivers to be loaded through system classloader for some
+		 * requires drivers to be loaded through system class loader for some
 		 * reason)
 		 * 
 		 * @author sautter
 		 */
-		private class GenericDriver implements Driver {
+		private static class GenericDriver implements Driver {
 			private Driver driver;
 			private GenericDriver(Driver driver) {
 				this.driver = driver;
@@ -594,48 +623,6 @@ public class EasyIO {
 				}
 			}
 		}
-//		
-//		/* (non-Javadoc)
-//		 * @see de.uka.ipd.idaho.easyIO.IoProvider#setNotNull(java.lang.String, java.lang.String)
-//		 */
-//		public boolean setNotNull(String table, String column) {
-//			
-//			//	check if table and column exist
-//			String checkQuery = ("SELECT " + column + " FROM " + table + " WHERE 1=0;");
-//			try {
-//				System.out.println("StandardIoProvider: checking table for not null constraint creation.\n  " + checkQuery.toString());
-//				this.executeSelectQuery(checkQuery.toString());
-//			}
-//			
-//			//	exception while checking table
-//			catch (SQLException checkSqlEx) {
-//				System.out.println("StandardIoProvider: " + checkSqlEx.getMessage() + " while checking table for not null constraint creation.\n  Query was " + checkQuery);
-//				return false;
-//			}
-//			
-//			//	create primary key constraint
-//			String constraintName = (table + "_NN_" + column);
-//			String createQuery = this.jdbcSyntax.getProperty(TableDefinition.SYNTAX_SET_NOT_NULL);
-//			createQuery = TableDefinition.replaceVariable(createQuery, TableDefinition.SYNTAX_KEYED_TABLE_VARIABLE, table);
-//			createQuery = TableDefinition.replaceVariable(createQuery, TableDefinition.SYNTAX_COLUMN_NAME_VARIABLE, column);
-//			try {
-//				System.out.println("StandardIoProvider: creating not null constraint\n  " + createQuery);
-//				this.executeUpdateQuery(createQuery);
-//				return true;
-//			}
-//			
-//			//	exception while creating index
-//			catch (SQLException createSqlEx) {
-//				
-//				//	catch case of index already existing, and return true on respective exceptions
-//				if (this.isAlreadyExistsErrorMessage(createSqlEx.getMessage(), "constraint", constraintName))
-//					return true;
-//				
-//				//	other error
-//				System.out.println("StandardIoProvider: " + createSqlEx.getMessage() + " while creating not null constraint.\n  Query was " + createQuery);
-//				return false;
-//			}
-//		}
 		
 		/* (non-Javadoc)
 		 * @see de.uka.ipd.idaho.easyIO.IoProvider#setPrimaryKey(java.lang.String, java.lang.String)
@@ -837,209 +824,6 @@ public class EasyIO {
 			return false;
 		}
 		
-//		public boolean ensureTable(TableDefinition definition, boolean create) {
-//			if (!this.jdbcValid || (definition == null)) {
-//				System.out.println("StandardIoProvider: JDBC invalid or TableDefinition was null.");
-//				return false;
-//			}
-//			
-//			try {
-//				
-//				//	get old definition from DB
-//				String validationQuery = definition.getColumnValidationQuery();
-//				System.out.println("StandardIoProvider: ensuring table columns in " + definition.getTableName() + "\n  " + validationQuery);
-//				SqlQueryResult sqr = this.executeSelectQuery(validationQuery);
-//				System.out.println("StandardIoProvider: column validation query successful.");
-//				TableDefinition existingDefinition = new TableDefinition(sqr, definition.getTableName());
-//				
-//				//	check for updates
-//				if (create) {
-//					try {
-//						
-//						//	get and execute update queries
-//						StringVector updates = definition.getUpdateQueries(existingDefinition);
-//						for (int i = 0; i < updates.size(); i++) {
-//							System.out.println("StandardIoProvider: altering column\n  " + updates.get(i));
-//							this.executeUpdateQuery(updates.get(i));
-//						}
-//						return true;
-//					}
-//					catch (SQLException updateSqlEx) {
-//						System.out.println("StandardIoProvider: " + updateSqlEx.getMessage() + " while updating table.");
-//						return false;
-//					}
-//				}
-//				
-//				//	check for equality if update not allowed
-//				else return existingDefinition.equals(definition);
-//			}
-//			
-//			//	at least one column missing
-//			catch (SQLException columnSqlEx) {
-//				System.out.println("StandardIoProvider: caught " + columnSqlEx.getMessage() + " while ensuring table, some column is missing.");
-//				try {
-//					
-//					//	get old definition from DB
-//					String validationQuery = definition.getValidationQuery();
-//					System.out.println("StandardIoProvider: ensuring table " + definition.getTableName() + "\n  " + validationQuery);
-//					SqlQueryResult sqr = this.executeSelectQuery(validationQuery);
-//					System.out.println("StandardIoProvider: validation query successful.");
-//					TableDefinition existingDefinition = new TableDefinition(sqr, definition.getTableName());
-//					
-//					//	check for updates
-//					if (create) {
-//						String updateQuery = "";
-//						try {
-//							
-//							//	get and execute update queries
-//							StringVector updates = definition.getUpdateQueries(existingDefinition);
-//							for (int i = 0; i < updates.size(); i++) {
-//								updateQuery = updates.get(i);
-//								System.out.println("StandardIoProvider: creating or altering column\n  " + updates.get(i));
-//								this.executeUpdateQuery(updates.get(i));
-//							}
-//							return true;
-//						}
-//						catch (SQLException updateSqlEx) {
-//							System.out.println("StandardIoProvider: " + updateSqlEx.getMessage() + " while extending / updating table.\n  Query was " + updateQuery);
-//							return false;
-//						}
-//					}
-//					
-//					//	check for equality if update not allowed
-//					else return existingDefinition.equals(definition);
-//				}
-//				
-//				//	table doesn't exist at all
-//				catch (SQLException tableSqlEx) {
-//					System.out.println("StandardIoProvider: caught " + tableSqlEx.getMessage() + " while ensuring table, table doesn't exist.");
-//					String creationQuery = "";
-//					try {
-//						
-//						//	create table if allowed
-//						if (create) {
-//							creationQuery = definition.getCreationQuery();
-//							System.out.println("StandardIoProvider: creating table\n  " + creationQuery);
-//							this.executeUpdateQuery(creationQuery);
-//							return true;
-//						}
-//						else return false;
-//					}
-//					
-//					//	exception while creating table
-//					catch (SQLException createSqlEx) {
-//						System.out.println("StandardIoProvider: " + createSqlEx.getMessage() + " while creating table.\n  Query was " + creationQuery);
-//						return false;
-//					}
-//				}
-//			}
-//		}
-//		
-//		/**	check if a table with the specified name exists and complies the specified definition
-//		 * @param	definition	the definition of the table to be validated
-//		 * @param 	create		if set to true, the questioned table will be created or adjusted to the specified definition (extensions only)
-//		 * @return	true if and only if a table with the specified name and definition exists or was created or adjusted successfully
-//		 * @deprecated de.easyIO.util.TableDefinition and de.easyIO.util.TableColumnDefinition are bound to the SQL dialect by Microsoft. Use de.uka.ipd.idaho.easyIO.sql.TableDefinition and de.uka.ipd.idaho.easyIO.sql.TableColumnDefinition and the ensureTablePortable() method instead. 
-//		 */
-//		public boolean ensureTable(de.uka.ipd.idaho.easyIO.util.TableDefinition definition, boolean create) {
-//			if (this.jdbcValid && (definition != null)) {
-//				try {
-//					
-//					//	get old definition from DB
-//					String validationQuery = definition.getColumnValidationQuery();
-//					System.out.println("StandardIoProvider: ensuring table columns in " + definition.getTableName() + "\n  " + validationQuery);
-//					SqlQueryResult sqr = this.executeSelectQuery(validationQuery);
-//					System.out.println("StandardIoProvider: column validation query successful.");
-//					de.uka.ipd.idaho.easyIO.util.TableDefinition existingDefinition = new de.uka.ipd.idaho.easyIO.util.TableDefinition(sqr, definition.getTableName());
-//					
-//					//	check for updates
-//					if (create) {
-//						try {
-//							
-//							//	get and execute update queries
-//							StringVector updates = definition.getUpdateQueries(existingDefinition);
-//							for (int i = 0; i < updates.size(); i++) {
-//								System.out.println("StandardIoProvider: altering column\n  " + updates.get(i));
-//								this.executeUpdateQuery(updates.get(i));
-//							}
-//							return true;
-//						}
-//						catch (SQLException updateSqlEx) {
-//							System.out.println("StandardIoProvider: " + updateSqlEx.getMessage() + " while updating table.");
-//							return false;
-//						}
-//					}
-//					
-//					//	check for equality if update not allowed
-//					else return existingDefinition.equals(definition);
-//				}
-//				
-//				//	at least one column missing
-//				catch (SQLException columnSqlEx) {
-//					System.out.println("StandardIoProvider: caught " + columnSqlEx.getMessage() + " while ensuring table, some column is missing.");
-//					try {
-//						
-//						//	get old definition from DB
-//						String validationQuery = definition.getValidationQuery();
-//						System.out.println("StandardIoProvider: ensuring table " + definition.getTableName() + "\n  " + validationQuery);
-//						SqlQueryResult sqr = this.executeSelectQuery(validationQuery);
-//						System.out.println("StandardIoProvider: validation query successful.");
-//						de.uka.ipd.idaho.easyIO.util.TableDefinition existingDefinition = new de.uka.ipd.idaho.easyIO.util.TableDefinition(sqr, definition.getTableName());
-//						
-//						//	check for updates
-//						if (create) {
-//							String updateQuery = "";
-//							try {
-//								
-//								//	get and execute update queries
-//								StringVector updates = definition.getUpdateQueries(existingDefinition);
-//								for (int i = 0; i < updates.size(); i++) {
-//									updateQuery = updates.get(i);
-//									System.out.println("StandardIoProvider: creationg or altering column\n  " + updates.get(i));
-//									this.executeUpdateQuery(updates.get(i));
-//								}
-//								return true;
-//							}
-//							catch (SQLException updateSqlEx) {
-//								System.out.println("StandardIoProvider: " + updateSqlEx.getMessage() + " while extending / updating table.\n  Query was " + updateQuery);
-//								return false;
-//							}
-//						}
-//						
-//						//	check for equality if update not allowed
-//						else return existingDefinition.equals(definition);
-//					}
-//					
-//					//	table doesn't exist at all
-//					catch (SQLException tableSqlEx) {
-//						System.out.println("StandardIoProvider: caught " + tableSqlEx.getMessage() + " while ensuring table, table doesn't exist.");
-//						String creationQuery = "";
-//						try {
-//							
-//							//	create table if allowed
-//							if (create) {
-//								creationQuery = definition.getCreationQuery();
-//								System.out.println("StandardIoProvider: creation table\n  " + creationQuery);
-//								this.executeUpdateQuery(creationQuery);
-//								return true;
-//							}
-//							else return false;
-//						}
-//						
-//						//	exception while creating table
-//						catch (SQLException createSqlEx) {
-//							System.out.println("StandardIoProvider: " + createSqlEx.getMessage() + " while creating table.\n  Query was " + creationQuery);
-//							return false;
-//						}
-//					}
-//				}
-//			}
-//			else {
-//				System.out.println("StandardIoProvider: JDBC invalid or TableDefinition was null.");
-//				return false;
-//			}
-//		}
-	//	
 		/**	execute a select query
 		 * @param	query	the query to be executed	
 		 * @param	copy	copy the result of the query to the result object
@@ -1048,20 +832,6 @@ public class EasyIO {
 		 * @throws SQLException
 		 */
 		public SqlQueryResult executeSelectQuery(String query, boolean copy) throws SQLException {
-//			if (this.jdbcValid && (query != null) && query.toLowerCase().startsWith("select")) {
-//				Statement st = null;
-//				SqlQueryResult sqr = null;
-//				try {
-//					st = (copy ? this.jdbcCon.createStatement() : this.jdbcCon.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY));
-//					sqr = new SqlQueryResult(query, st.executeQuery(this.prepareQuery(query)), copy);
-//					return sqr;
-//				}
-//				finally {
-//					if ((copy || (sqr == null)) && (st != null))
-//						st.close();
-//				}
-//			}
-//			else return null;
 			return this.executeSelectQuery(query, copy, true);
 		}
 		
@@ -1116,18 +886,6 @@ public class EasyIO {
 		 * @throws SQLException
 		 */
 		public int executeUpdateQuery(String query) throws SQLException {
-//			if (this.jdbcValid && (query != null)) {
-//				Statement st = null;
-//				try {
-//					st = this.jdbcCon.createStatement();
-//					return st.executeUpdate(this.prepareQuery(query));
-//				}
-//				finally {
-//					if (st != null)
-//						st.close();
-//				}
-//			}
-//			else return 0;
 			return this.executeUpdateQuery(query, true);
 		}
 		
@@ -1212,124 +970,6 @@ public class EasyIO {
 			return jmd;
 		}
 		
-		//		/** read a text file
-//		 * @param	fileName	the path and name of the file to be read, under this StandardIoProvider's default directory
-//		 * @return	the content of the file addressed by fileName
-//		 * @throws FileNotFoundException
-//		 * @throws IOException
-//		 */
-//		public String readFile(String fileName) throws FileNotFoundException, IOException {
-//			return EasyIO.readFile((new File(fileName)).isAbsolute() ? fileName : (this.fileHomeDir + fileName));
-//		}
-//		/** read a text file
-//		 * @param	file	the file to be read
-//		 * @return	the content of the specified File
-//		 * @throws FileNotFoundException
-//		 * @throws IOException
-//		 */
-//		public String readFile(File file) throws FileNotFoundException, IOException {
-//			return EasyIO.readFile(file);
-//		}
-	//	
-//		/**	write content to the end of an existing file, create file if non-existant
-//		 * @param	fileName	the path and name of the file to write to, under this StandardIoProvider's default directory
-//		 * @param	content		the String to be written to the end of the specified file
-//		 * @throws IOException
-//		 */
-//		public void writeFile(String fileName, String content) throws IOException {
-//			EasyIO.writeFile(((new File(fileName)).isAbsolute() ? fileName : (this.fileHomeDir + fileName)), content);
-//		}
-//		/**	write content to the end of an existing file, create file if non-existant
-//		 * @param	file		the File to write to
-//		 * @param	content		the String(s) to be written to the end of the specified file
-//		 * @throws IOException
-//		 */
-//		public void writeFile(File file, String content) throws IOException {
-//			EasyIO.writeFile(file, content);
-//		}
-//		/**	write content to the end of an existing file, create file if non-existant
-//		 * @param	fileName	the path and name of the file to write to, under this StandardIoProvider's default directory
-//		 * @param	content		the String(s) to be written to the end of the specified file
-//		 * @throws IOException
-//		 */
-//		public void writeFile(String fileName, StringVector content) throws IOException {
-//			EasyIO.writeFile(((new File(fileName)).isAbsolute() ? fileName : (this.fileHomeDir + fileName)), content);
-//		}
-//		/**	write content to the end of an existing file, create file if non-existant
-//		 * @param	file		the File to write to
-//		 * @param	content		the String(s) to be written to the end of the specified file
-//		 * @throws IOException
-//		 */
-//		public void writeFile(File file, StringVector content) throws IOException {
-//			EasyIO.writeFile(file, content);
-//		}
-	//	
-//		/**	write content to the end of an existing file
-//		 * @param	fileName	the path and name of the file to write to, under this StandardIoProvider's default directory
-//		 * @param	content		the String to be written to the end of the specified file
-//		 * @throws IOException
-//		 */
-//		public void writeToFile(String fileName, String content) throws IOException {
-//			EasyIO.writeToFile(((new File(fileName)).isAbsolute() ? fileName : (this.fileHomeDir + fileName)), content);
-//		}
-//		/**	write content to the end of an existing file
-//		 * @param	file		the File to write to
-//		 * @param	content		the String to be written to the end of the specified file
-//		 * @throws IOException
-//		 */
-//		public void writeToFile(File file, String content) throws IOException {
-//			EasyIO.writeToFile(file, content);
-//		}
-	//	
-//		/**	obtain a File by its name. If the file does not exist, it is created. If the specified file name denotes a relative path, the returned file is relative to this IoProvider's data base path.    
-//		 * @param	fileName	the path and name of the desired file
-//		 * @return	the File denoted by the specified file name and, if the latter is relative, by this IoProvider's data base path 
-//		 * @throws IOException
-//		 */
-//		public File getFile(String fileName) throws IOException {
-//			File file = new File((new File(fileName)).isAbsolute() ? fileName : (this.fileHomeDir + fileName));
-//			if (!file.exists()) {
-//				if (file.isDirectory()) file.mkdirs();
-//				else {
-//					File parentFile = file.getParentFile();
-//					if ((parentFile != null) && !parentFile.exists()) parentFile.mkdirs();
-//					file.createNewFile();
-//				}
-//			}
-//			return file;
-//		}
-	//	
-//		/**	@return	the File denoting the base directory for this IoProvider's file IO
-//		 */
-//		public File getHomeDirectory() {
-//			return new File(this.fileHomeDir);
-//		}
-	//	
-//		/**	change the base directory for this IoProvider's file IO (use with care)
-//		 * @param	homeDirectory	the new base directory for this IoProvider's file IO
-//		 */
-//		public void setHomeDirectory(File homeDirectory) {
-//			if (homeDirectory != null) {
-//				if (homeDirectory.isDirectory()) {
-//					if (!homeDirectory.exists()) homeDirectory.mkdirs();
-//					this.fileHomeDir = homeDirectory.getAbsolutePath();
-//				}
-//				else this.setHomeDirectory(homeDirectory.getParentFile());
-//			}
-//		}
-	//	
-//		/**	load a page form the WWW
-//		 * @param	url		the address to read
-//		 * @return	the page as a String
-//		 * @throws MalformedURLException
-//		 * @throws IOException
-//		 */
-//		public String getPage(String url) throws MalformedURLException, IOException {
-//			if (this.wwwValid)
-//				return EasyIO.getPage(url);
-//			else return null;
-//		}
-	//	
 		/**	send msg as an eMail with subject sbj to toAddress
 		 */
 		public void smtpSend(String subject, String message, String[] toAddresses) throws Exception {
@@ -1343,29 +983,7 @@ public class EasyIO {
 			return this.smtpValid;
 		}
 	}
-//	
-//	/**
-//	 * Creates an IO Provider configured according to the settings specified in
-//	 * the specified file.
-//	 * @param settingsFile the path and file containing the settings
-//	 * @return an IO interface configured according to the settings specified in
-//	 *         the specified file
-//	 */
-//	public static IoProvider getIoProvider(String settingsFile) {
-//		Settings config = Settings.loadSettings(settingsFile);
-//		return new StandardIoProvider(config);
-//	}
-//	
-//	/**	readFile reads the content of the specified file and returns it as a String
-//	* @param	fileName	the path and name of the file to read
-//	* @return	the content of the specified file as a String
-//	* @throws	FileNotFoundException, if the specified file dosn't exist in the specified path
-//	* @throws	IOException, if any IOException occures
-//	*/
-//	public static String readFile(String fileName) throws FileNotFoundException, IOException {
-//		return readFile(new File(fileName));
-//	}
-//	
+	
 	/**
 	 * Read the content of a file and return it as a String.
 	 * @param file the file to read
@@ -1383,18 +1001,7 @@ public class EasyIO {
 		br.close();
 		return assembler.toString();
 	}
-//	
-//	/**	writeFile writes the String content to the end of the specified file
-//	 * @param	fileName	the path and name of the file to write to
-//	 * @param	content		the String to be written to the end of the specified file
-//	 * @return	true, if the writing process was successful, false otherwise
-//	 * @throws	IOException, if any IOEXception occures
-//	 * 	If the specified file doesn't exist in the specified path, it will be created
-//	 */
-//	public static boolean writeFile(String fileName, String content) throws IOException {
-//		return writeFile(new File(fileName), content);
-//	}
-//	
+	
 	/**
 	 * Append a string to the end of a file. If the specified file doesn't exist
 	 * in the specified path, it will be created.
@@ -1416,203 +1023,7 @@ public class EasyIO {
 			return false;
 		}
 	}
-//	
-//	/**	writeFile writes the Strings contained in the StringVector content to the end of the specified file
-//	 * @param	fileName	the path and name of the file to write to
-//	 * @param	content		the StringVector containing the Strings to be written to the end of the specified file
-//	 * @return	true, if the writing process was successful, false otherwise
-//	 * @throws	IOException, if any IOEXception occures
-//	 * 	If the specified file doesn't exist in the specified path, it will be created
-//	 */
-//	public static boolean writeFile(String fileName, StringVector content) throws IOException {
-//		return writeFile(new File(fileName), content);
-//	}
-//	
-//	/**	writeFile writes the Strings contained in the StringVector content to the end of the specified file
-//	 * @param	file		the file to write to
-//	 * @param	content		the StringVector containing the Strings to be written to the end of the specified file
-//	 * @return	true, if the writing process was successful, false otherwise
-//	 * @throws	IOException, if any IOEXception occures
-//	 * 	If the specified file doesn't exist in the specified path, it will be created
-//	 */
-//	public static boolean writeFile(File file, StringVector content) throws IOException {
-//		StringVector lines;
-//		BufferedWriter buf;
-//		
-//		try {
-//			buf = new BufferedWriter(new FileWriter(file, true));
-//			for (int c = 0; c < content.size(); c++) {
-//				lines = parseWriteString(content.get(c));
-//				for (int l = 0; l < lines.size(); l++) {
-//					buf.write(lines.get(l), 0, lines.get(l).length());
-//					buf.newLine();
-//				}
-//			}
-//			buf.flush();
-//			buf.close();
-//			return true;
-//		}
-//		catch (IOException e) {
-//			return false;
-//		}
-//	}
-//	
-//	/**	writeToFile writes the String content to the end of the specified file
-//	 * @param	fileName	the path and name of the file to write to
-//	 * @param	content		the String to be written to the end of the specified file
-//	 * @return	true, if the writing process was successful, false otherwise
-//	 * @throws	FileNotFoundException, if the specified file dosn't exist in the specified path
-//	 * @throws	IOException, if any IOEXception occures
-//	 * 	If the specified file doesn't exist in the specified path, it won't be created
-//	 */
-//	public static boolean writeToFile(String fileName, String content) throws IOException {
-//		File f = new File(fileName);
-//		return writeToFile(f, content);
-//	}
-//	
-//	/**	writeToFile writes the String content to the end of the specified file
-//	 * @param	file		the file to write to
-//	 * @param	content		the String to be written to the end of the specified file
-//	 * @return	true, if the writing process was successful, false otherwise
-//	 * @throws	FileNotFoundException, if the specified file dosn't exist in the specified path
-//	 * @throws	IOException, if any IOEXception occures
-//	 * 	If the specified file doesn't exist in the specified path, it won't be created
-//	 */
-//	public static boolean writeToFile(File file, String content) throws IOException {
-//		StringVector lines;
-//		BufferedWriter buf;
-//		
-//		if (file.exists()) {
-//			lines = parseWriteString(content);
-//			try {
-//				buf = new BufferedWriter(new FileWriter(file, true));
-//				for (int i = 0; i < lines.size(); i++) {
-//					buf.write(lines.get(i), 0, lines.get(i).length());
-//					buf.newLine();
-//				}
-//				buf.flush();
-//				buf.close();
-//				return true;
-//			}
-//			catch (IOException e) {
-//				return false;
-//			}
-//		}
-//		else return false;
-//	}
-//	
-//	/**	parseWriteString parses the String s to individual lines at \n and \r characters
-//	 * @param	s	the String to be parsed
-//	 * @return	a StringVector containing the parts of s
-//	 */
-//	private static StringVector parseWriteString(String s) {
-//		StringVector lines = new StringVector();
-//		String workString = s;
-//		while ((workString.indexOf("\n") > - 1) || (workString.indexOf("\r") > - 1)) {
-//			if ((workString.indexOf("\n") > - 1) && ((workString.indexOf("\n") < workString.indexOf("\r")) || (workString.indexOf("\r") == -1))) {
-//				lines.addElement(workString.substring(0, workString.indexOf("\n")));
-//				if (workString.indexOf("\n") < workString.length())
-//					workString = workString.substring(workString.indexOf("\n")+1);
-//				else workString = "";
-//			}
-//			else if ((workString.indexOf("\r") > - 1) && ((workString.indexOf("\r") < workString.indexOf("\n")) || (workString.indexOf("\n") == -1))) {
-//				lines.addElement(workString.substring(0, workString.indexOf("\r")));
-//				if (workString.indexOf("\r") < workString.length())
-//					workString = workString.substring(workString.indexOf("\r")+1);
-//				else workString = "";
-//			}
-//		}
-//		if (workString.length() > 0)
-//			lines.addElement(workString);
-//		
-//		return lines;
-//	}
-//	
-//	/**	rename a file (if the File denoted by the new name exists, it is deleted)
-//	 * @param	file		the File to rename (if it does not exist, nothing changes)
-//	 * @param	newFile		the File denoting the new name (if it exists, it is deleted before the other file is renamed)
-//	 * @return a File object referencing the renamed file
-//	 */
-//	public static File renameFile(File file, File newFile) {
-//		if ((file == null) || !file.exists() || (newFile == null)) return file;
-//		if (newFile.exists()) newFile.delete();
-//		file.renameTo(newFile);
-//		return newFile;
-//	}
-//
-//	/**	getPage reads the internet page pointed to by url and returns it as a String
-//	* @param	url			the address of the internet page to get
-//	* @return	the internet page as a String
-//	* @throws	MalformedURLException, if the specified url is malformed
-//	* @throws	IOException, if any IOException occures
-//	*/
-//	public static String getPage(String url) throws MalformedURLException, IOException {
-//		String protocol = "http";
-//		String host;
-//		int port = 0;
-//		String file = "";
-//		URL address;
-//		
-//		//	parse url
-//		//	- read protocol if given
-//		if (url.indexOf("://") > -1) {
-//			protocol = url.substring(0, url.indexOf("://"));
-//			
-//			//		- parse file if given
-//			if (url.indexOf("/", (url.indexOf("://") + 3)) > -1) {
-//				host = url.substring((url.indexOf("://") + 3), url.indexOf("/", (url.indexOf("://") + 3)));
-//				file = url.substring(url.indexOf("/", (url.indexOf("://") + 3)));
-//			}
-//			
-//			//		- otherwise
-//			else host = url.substring(url.indexOf("://") + 3);
-//		}
-//		
-//		//	- otherwise
-//		else {
-//			
-//			//		- parse file if given
-//			if (url.indexOf("/") > -1) {
-//				host = url.substring(0, url.indexOf("/"));
-//				file = url.substring(url.indexOf("/"));
-//			}
-//			
-//			//		- otherwise
-//			else host = url;
-//		}
-//		
-//		//	- read port number if given
-//		if (host.indexOf(":") > -1) {
-//			port = java.lang.Integer.parseInt(host.substring(host.indexOf(":") + 1));
-//			host =host.substring(0, host.indexOf(":"));
-//		}
-//		
-//		//	create full address
-//		if (port == 0)
-//			address = new URL(protocol, host, file);
-//		else address = new URL(protocol, host, port, file);
-//		
-//		//	open connection
-//		URLConnection connection = address.openConnection();
-//		connection.setDoInput(true);
-//		connection.setDoOutput(true);
-//		connection.setUseCaches(false);
-//		connection.setRequestProperty("User-Agent", "EasyIO");
-//		connection.connect();
-//		BufferedReader urlReader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
-//		
-//		StringBuffer pageAssembler = new StringBuffer();
-//		String pagePiece;
-//		
-//		//	read page
-//		while ((pagePiece = urlReader.readLine()) != null) {
-//			pagePiece = pagePiece.trim();
-//			pageAssembler.append(pagePiece + "\n");
-//		}
-//		urlReader.close();
-//		return pageAssembler.toString();
-//	}
-//	
+	
 	/**
 	 * Send the String msg as an eMail with the subject sbj to the
 	 * address toAddress.
@@ -1647,28 +1058,6 @@ public class EasyIO {
     		};
         }
         
-//		Session session = Session.getInstance(props, auth);
-//		
-//		MimeMessage msg = new MimeMessage(session);
-//		
-//		msg.setFrom(new InternetAddress(fromAddress));
-//		Address to[] = new Address[toAddresses.length];
-//		for (int t = 0; t < to.length; t++)
-//			to[t] = new InternetAddress(toAddresses[t]);
-//		msg.setRecipients(Message.RecipientType.TO, to);
-//		
-//		msg.setSubject(subject);
-//		
-//		MimeBodyPart body = new MimeBodyPart();
-//		body.setText(message);
-//		Multipart multipart = new MimeMultipart();
-//		multipart.addBodyPart(body);
-//		msg.setContent(multipart);
-//		
-//		Transport transport = session.getTransport("smtp");
-//		transport.connect(server, port, login, password);
-//		transport.sendMessage(msg, to);
-//		transport.close();
         
     	//	get session
     	Session session = ((smtpSessionAuth == null) ? Session.getInstance(smtpSessionProps) : Session.getInstance(smtpSessionProps, smtpSessionAuth));
