@@ -28,7 +28,6 @@
 package de.uka.ipd.idaho.gamta.defaultImplementation;
 
 
-import java.lang.ref.SoftReference;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -37,10 +36,9 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.Map.Entry;
 import java.util.Properties;
 import java.util.TreeSet;
+import java.util.WeakHashMap;
 
 import de.uka.ipd.idaho.gamta.Annotation;
 import de.uka.ipd.idaho.gamta.AnnotationListener;
@@ -83,7 +81,6 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 	
 	private ArrayList annotationListeners = null;
 	
-	//	TODO remove this after server clean !!!
 	static final boolean TRACK_INSTANCES = false;
 	final AccessHistory accessHistory = (TRACK_INSTANCES ? new AccessHistory(this) : null);
 	private static class AccessHistory {
@@ -923,7 +920,6 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 	 * @see de.gamta.MutableAnnotation#removeAnnotation(de.gamta.Annotation)
 	 */
 	public Annotation removeAnnotation(Annotation annotation) {
-//		AnnotationBase ab = this.annotations.removeAnnotation(0, annotation);
 		AnnotationBase ab = this.annotations.removeAnnotation(annotation);
 		if (ab == null)
 			return annotation;
@@ -1041,9 +1037,6 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 			this.data = data;
 			this.base = base;
 		}
-		/* (non-Javadoc)
-		 * @see de.gamta.defaultImplementation.GamtaDocument.AnnotationBase#changeTypeTo(java.lang.String)
-		 */
 		public String changeTypeTo(String newType) {
 			//	change type
 			String oldType = this.data.changeTypeTo(newType);
@@ -1066,33 +1059,18 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 			//	return old type
 			return oldType;
 		}
-		/* (non-Javadoc)
-		 * @see de.gamta.Annotation#getDocumentProperty(java.lang.String)
-		 */
 		public String getDocumentProperty(String propertyName) {
 			return GamtaDocument.this.getDocumentProperty(propertyName);
 		}
-		/* (non-Javadoc)
-		 * @see de.gamta.Annotation#getDocumentProperty(java.lang.String, java.lang.String)
-		 */
 		public String getDocumentProperty(String propertyName, String defaultValue) {
 			return GamtaDocument.this.getDocumentProperty(propertyName, defaultValue);
 		}
-		/* (non-Javadoc)
-		 * @see de.gamta.Annotation#getDocumentPropertyNames()
-		 */
 		public String[] getDocumentPropertyNames() {
 			return GamtaDocument.this.getDocumentPropertyNames();
 		}
-		/* (non-Javadoc)
-		 * @see de.gamta.defaultImplementation.GamtaDocument.AnnotationBase#charAt(int)
-		 */
 		public char charAt(int index) {
 			return this.data.charAt(index);
 		}
-		/* (non-Javadoc)
-		 * @see de.gamta.defaultImplementation.GamtaDocument.AnnotationBase#compareTo(java.lang.Object)
-		 */
 		public int compareTo(Object obj) {
 			if (obj instanceof Annotation) {
 				int c = AnnotationUtils.compare(this, ((Annotation) obj));
@@ -1103,220 +1081,112 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 			}
 			else return -1;
 		}
-		/* (non-Javadoc)
-		 * @see java.lang.Object#equals(java.lang.Object)
-		 */
 		public boolean equals(Object obj) {
 			return (this.compareTo(obj) == 0);
 		}
-		/* (non-Javadoc)
-		 * @see de.gamta.defaultImplementation.GamtaDocument.AnnotationBase#firstToken()
-		 */
 		public Token firstToken() {
 			return new TokenView(this.data.firstToken(), this);
 		}
-		/* (non-Javadoc)
-		 * @see de.gamta.defaultImplementation.GamtaDocument.AnnotationBase#firstValue()
-		 */
 		public String firstValue() {
 			return this.data.firstValue();
 		}
-		/* (non-Javadoc)
-		 * @see de.gamta.defaultImplementation.GamtaDocument.AnnotationBase#getAbsoluteStartIndex()
-		 */
 		public int getAbsoluteStartIndex() {
 			return this.data.absoluteStartIndex;
 		}
-		/* (non-Javadoc)
-		 * @see de.gamta.defaultImplementation.GamtaDocument.AnnotationBase#getAbsoluteStartOffset()
-		 */
 		public int getAbsoluteStartOffset() {
 			return this.data.getAbsoluteStartOffset();
 		}
-		/* (non-Javadoc)
-		 * @see de.gamta.defaultImplementation.GamtaDocument.AnnotationBase#getAnnotationID()
-		 */
 		public String getAnnotationID() {
 			return this.data.getAnnotationID();
 		}
-		/* (non-Javadoc)
-		 * @see de.uka.ipd.idaho.gamta.QueriableAnnotation#getAnnotation(java.lang.String)
-		 */
 		public QueriableAnnotation getAnnotation(String id) {
 			AnnotationBase ab = this.data.getAnnotation(id);
 			return ((ab == null) ? null : new QueriableAnnotationView(ab, this));
 		}
-		/* (non-Javadoc)
-		 * @see de.gamta.defaultImplementation.GamtaDocument.AnnotationBase#getAnnotations()
-		 */
 		public QueriableAnnotation[] getAnnotations() {
 			return this.getAnnotations(null);
 		}
-		/* (non-Javadoc)
-		 * @see de.gamta.defaultImplementation.GamtaDocument.AnnotationBase#getAnnotations(java.lang.String)
-		 */
 		public QueriableAnnotation[] getAnnotations(String type) {
 			return wrapAnnotationBasesQueriable(this.data.getAnnotations(type), this);
 		}
-		/* (non-Javadoc)
-		 * @see de.uka.ipd.idaho.gamta.QueriableAnnotation#getAnnotationsSpanning(int, int)
-		 */
 		public QueriableAnnotation[] getAnnotationsSpanning(int startIndex, int endIndex) {
 			return this.getAnnotationsSpanning(null, startIndex, endIndex);
 		}
-		/* (non-Javadoc)
-		 * @see de.uka.ipd.idaho.gamta.QueriableAnnotation#getAnnotationsSpanning(java.lang.String, int, int)
-		 */
 		public QueriableAnnotation[] getAnnotationsSpanning(String type, int startIndex, int endIndex) {
 			return wrapAnnotationBasesQueriable(this.data.getAnnotationsSpanning(type, startIndex, endIndex), this);
 		}
-		/* (non-Javadoc)
-		 * @see de.uka.ipd.idaho.gamta.QueriableAnnotation#getAnnotationsOverlapping(int, int)
-		 */
 		public QueriableAnnotation[] getAnnotationsOverlapping(int startIndex, int endIndex) {
 			return this.getAnnotationsOverlapping(null, startIndex, endIndex);
 		}
-		/* (non-Javadoc)
-		 * @see de.uka.ipd.idaho.gamta.QueriableAnnotation#getAnnotationsOverlapping(java.lang.String, int, int)
-		 */
 		public QueriableAnnotation[] getAnnotationsOverlapping(String type, int startIndex, int endIndex) {
 			return wrapAnnotationBasesQueriable(this.data.getAnnotationsOverlapping(type, startIndex, endIndex), this);
 		}
-		/* (non-Javadoc)
-		 * @see de.gamta.defaultImplementation.GamtaDocument.AnnotationBase#getAnnotationTypes()
-		 */
 		public String[] getAnnotationTypes() {
 			return this.data.getAnnotationTypes();
 		}
-		/* (non-Javadoc)
-		 * @see de.gamta.QueriableAnnotation#getAnnotationNestingOrder()
-		 */
 		public String getAnnotationNestingOrder() {
 			return annotationNestingOrder;
 		}
-		/* (non-Javadoc)
-		 * @see de.gamta.defaultImplementation.GamtaDocument.AnnotationBase#getEndIndex()
-		 */
 		public int getEndIndex() {
 			return (this.data.getEndIndex() - this.base.getAbsoluteStartIndex());
 		}
-		/* (non-Javadoc)
-		 * @see de.gamta.defaultImplementation.GamtaDocument.AnnotationBase#getEndOffset()
-		 */
 		public int getEndOffset() {
 			return (this.data.getEndOffset() - this.base.getAbsoluteStartOffset());
 		}
-		/* (non-Javadoc)
-		 * @see de.gamta.defaultImplementation.GamtaDocument.AnnotationBase#getLeadingWhitespace()
-		 */
 		public String getLeadingWhitespace() {
 			return this.data.getLeadingWhitespace();
 		}
-		/* (non-Javadoc)
-		 * @see de.gamta.defaultImplementation.GamtaDocument.AnnotationBase#getStartIndex()
-		 */
 		public int getStartIndex() {
 			return (this.data.absoluteStartIndex - this.base.getAbsoluteStartIndex());
 		}
-		/* (non-Javadoc)
-		 * @see de.gamta.defaultImplementation.GamtaDocument.AnnotationBase#getStartOffset()
-		 */
 		public int getStartOffset() {
 			return (this.data.getAbsoluteStartOffset() - this.base.getAbsoluteStartOffset());
 		}
-		/* (non-Javadoc)
-		 * @see de.gamta.defaultImplementation.GamtaDocument.AnnotationBase#getSubsequence(int, int)
-		 */
 		public TokenSequence getSubsequence(int start, int size) {
 			return this.data.getSubsequence(start, size);
 		}
-		/* (non-Javadoc)
-		 * @see de.gamta.defaultImplementation.GamtaDocument.AnnotationBase#getTokenizer()
-		 */
 		public Tokenizer getTokenizer() {
 			return this.data.getTokenizer();
 		}
-		/* (non-Javadoc)
-		 * @see de.gamta.defaultImplementation.GamtaDocument.AnnotationBase#getType()
-		 */
 		public String getType() {
 			return this.data.getType();
 		}
-		/* (non-Javadoc)
-		 * @see de.gamta.defaultImplementation.GamtaDocument.AnnotationBase#getValue()
-		 */
 		public String getValue() {
 			return this.data.getValue();
 		}
-		/* (non-Javadoc)
-		 * @see de.gamta.Annotation#toXML()
-		 */
 		public String toXML() {
 			return (AnnotationUtils.produceStartTag(this) + AnnotationUtils.escapeForXml(this.getValue()) + AnnotationUtils.produceEndTag(this));
 		}
-		/* (non-Javadoc)
-		 * @see de.uka.ipd.idaho.gamta.Annotation#getDocument()
-		 */
 		public QueriableAnnotation getDocument() {
 			return GamtaDocument.this;
 		}
-		/* (non-Javadoc)
-		 * @see de.gamta.defaultImplementation.GamtaDocument.AnnotationBase#getWhitespaceAfter(int)
-		 */
 		public String getWhitespaceAfter(int index) {
 			return this.data.getWhitespaceAfter(index);
 		}
-		/* (non-Javadoc)
-		 * @see de.gamta.defaultImplementation.GamtaDocument.AnnotationBase#lastToken()
-		 */
 		public Token lastToken() {
 			return new TokenView(this.data.lastToken(), this);
 		}
-		/* (non-Javadoc)
-		 * @see de.gamta.defaultImplementation.GamtaDocument.AnnotationBase#lastValue()
-		 */
 		public String lastValue() {
 			return this.data.lastValue();
 		}
-		/* (non-Javadoc)
-		 * @see de.gamta.defaultImplementation.GamtaDocument.AnnotationBase#length()
-		 */
 		public int length() {
 			return this.data.length();
 		}
-		/* (non-Javadoc)
-		 * @see de.gamta.defaultImplementation.GamtaDocument.AnnotationBase#size()
-		 */
 		public int size() {
 			return this.data.size;
 		}
-		/* (non-Javadoc)
-		 * @see de.gamta.defaultImplementation.GamtaDocument.AnnotationBase#subSequence(int, int)
-		 */
 		public CharSequence subSequence(int start, int end) {
 			return this.data.subSequence(start, end);
 		}
-		/* (non-Javadoc)
-		 * @see de.gamta.defaultImplementation.GamtaDocument.AnnotationBase#tokenAt(int)
-		 */
 		public Token tokenAt(int index) {
 			return new TokenView(this.data.tokenAt(index), this);
 		}
-		/* (non-Javadoc)
-		 * @see de.gamta.defaultImplementation.GamtaDocument.AnnotationBase#toString()
-		 */
 		public String toString() {
 			return this.getValue();
 		}
-		/* (non-Javadoc)
-		 * @see de.gamta.defaultImplementation.GamtaDocument.AnnotationBase#valueAt(int)
-		 */
 		public String valueAt(int index) {
 			return this.data.valueAt(index);
 		}
-		/* (non-Javadoc)
-		 * @see de.gamta.defaultImplementation.AbstractAttributed#clearAttributes()
-		 */
 		public void clearAttributes() {
 			this.data.clearAttributes();
 			
@@ -1335,9 +1205,6 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 			if (base == GamtaDocument.this)
 				GamtaDocument.this.notifyAnnotationAttributeChanged(this.data, null, null);
 		}
-		/* (non-Javadoc)
-		 * @see de.gamta.defaultImplementation.AbstractAttributed#copyAttributes(de.gamta.Attributed)
-		 */
 		public void copyAttributes(Attributed source) {
 			this.data.copyAttributes(source);
 			
@@ -1356,37 +1223,22 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 			if (base == GamtaDocument.this)
 				GamtaDocument.this.notifyAnnotationAttributeChanged(this.data, null, null);
 		}
-		/* (non-Javadoc)
-		 * @see de.gamta.defaultImplementation.AbstractAttributed#getAttribute(java.lang.String, java.lang.Object)
-		 */
 		public Object getAttribute(String name, Object def) {
 			if (START_INDEX_ATTRIBUTE.equals(name)) return new Integer(this.getStartIndex());
 			else if (END_INDEX_ATTRIBUTE.equals(name)) return new Integer(this.getEndIndex());
 			else return this.data.getAttribute(name, def);
 		}
-		/* (non-Javadoc)
-		 * @see de.gamta.defaultImplementation.AbstractAttributed#getAttribute(java.lang.String)
-		 */
 		public Object getAttribute(String name) {
 			if (START_INDEX_ATTRIBUTE.equals(name)) return new Integer(this.getStartIndex());
 			else if (END_INDEX_ATTRIBUTE.equals(name)) return new Integer(this.getEndIndex());
 			else return this.data.getAttribute(name);
 		}
-		/* (non-Javadoc)
-		 * @see de.gamta.defaultImplementation.AbstractAttributed#getAttributeNames()
-		 */
 		public String[] getAttributeNames() {
 			return this.data.getAttributeNames();
 		}
-		/* (non-Javadoc)
-		 * @see de.gamta.defaultImplementation.AbstractAttributed#hasAttribute(java.lang.String)
-		 */
 		public boolean hasAttribute(String name) {
 			return this.data.hasAttribute(name);
 		}
-		/* (non-Javadoc)
-		 * @see de.gamta.defaultImplementation.AbstractAttributed#removeAttribute(java.lang.String)
-		 */
 		public Object removeAttribute(String name) {
 			Object oldValue = this.data.removeAttribute(name);
 			
@@ -1407,9 +1259,6 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 			
 			return oldValue;
 		}
-		/* (non-Javadoc)
-		 * @see de.uka.ipd.idaho.gamta.Attributed#setAttribute(java.lang.String)
-		 */
 		public void setAttribute(String name) {
 			Object oldValue = this.getAttribute(name);
 			
@@ -1429,9 +1278,6 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 			if (base == GamtaDocument.this)
 				GamtaDocument.this.notifyAnnotationAttributeChanged(this.data, name, oldValue);
 		}
-		/* (non-Javadoc)
-		 * @see de.gamta.defaultImplementation.AbstractAttributed#setAttribute(java.lang.String, java.lang.Object)
-		 */
 		public Object setAttribute(String name, Object value) {
 			Object oldValue = this.data.setAttribute(name, value);
 			
@@ -1461,19 +1307,15 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 		private ArrayList annotationListeners = null;
 		MutableAnnotationView(AnnotationBase data, QueriableAnnotation base) {
 			super(data, base);
+			if (this.data.views == null)
+				this.data.views = new ArrayList(2);
 			this.data.views.add(this);
 		}
-		/* (non-Javadoc)
-		 * @see de.gamta.defaultImplementation.GamtaDocument.QueriableAnnotationView#finalize()
-		 */
 		protected void finalize() throws Throwable {
 			if (this.data != null)
 				this.data.views.remove(this);
 			super.finalize();
 		}
-		/* (non-Javadoc)
-		 * @see de.gamta.defaultImplementation.GamtaDocument.AnnotationBase#addAnnotation(de.gamta.Annotation)
-		 */
 		public MutableAnnotation addAnnotation(Annotation annotation) {
 			AnnotationBase ab = this.data.addAnnotation(annotation);
 			
@@ -1487,9 +1329,6 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 			//	return new Annotation
 			return new MutableAnnotationView(ab, this);
 		}
-		/* (non-Javadoc)
-		 * @see de.gamta.defaultImplementation.GamtaDocument.AnnotationBase#addAnnotation(java.lang.String, int, int)
-		 */
 		public MutableAnnotation addAnnotation(String type, int startIndex, int size) {
 			AnnotationBase ab = this.data.addAnnotation(type, startIndex, size);
 			
@@ -1503,52 +1342,28 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 			//	return new Annotation
 			return new MutableAnnotationView(ab, this);
 		}
-		/* (non-Javadoc)
-		 * @see de.uka.ipd.idaho.gamta.MutableAnnotation#addAnnotation(int, int, java.lang.String)
-		 */
 		public MutableAnnotation addAnnotation(int startIndex, int endIndex, String type) {
 			return this.addAnnotation(type, startIndex, (endIndex - startIndex));
 		}
-		/* (non-Javadoc)
-		 * @see de.gamta.defaultImplementation.GamtaDocument.AnnotationBase#addChar(char)
-		 */
 		public void addChar(char ch) {
 			this.data.addChar(ch);
 		}
-		/* (non-Javadoc)
-		 * @see de.gamta.defaultImplementation.GamtaDocument.AnnotationBase#addChars(java.lang.CharSequence)
-		 */
 		public void addChars(CharSequence chars) {
 			this.data.addChars(chars);
 		}
-		/* (non-Javadoc)
-		 * @see de.gamta.defaultImplementation.GamtaDocument.AnnotationBase#addTokens(java.lang.CharSequence)
-		 */
 		public CharSequence addTokens(CharSequence tokens) {
 			return this.data.addTokens(tokens);
 		}
-		/* (non-Javadoc)
-		 * @see de.gamta.defaultImplementation.GamtaDocument.AnnotationBase#clear()
-		 */
 		public void clear() {
 			this.data.clear();
 		}
-		/* (non-Javadoc)
-		 * @see de.uka.ipd.idaho.gamta.MutableAnnotation#getMutableAnnotation(java.lang.String)
-		 */
 		public MutableAnnotation getMutableAnnotation(String id) {
 			AnnotationBase ab = this.data.getAnnotation(id);
 			return ((ab == null) ? null : new MutableAnnotationView(ab, this));
 		}
-		/* (non-Javadoc)
-		 * @see de.gamta.defaultImplementation.GamtaDocument.AnnotationBase#getMutableAnnotations()
-		 */
 		public MutableAnnotation[] getMutableAnnotations() {
 			return this.getMutableAnnotations(null);
 		}
-		/* (non-Javadoc)
-		 * @see de.gamta.defaultImplementation.GamtaDocument.AnnotationBase#getMutableAnnotations(java.lang.String)
-		 */
 		public MutableAnnotation[] getMutableAnnotations(String type) {
 			AnnotationBase[] abs = this.data.getAnnotations(type);
 			MutableAnnotation mas[] = new MutableAnnotation[abs.length];
@@ -1557,63 +1372,33 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 			Arrays.sort(mas, nestingOrder);
 			return mas;
 		}
-		/* (non-Javadoc)
-		 * @see de.uka.ipd.idaho.gamta.MutableAnnotation#getMutableAnnotationsSpanning(int, int)
-		 */
 		public MutableAnnotation[] getMutableAnnotationsSpanning(int startIndex, int endIndex) {
 			return this.getMutableAnnotationsSpanning(null, startIndex, endIndex);
 		}
-		/* (non-Javadoc)
-		 * @see de.uka.ipd.idaho.gamta.MutableAnnotation#getMutableAnnotationsSpanning(java.lang.String, int, int)
-		 */
 		public MutableAnnotation[] getMutableAnnotationsSpanning(String type, int startIndex, int endIndex) {
 			return wrapAnnotationBasesMutable(this.data.getAnnotationsSpanning(type, startIndex, endIndex), this);
 		}
-		/* (non-Javadoc)
-		 * @see de.uka.ipd.idaho.gamta.MutableAnnotation#getMutableAnnotationsOverlapping(int, int)
-		 */
 		public MutableAnnotation[] getMutableAnnotationsOverlapping(int startIndex, int endIndex) {
 			return this.getMutableAnnotationsOverlapping(null, startIndex, endIndex);
 		}
-		/* (non-Javadoc)
-		 * @see de.uka.ipd.idaho.gamta.MutableAnnotation#getMutableAnnotationsOverlapping(java.lang.String, int, int)
-		 */
 		public MutableAnnotation[] getMutableAnnotationsOverlapping(String type, int startIndex, int endIndex) {
 			return wrapAnnotationBasesMutable(this.data.getAnnotationsOverlapping(type, startIndex, endIndex), this);
 		}
-		/* (non-Javadoc)
-		 * @see de.gamta.defaultImplementation.GamtaDocument.AnnotationBase#getMutableSubsequence(int, int)
-		 */
 		public MutableTokenSequence getMutableSubsequence(int start, int size) {
 			return this.data.getMutableSubsequence(start, size);
 		}
-		/* (non-Javadoc)
-		 * @see de.gamta.defaultImplementation.GamtaDocument.AnnotationBase#insertChar(char, int)
-		 */
 		public void insertChar(char ch, int offset) {
 			this.data.insertChar(ch, offset);
 		}
-		/* (non-Javadoc)
-		 * @see de.gamta.defaultImplementation.GamtaDocument.AnnotationBase#insertChars(java.lang.CharSequence, int)
-		 */
 		public void insertChars(CharSequence chars, int offset) {
 			this.data.insertChars(chars, offset);
 		}
-		/* (non-Javadoc)
-		 * @see de.gamta.defaultImplementation.GamtaDocument.AnnotationBase#insertTokensAt(java.lang.CharSequence, int)
-		 */
 		public CharSequence insertTokensAt(CharSequence tokens, int index) {
 			return this.data.insertTokensAt(tokens, index);
 		}
-		/* (non-Javadoc)
-		 * @see de.gamta.defaultImplementation.GamtaDocument.AnnotationBase#mutableSubSequence(int, int)
-		 */
 		public MutableCharSequence mutableSubSequence(int start, int end) {
 			return this.data.mutableSubSequence(start, end);
 		}
-		/* (non-Javadoc)
-		 * @see de.gamta.defaultImplementation.GamtaDocument.AnnotationBase#removeAnnotation(de.gamta.Annotation)
-		 */
 		public Annotation removeAnnotation(Annotation annotation) {
 			AnnotationBase ab = this.data.removeAnnotation(annotation);
 			
@@ -1629,62 +1414,36 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 			//	return standalone annotation otherwise
 			return ra;
 		}
-		/* (non-Javadoc)
-		 * @see de.gamta.defaultImplementation.GamtaDocument.AnnotationBase#removeChar(int)
-		 */
 		public char removeChar(int offset) {
 			return this.data.removeChar(offset);
 		}
-		/* (non-Javadoc)
-		 * @see de.gamta.defaultImplementation.GamtaDocument.AnnotationBase#removeChars(int, int)
-		 */
 		public CharSequence removeChars(int offset, int length) {
 			return this.data.removeChars(offset, length);
 		}
-		/* (non-Javadoc)
-		 * @see de.gamta.defaultImplementation.GamtaDocument.AnnotationBase#addCharSequenceListener(de.gamta.CharSequenceListener)
-		 */
 		public void addCharSequenceListener(CharSequenceListener csl) {
 			if (csl == null)
 				return;
-//			if (this.charListeners == null) this.charListeners = new Vector(2);
 			if (this.charListeners == null)
 				this.charListeners = new ArrayList(2);
 			this.charListeners.add(csl);
 		}
-		/* (non-Javadoc)
-		 * @see de.gamta.defaultImplementation.GamtaDocument.AnnotationBase#removeCharSequenceListener(de.gamta.CharSequenceListener)
-		 */
 		public void removeCharSequenceListener(CharSequenceListener csl) {
 			if (this.charListeners != null)
 				this.charListeners.remove(csl);
 		}
-		/* (non-Javadoc)
-		 * @see de.gamta.defaultImplementation.GamtaDocument.AnnotationBase#removeTokens(de.gamta.Annotation)
-		 */
 		public TokenSequence removeTokens(Annotation annotation) {
 			return this.data.removeTokens(annotation);
 		}
-		/* (non-Javadoc)
-		 * @see de.gamta.defaultImplementation.GamtaDocument.AnnotationBase#removeTokensAt(int, int)
-		 */
 		public TokenSequence removeTokensAt(int index, int size) {
 			return this.data.removeTokensAt(index, size);
 		}
-		/* (non-Javadoc)
-		 * @see de.gamta.defaultImplementation.GamtaDocument.AnnotationBase#addTokenSequenceListener(de.gamta.TokenSequenceListener)
-		 */
 		public void addTokenSequenceListener(TokenSequenceListener tsl) {
 			if (tsl == null)
 				return;
-//			if (this.tokenListeners == null) this.tokenListeners = new Vector(2);
 			if (this.tokenListeners == null) 
 				this.tokenListeners = new ArrayList(2);
 			this.tokenListeners.add(tsl);
 		}
-		/* (non-Javadoc)
-		 * @see de.gamta.defaultImplementation.GamtaDocument.AnnotationBase#removeTokenSequenceListener(de.gamta.TokenSequenceListener)
-		 */
 		public void removeTokenSequenceListener(TokenSequenceListener tsl) {
 			if (this.tokenListeners != null)
 				this.tokenListeners.remove(tsl);
@@ -1709,54 +1468,28 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 				for (int l = 0; l < this.tokenListeners.size(); l++)
 					((TokenSequenceListener) this.tokenListeners.get(l)).tokenSequenceChanged(vTse);
 		}
-		/* (non-Javadoc)
-		 * @see de.gamta.defaultImplementation.GamtaDocument.AnnotationBase#setChar(char, int)
-		 */
 		public char setChar(char ch, int offset) {
 			return this.data.setChar(ch, offset);
 		}
-		/* (non-Javadoc)
-		 * @see de.gamta.defaultImplementation.GamtaDocument.AnnotationBase#setChars(java.lang.CharSequence, int, int)
-		 */
 		public CharSequence setChars(CharSequence chars, int offset, int length) {
 			return this.data.setChars(chars, offset, length);
 		}
-		/* (non-Javadoc)
-		 * @see de.gamta.defaultImplementation.GamtaDocument.AnnotationBase#setLeadingWhitespace(java.lang.CharSequence)
-		 */
 		public CharSequence setLeadingWhitespace(CharSequence whitespace) throws IllegalArgumentException {
 			return this.data.setLeadingWhitespace(whitespace);
 		}
-		/* (non-Javadoc)
-		 * @see de.gamta.defaultImplementation.GamtaDocument.AnnotationBase#setValueAt(java.lang.CharSequence, int)
-		 */
 		public CharSequence setValueAt(CharSequence value, int index) throws IllegalArgumentException {
 			return this.data.setValueAt(value, index);
 		}
-		/* (non-Javadoc)
-		 * @see de.gamta.defaultImplementation.GamtaDocument.AnnotationBase#setWhitespaceAfter(java.lang.CharSequence, int)
-		 */
 		public CharSequence setWhitespaceAfter(CharSequence whitespace, int index) throws IllegalArgumentException {
 			return this.data.setWhitespaceAfter(whitespace, index);
 		}
-		/* (non-Javadoc)
-		 * @see de.gamta.MutableAnnotation#addAnnotationListener(de.gamta.AnnotationListener)
-		 */
 		public void addAnnotationListener(AnnotationListener al) {
 			if (al == null)
 				return;
 			if (this.annotationListeners == null)
 				this.annotationListeners = new ArrayList(2);
 			this.annotationListeners.add(al);
-//			if (al != null) {
-//				if (this.annotationListeners == null)
-//					this.annotationListeners = new Vector(2);
-//				this.annotationListeners.add(al);
-//			}
 		}
-		/* (non-Javadoc)
-		 * @see de.gamta.MutableAnnotation#removeAnnotationListener(de.gamta.AnnotationListener)
-		 */
 		public void removeAnnotationListener(AnnotationListener al) {
 			if (this.annotationListeners != null)
 				this.annotationListeners.remove(al);
@@ -1865,117 +1598,60 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 			this.data = data;
 			this.base = base;
 		}
-		/* (non-Javadoc)
-		 * @see java.lang.Object#equals(java.lang.Object)
-		 */
 		public boolean equals(Object obj) {
 			return this.getValue().equals(obj);
 		}
-		/* (non-Javadoc)
-		 * @see java.lang.Object#hashCode()
-		 */
 		public int hashCode() {
 			return this.getValue().hashCode();
 		}
-		/* (non-Javadoc)
-		 * @see java.lang.Object#toString()
-		 */
 		public String toString() {
 			return this.getValue();
 		}
-		/* (non-Javadoc)
-		 * @see de.gamta.Token#charAt(int)
-		 */
 		public char charAt(int index) {
 			return this.data.charAt(index);
 		}
-		/* (non-Javadoc)
-		 * @see de.gamta.Token#getEndOffset()
-		 */
 		public int getEndOffset() {
 			return (this.data.getEndOffset() - this.base.getAbsoluteStartOffset());
 		}
-		/* (non-Javadoc)
-		 * @see de.gamta.Token#getStartOffset()
-		 */
 		public int getStartOffset() {
 			return (this.data.getStartOffset() - this.base.getAbsoluteStartOffset());
 		}
-		/* (non-Javadoc)
-		 * @see de.gamta.Token#getTokenizer()
-		 */
 		public Tokenizer getTokenizer() {
 			return this.data.getTokenizer();
 		}
-		/* (non-Javadoc)
-		 * @see de.gamta.Token#getValue()
-		 */
 		public String getValue() {
 			return this.data.getValue();
 		}
-		/* (non-Javadoc)
-		 * @see de.gamta.Token#length()
-		 */
 		public int length() {
 			return this.data.length();
 		}
-		/* (non-Javadoc)
-		 * @see de.gamta.Token#subSequence(int, int)
-		 */
 		public CharSequence subSequence(int start, int end) {
 			return this.data.subSequence(start, end);
 		}
-		/* (non-Javadoc)
-		 * @see de.gamta.Attributed#clearAttributes()
-		 */
 		public void clearAttributes() {
 			this.data.clearAttributes();
 		}
-		/* (non-Javadoc)
-		 * @see de.gamta.Attributed#copyAttributes(de.gamta.Attributed)
-		 */
 		public void copyAttributes(Attributed source) {
 			this.data.copyAttributes(source);
 		}
-		/* (non-Javadoc)
-		 * @see de.gamta.Attributed#getAttribute(java.lang.String, java.lang.Object)
-		 */
 		public Object getAttribute(String name, Object def) {
 			return this.data.getAttribute(name, def);
 		}
-		/* (non-Javadoc)
-		 * @see de.gamta.Attributed#getAttribute(java.lang.String)
-		 */
 		public Object getAttribute(String name) {
 			return this.data.getAttribute(name);
 		}
-		/* (non-Javadoc)
-		 * @see de.gamta.Attributed#getAttributeNames()
-		 */
 		public String[] getAttributeNames() {
 			return this.data.getAttributeNames();
 		}
-		/* (non-Javadoc)
-		 * @see de.gamta.Attributed#hasAttribute(java.lang.String)
-		 */
 		public boolean hasAttribute(String name) {
 			return this.data.hasAttribute(name);
 		}
-		/* (non-Javadoc)
-		 * @see de.gamta.Attributed#removeAttribute(java.lang.String)
-		 */
 		public Object removeAttribute(String name) {
 			return this.data.removeAttribute(name);
 		}
-		/* (non-Javadoc)
-		 * @see de.uka.ipd.idaho.gamta.Attributed#setAttribute(java.lang.String)
-		 */
 		public void setAttribute(String name) {
 			this.data.setAttribute(name);
 		}
-		/* (non-Javadoc)
-		 * @see de.gamta.Attributed#setAttribute(java.lang.String, java.lang.Object)
-		 */
 		public Object setAttribute(String name, Object value) {
 			return this.data.setAttribute(name, value);
 		}
@@ -1989,22 +1665,16 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 	//	the basic implementation of an Annotation at this Document, which backs the view(s)
 	private class AnnotationBase extends AbstractAttributed {
 		String type; // the type of the Annotation, corresponding to the XML element name
-		
-//		private int absoluteStartIndex; // the index of this Annotation's first token in the TokenSequence of the surrounding GamtaDocument 
-//		private int size; // the number of tokens contained in this Annotation
 		int absoluteStartIndex; // the index of this Annotation's first token in the TokenSequence of the surrounding GamtaDocument 
 		int size; // the number of tokens contained in this Annotation
-		
 		String annotationId = Gamta.getAnnotationID(); // the ID for this Annotation
 		
-//		private long timestamp = System.currentTimeMillis(); // creation time stamp, for maintaining insertion order
 		final long createOrderNumber = getCreateOrderNumber(); // creation order number, for maintaining insertion order
 		
 		private Change change = null; // the change originating from the current update to the underlying token sequence (will be null unless a change is in progress)
+		ArrayList views = null; // the views currently referring to this AbbotationBase, for event notification purposes
 		
-		private ArrayList views = new ArrayList(2); // the views currently referring to this AbbotationBase, for event notification purposes
-		
-		final AnnotationCache subAnnotationsByType = new AnnotationCache(16);
+		private WeakHashMap subAnnotationsByType = null;
 		
 		AnnotationBase(String type, int startIndex, int size) {
 			if ((type == null) || !AnnotationUtils.isValidAnnotationType(type))
@@ -2014,38 +1684,22 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 			this.size = size;
 		}
 		
-		void cleanCaches() {
-			if (this.subAnnotationsByType.isEmpty())
-				return;
-			for (Iterator kit = this.subAnnotationsByType.keySet().iterator(); kit.hasNext();) {
-				AnnotationCacheEntry ace = ((AnnotationCacheEntry) this.subAnnotationsByType.get(kit.next()));
-				if (ace.isInvalid())
-					kit.remove();
-			}
+		AnnotationCacheEntry subAnnotationCacheGet(String type) {
+			return ((this.subAnnotationsByType == null) ? null : ((AnnotationCacheEntry) this.subAnnotationsByType.get(type)));
+		}
+		void subAnnotationCachePut(String type, AnnotationCacheEntry ace) {
+			if (this.subAnnotationsByType == null)
+				this.subAnnotationsByType = new WeakHashMap();
+			this.subAnnotationsByType.put(type, ace);
 		}
 		
-		void clearCaches() {
-			this.subAnnotationsByType.clear();
-		}
-		
-		/* (non-Javadoc)
-		 * @see de.uka.ipd.idaho.gamta.defaultImplementation.AbstractAttributed#getAttributeNames()
-		 */
 		public String[] getAttributeNames() {
 			if (TRACK_INSTANCES) accessHistory.accessed();
 			return super.getAttributeNames();
 		}
-		
-		/* (non-Javadoc)
-		 * @see de.gamta.defaultImplementation.AbstractAttributed#getAttribute(java.lang.String)
-		 */
 		public Object getAttribute(String name) {
 			return this.getAttribute(name, null);
 		}
-		
-		/* (non-Javadoc)
-		 * @see de.gamta.defaultImplementation.AbstractAttributed#getAttribute(java.lang.String, java.lang.Object)
-		 */
 		public Object getAttribute(String name, Object def) {
 			if (TRACK_INSTANCES) accessHistory.accessed();
 			if (SIZE_ATTRIBUTE.equals(name))
@@ -2056,18 +1710,10 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 				return this.annotationId;
 			else return super.getAttribute(name, def);
 		}
-		
-		/* (non-Javadoc)
-		 * @see de.gamta.defaultImplementation.AbstractAttributed#hasAttribute(java.lang.String)
-		 */
 		public boolean hasAttribute(String name) {
 			if (TRACK_INSTANCES) accessHistory.accessed();
 			return (START_INDEX_ATTRIBUTE.equals(name) || SIZE_ATTRIBUTE.equals(name) || END_INDEX_ATTRIBUTE.equals(name) || ANNOTATION_VALUE_ATTRIBUTE.equals(name) || ANNOTATION_ID_ATTRIBUTE.equals(name) || super.hasAttribute(name));
 		}
-		
-		/* (non-Javadoc)
-		 * @see de.gamta.defaultImplementation.AbstractAttributed#setAttribute(java.lang.String, java.lang.Object)
-		 */
 		public Object setAttribute(String name, Object value) {
 			if (TRACK_INSTANCES) accessHistory.accessed();
 			if (START_INDEX_ATTRIBUTE.equals(name) || SIZE_ATTRIBUTE.equals(name) || END_INDEX_ATTRIBUTE.equals(name) || ANNOTATION_VALUE_ATTRIBUTE.equals(name))
@@ -2362,9 +2008,10 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 			this.absoluteStartIndex += this.change.startIndexDelta;
 			this.size += this.change.sizeDelta;
 			
-			if (this.change.cause != null)
+			if ((this.views != null) && (this.change.cause != null)) {
 				for (int v = 0; v < this.views.size(); v++)
 					((MutableAnnotationView) this.views.get(v)).notifyTokenSequenceChanged(this.change.cause);
+			}
 			
 			this.change = null;
 		}
@@ -2428,6 +2075,13 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 		}
 		protected void finalize() throws Throwable {
 			
+			//	clear attributes
+			this.clearAttributes();
+			
+			//	any views to take care of?
+			if (this.views == null)
+				return;
+			
 			//	clean up views
 			for (int v = 0; v < this.views.size(); v++) {
 				MutableAnnotationView mav = ((MutableAnnotationView) this.views.get(v));
@@ -2437,9 +2091,6 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 					mav.tokenListeners.clear();
 				mav.data = null;
 			}
-			
-			//	clear attributes
-			this.clearAttributes();
 			
 			//	discard views
 			this.views.clear();
@@ -2474,8 +2125,6 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 			return tokenData.getWhitespaceAfter(index + this.absoluteStartIndex);
 		}
 		void insertChar(char ch, int offset) {
-//			if (offset > this.length())
-//				throw new IndexOutOfBoundsException("" + offset + " > " + this.length());
 			//	allow char modification in whitespace after last token
 			if (offset > (this.length() + tokenData.getWhitespaceAfter(this.absoluteStartIndex + this.size - 1).length()))
 				throw new IndexOutOfBoundsException("" + offset + " > " + this.length());
@@ -2484,8 +2133,6 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 			modificationSource = null;
 		}
 		void insertChars(CharSequence chars, int offset) {
-//			if (offset > this.length())
-//				throw new IndexOutOfBoundsException("" + offset + " > " + this.length());
 			//	allow char modification in whitespace after last token
 			if (offset > (this.length() + tokenData.getWhitespaceAfter(this.absoluteStartIndex + this.size - 1).length()))
 				throw new IndexOutOfBoundsException("" + offset + " > " + this.length());
@@ -2535,8 +2182,6 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 			return ts;
 		}
 		char setChar(char ch, int offset) {
-//			if ((offset + 1) > this.length())
-//				throw new IndexOutOfBoundsException("" + offset + "+" + 1 + " > " + this.length());
 			//	allow char modification in whitespace after last token
 			if ((offset + 1) > (this.length() + tokenData.getWhitespaceAfter(this.absoluteStartIndex + this.size - 1).length()))
 				throw new IndexOutOfBoundsException("" + offset + "+" + 1 + " > " + this.length());
@@ -2546,8 +2191,6 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 			return c;
 		}
 		CharSequence setChars(CharSequence chars, int offset, int length) {
-//			if ((offset + length) > this.length())
-//				throw new IndexOutOfBoundsException("" + offset + "+" + length + " > " + this.length());
 			//	allow char modification in whitespace after last token
 			if ((offset + length) > (this.length() + tokenData.getWhitespaceAfter(this.absoluteStartIndex + this.size - 1).length()))
 				throw new IndexOutOfBoundsException("" + offset + "+" + length + " > " + this.length());
@@ -2571,16 +2214,11 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 		CharSequence setWhitespaceAfter(CharSequence whitespace, int index) throws IllegalArgumentException {
 			if (index >= this.size)
 				throw new IndexOutOfBoundsException("" + index + " >= " + this.size);
-//			else if ((index+1) == this.size)
-//				return whitespace;
 			modificationSource = this;
 			CharSequence cs = tokenData.setWhitespaceAfter(whitespace, (index + this.absoluteStartIndex));
 			modificationSource = null;
 			return cs;
 		}
-//		int size() {
-//			return this.size;
-//		}
 		CharSequence subSequence(int start, int end) {
 			if (start < 0)
 				throw new IndexOutOfBoundsException("" + start + " < " + 0);
@@ -2608,9 +2246,6 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 				throw new IndexOutOfBoundsException("" + end + " > " + this.length());
 			return tokenData.mutableSubSequence((start + this.getAbsoluteStartOffset()), (end + this.getAbsoluteStartOffset()));
 		}
-//		int getAbsoluteStartIndex() {
-//			return this.absoluteStartIndex;
-//		}
 		int getAbsoluteStartOffset() {
 			return this.firstToken().getStartOffset();
 		}
@@ -2721,165 +2356,6 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 		return mas;
 	}
 	
-//	private class AnnotationList {
-//		private ArrayList annotations = new ArrayList();
-//		private HashSet removed = new HashSet();
-//		private int modCount = 0;
-//		private int addCount = 0;
-//		private int cleanAddCount = 0;
-//		private int typeModCount = 0;
-//		private int cleanTypeModCount = 0;
-//		private int cleanOrderModCount = orderModCount;
-//		private final String type;
-//		AnnotationList(String type) {
-//			this.type = type;
-//		}
-//		void addAnnotation(AnnotationBase ab) {
-//			if (ab == null)
-//				return;
-//			this.removed.remove(ab);
-//			this.annotations.add(ab);
-//			this.modCount++;
-//			this.addCount++;
-//		}
-//		void removeAnnotation(AnnotationBase ab) {
-//			if (ab == null)
-//				return;
-//			this.removed.add(ab);
-//			this.modCount++;
-//		}
-//		AnnotationBase getAnnotation(int index) {
-//			this.ensureSorted();
-//			return ((AnnotationBase) this.annotations.get(index));
-//		}
-//		boolean isEmpty() {
-//			return (this.annotations.isEmpty() || this.removed.containsAll(this.annotations));
-//		}
-//		int size() {
-//			this.ensureClean();
-//			return this.annotations.size();
-//		}
-//		AnnotationBase[] getAnnotations() {
-//			this.ensureSorted();
-//			return ((AnnotationBase[]) this.annotations.toArray(new AnnotationBase[this.annotations.size()]));
-//		}
-//		AnnotationBase[] getAnnotationsIn(AnnotationBase base) {
-//			
-//			//	check cache first
-//			AnnotationCacheEntry annots = ((AnnotationCacheEntry) base.subAnnotationListsByType.get(this.type));
-//			if ((annots != null) && annots.isValid(this))
-//				return annots.annotations;
-//			
-//			//	make sure we're good to go
-//			this.ensureSorted();
-//			
-//			//	binary search first annotation
-//			int left = 0;
-//			int right = this.annotations.size();
-//			
-//			//	narrow staring point with binary search down to a 2 interval
-//			int start = -1;
-//			for (int c; (start == -1) && ((right - left) > 2);) {
-//				int middle = ((left + right) / 2);
-//				
-//				//	start linear search if interval down to 4
-//				if ((right - left) < 4)
-//					c = 0;
-//				else c = (((AnnotationBase) this.annotations.get(middle)).absoluteStartIndex - base.absoluteStartIndex);
-//				
-//				if (c < 0)
-//					left = middle; // starting point is right of middle
-//				else if (c == 0) { // start of Annotation at middle is equal to base start of base, scan leftward for others at same start
-//					start = middle;
-//					while ((start != 0) && (((AnnotationBase) this.annotations.get(start)).absoluteStartIndex == base.absoluteStartIndex))
-//						start --; // count down to 0 at most
-//				}
-//				else right = middle;  // starting point is left of middle
-//			}
-//			
-//			//	ensure valid index
-//			start = Math.max(start, 0);
-//			
-//			//	move right to exact staring point
-//			while ((start < this.annotations.size()) && (((AnnotationBase) this.annotations.get(start)).absoluteStartIndex < base.absoluteStartIndex))
-//				start++;
-//			
-//			int baseEndIndex = base.getEndIndex();
-//			ArrayList annotList = new ArrayList();
-//			for (int a = start; a < this.annotations.size(); a++) {
-//				AnnotationBase ab = ((AnnotationBase) this.annotations.get(a));
-//				if ((base.absoluteStartIndex <= ab.absoluteStartIndex) && (ab.getEndIndex() <= baseEndIndex))
-//					annotList.add(ab);
-//				if (baseEndIndex <= ab.absoluteStartIndex)
-//					break;
-//			}
-//			annots = new AnnotationCacheEntry(((AnnotationBase[]) annotList.toArray(new AnnotationBase[annotList.size()])), this);
-//			base.subAnnotationListsByType.put(this.type, annots);
-//			return annots.annotations;
-//		}
-//		void cleanup() {
-//			for (int a = 0; a < this.annotations.size(); a++) {
-//				AnnotationBase ab = ((AnnotationBase) this.annotations.get(a));
-//				if (ab.size <= 0) {
-//					this.removed.add(ab);
-//					this.modCount++;
-//					if (AnnotationBase.DEBUG_CHANGE || ab.printDebugInfo())
-//						System.out.println("REMOVED: " + ab.type + " at " + ab.absoluteStartIndex + " sized " + ab.size);
-//				}
-//			}
-//			this.ensureClean();
-//		}
-//		void clear() {
-//			this.annotations.clear();
-//			this.removed.clear();
-//			this.modCount++;
-//		}
-//		void annotationTypeChanged() {
-//			this.typeModCount++;
-//		}
-//		private void ensureSorted() {
-//			this.ensureClean();
-//			if ((this.cleanAddCount == this.addCount) && (this.cleanTypeModCount == this.typeModCount) && (this.cleanOrderModCount == orderModCount))
-//				return;
-//			/* TODOnot if order and types unmodified, we can even save sorting the whole list:
-//			 * - sort only added annotations ...
-//			 * - ... and then merge them into main list in single pass
-//			 * ==> but then, TimSort already does pretty much that ... */
-//			Collections.sort(this.annotations, annotationBaseOrder);
-//			this.cleanAddCount = this.addCount;
-//			this.cleanTypeModCount = this.typeModCount;
-//			this.cleanOrderModCount = orderModCount;
-//		}
-//		private void ensureClean() {
-//			if (this.removed.isEmpty())
-//				return;
-//			for (int a = (this.annotations.size()-1); a >= 0; a--) {
-//				if (this.removed.contains(this.annotations.get(a)))
-//					this.annotations.remove(a);
-//			}
-//			this.removed.clear();
-//		}
-//	}
-	
-	private static class CacheCleaningTrigger {
-		private AnnotationList annotList;
-		CacheCleaningTrigger(AnnotationList annotList) {
-			this.annotList = annotList;
-		}
-		protected void finalize() throws Throwable {
-			this.annotList.cleanCaches();
-		}
-	}
-	private static class CacheClearingTrigger {
-		private AnnotationList annotList;
-		CacheClearingTrigger(AnnotationList annotList) {
-			this.annotList = annotList;
-		}
-		protected void finalize() throws Throwable {
-			this.annotList.clearCaches();
-		}
-	}
-	
 	private class AnnotationList {
 		/* Handling our own array saves lots of method calls to ArrayList,
 		 * enables more efficient single-pass cleanup (without shifting the
@@ -2889,7 +2365,7 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 		private AnnotationBase[] annots = new AnnotationBase[16];
 		private int annotCount = 0;
 		private HashSet removed = new HashSet();
-		private int modCount = 0;
+		int modCount = 0; // used by cache entries
 		private int addCount = 0;
 		private int cleanAddCount = 0;
 		private int typeModCount = 0;
@@ -2898,13 +2374,9 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 		private final String type;
 		
 		private int maxAnnotSize = 0;
-		private SoftReference cacheCleaningTrigger;
-		private SoftReference cacheClearingTrigger;
 		
 		AnnotationList(String type) {
 			this.type = type;
-			this.cacheCleaningTrigger = new SoftReference(new CacheCleaningTrigger(this));
-			this.cacheClearingTrigger = new SoftReference(new CacheClearingTrigger(this));
 		}
 		void addAnnotation(AnnotationBase ab) {
 			if (TRACK_INSTANCES) accessHistory.accessed();
@@ -2921,7 +2393,6 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 				this.maxAnnotSize = ab.size;
 			this.modCount++;
 			this.addCount++;
-			this.cacheClearingTrigger.get(); // touch clearing trigger, so cleaning trigger gets reclaimed first
 		}
 		void removeAnnotation(AnnotationBase ab) {
 			if (TRACK_INSTANCES) accessHistory.accessed();
@@ -2929,7 +2400,6 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 				return;
 			this.removed.add(ab);
 			this.modCount++;
-			this.cacheClearingTrigger.get(); // touch clearing trigger, so cleaning trigger gets reclaimed first
 		}
 		AnnotationBase getAnnotation(int index) {
 			this.ensureSorted();
@@ -2938,9 +2408,10 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 		boolean isEmpty() {
 			if (this.annotCount == 0)
 				return true;
-			for (int a = 0; a < this.annotCount; a++)
+			for (int a = 0; a < this.annotCount; a++) {
 				if (!this.removed.contains(this.annots[a]))
 					return false;
+			}
 			return true;
 		}
 		int size() {
@@ -2958,11 +2429,11 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 			return this.getAnnotationsIn(minAbsoluteStartIndex, maxAbsoluteStartIndex, minAbsoluteEndIndex, maxAbsoluteEndIndex);
 		}
 		AnnotationBase[] getAnnotationsIn(AnnotationBase base) {
-			AnnotationCacheEntry annots = base.subAnnotationsByType.lookup(this.type);
+			AnnotationCacheEntry annots = base.subAnnotationCacheGet(this.type);
 			if ((annots == null) || annots.isInvalid(this)) /* cache miss, or entry stale */ {
 				AnnotationBase[] abs = this.getAnnotationsIn(base.absoluteStartIndex, (base.getEndIndex()-1), (base.absoluteStartIndex+1), base.getEndIndex());
 				annots = new AnnotationCacheEntry(abs, this);
-				base.subAnnotationsByType.cache(this.type, annots);
+				base.subAnnotationCachePut(this.type, annots);
 			}
 			return annots.annotations;
 		}
@@ -3069,7 +2540,6 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 		}
 		private void ensureClean() {
 			if (TRACK_INSTANCES) accessHistory.accessed();
-			this.cacheClearingTrigger.get(); // touch clearing trigger, so cleaning trigger gets reclaimed first
 			if (this.removed.isEmpty())
 				return;
 			int removed = 0;
@@ -3078,7 +2548,6 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 				if (this.removed.contains(this.annots[a]))
 					removed++;
 				else {
-					this.annots[a].subAnnotationsByType.remove(this.type); // cache entries are invalid now
 					if (maxAnnotSize < this.annots[a].size)
 						maxAnnotSize = this.annots[a].size;
 					if (removed != 0)
@@ -3089,33 +2558,6 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 			this.annotCount -= removed;
 			this.maxAnnotSize = maxAnnotSize;
 			this.removed.clear();
-		}
-		void cleanCaches() {
-			for (int a = 0; a < this.annotCount; a++)
-				this.annots[a].cleanCaches();
-			this.cacheCleaningTrigger = new SoftReference(new CacheCleaningTrigger(this));
-		}
-		void clearCaches() {
-			for (int a = 0; a < this.annotCount; a++)
-				this.annots[a].clearCaches();
-			this.cacheClearingTrigger = new SoftReference(new CacheClearingTrigger(this));
-		}
-	}
-	
-	private static class AnnotationCache extends LinkedHashMap {
-		private int maxCapacity;
-		AnnotationCache(int maxCapacity) {
-			super(8, 0.9f, true);
-			this.maxCapacity = maxCapacity;
-		}
-		AnnotationCacheEntry lookup(String key) {
-			return ((AnnotationCacheEntry) this.get(key));
-		}
-		void cache(String key, AnnotationCacheEntry entry) {
-			this.put(key, entry);
-		}
-		protected boolean removeEldestEntry(Entry eldest) {
-			return (this.maxCapacity < this.size());
 		}
 	}
 	
@@ -3131,9 +2573,6 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 		boolean isInvalid(AnnotationList parent) {
 			return ((parent != this.parent) || (this.createModCount != this.parent.modCount));
 		}
-		boolean isInvalid() {
-			return (this.createModCount != this.parent.modCount);
-		}
 	}
 	
 	private static final AnnotationBase[] emptyAnnotationBaseArray = {};
@@ -3141,7 +2580,6 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 		private AnnotationList annotations = new AnnotationList(null);
 		private HashMap annotationsByType = new HashMap();
 		private HashMap annotationsByID = new HashMap();
-		
 		private AnnotationList getAnnotationList(String type, boolean create) {
 			if (TRACK_INSTANCES) accessHistory.accessed();
 			if (type == null)
@@ -3269,344 +2707,4 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 			this.annotationsByID.clear();
 		}
 	}
-//	/**	the storage for Annotations
-//	 */
-//	private class AnnotationStore {
-//		
-//		private ArrayList annotations = new ArrayList();
-//		private HashSet annotationIDs = new HashSet();
-//		
-//		/**	store an Annotation
-//		 * @param	ab	the Annotation to be stored
-//		 */
-//		synchronized void storeAnnotation(AnnotationBase ab) {
-//			
-//			//	do not insert an Annotation twice
-//			if (this.containsAnnotation(ab))
-//				return;
-//			
-//			//	add Annotation to content index
-//			this.annotationIDs.add(ab.annotationId);
-//			
-//			//	start searching insertion point at end points
-//			int left = 0;
-//			int right = this.annotations.size();
-//			
-//			//	catch special cases (head or tail insert)
-//			if (this.annotations.size() != 0) {
-//				
-//				//	larger than largest Annotation contained so far (check first, in order to save time when adding Annotations in ascending order, which happens more often than in descending order)
-//				if (((AnnotationBase) this.annotations.get(right - 1)).compareTo(ab) <= 0) {
-//					this.annotations.add(right, ab);
-//					return;
-//				}
-//				
-//				//	smaller than smallest annotation contained so far
-//				else if (((AnnotationBase) this.annotations.get(0)).compareTo(ab) > 0) {
-//					this.annotations.add(0, ab);
-//					return;
-//				}
-//			}
-//			
-//			//	narrow insertion point with binary search down to a 4 interval
-//			int c = -1;
-//			int middle;
-//			while ((right - left) > 4) {
-//				middle = ((left + right) / 2);
-//				c = ((AnnotationBase) this.annotations.get(middle)).compareTo(ab);
-//				if (c < 0)
-//					left = middle; // insertion right is left of middle
-//				else if (c == 0) { // Annotation at middle is equal to inserted Annotation, search insertion point rightward to maintain insertion order
-//					int lastC;
-//					for (int i = middle; i < right; i++) {
-//						lastC = c;
-//						c = ((AnnotationBase) this.annotations.get(i)).compareTo(ab);
-//						if (lastC <= 0 && c > 0) {
-//							this.annotations.add(i, ab);
-//							return;
-//						}
-//					}
-//					this.annotations.add(right, ab);
-//					return;
-//				}
-//				else right = middle;  // insertion point is left of middle
-//			}
-//			
-//			//	insert with linear search in order to avoid special case treatments in binary search
-//			int lastC;
-//			for (int i = left; i < right; i++) {
-//				lastC = c;
-//				c = ((AnnotationBase) this.annotations.get(i)).compareTo(ab);
-//				if (lastC <= 0 && c > 0) {
-//					this.annotations.add(i, ab);
-//					return;
-//				}
-//			}
-//			this.annotations.add(right, ab);
-//		}
-//		
-//		/**	retrieve all Annotations of a particular type contained in this AnnotationStore
-//		 * @param	type	the type of the desired Annotations (specifying null will return all Annotations, regardless of their type)
-//		 * @return all Annotations of the specified type contained in this AnnotationStore packed in an array
-//		 */
-//		AnnotationBase[] getAnnotations(String type) {
-//			ArrayList list = new ArrayList();
-//			AnnotationBase annot;
-//			for (int a = 0; a < this.annotations.size(); a++) {
-//				annot = ((AnnotationBase) this.annotations.get(a));
-//				if ((type == null) || type.equals(annot.getType()))
-//					list.add(annot);
-//			}
-//			return ((AnnotationBase[]) list.toArray(new AnnotationBase[list.size()]));
-//		}
-//		
-//		/**	retrieve all Annotations of a particular type contained in this AnnotationStore that lay inside a given range
-//		 * @param	type		the type of the desired Annotations (specifying null will return all Annotations, regardless of their type)
-//		 * @param	absoluteStartIndex	the start index of the range
-//		 * @param	size		the size of the range
-//		 * @return all Annotations of the specified type contained in this AnnotationStore that lay within the specified range, packed in an array
-//		 */
-//		AnnotationBase[] getAnnotations(AnnotationBase base, String type) {
-//			int baseAbsoluteStartIndex = base.getAbsoluteStartIndex();
-//			int start = -1;
-//			
-//			//	binary search first annotation, start searching insertion point at end points
-//			int left = 0;
-//			int right = this.annotations.size();
-//			
-//			//	narrow staring point with binary search down to a 2 interval
-//			int c = -1;
-//			int middle;
-//			while ((start == -1) && ((right - left) > 2)) {
-//				middle = ((left + right) / 2);
-//				
-//				//	start linear search if interval down to 4
-//				if ((right - left) < 4) c = 0;
-//				else c = (((AnnotationBase) this.annotations.get(middle)).absoluteStartIndex - baseAbsoluteStartIndex);
-//				
-//				if (c < 0) left = middle; // starting point is right of middle
-//				else if (c == 0) { // start of Annotation at middle is equal to base Annotation, search insertion point leftward not to miss an Annotation
-//					start = middle;
-//					while ((start != 0) && (((AnnotationBase) this.annotations.get(start)).absoluteStartIndex == baseAbsoluteStartIndex))
-//						start --; // count down to 0 at most
-//				}
-//				else right = middle;  // starting point is left of middle
-//			}
-//			
-//			//	ensure valid index
-//			start = Math.max(start, 0);
-//			
-//			//	move right to exact staring point
-//			while ((start < this.annotations.size()) && (((AnnotationBase) this.annotations.get(start)).absoluteStartIndex < baseAbsoluteStartIndex))
-//				start++;
-//			
-//			int absoluteStartIndexLimit = base.getAbsoluteStartIndex() + base.size();
-//			ArrayList annotationList = new ArrayList();
-//			AnnotationBase ab;
-//			for (int a = start; a < this.annotations.size(); a++) {
-//				ab = ((AnnotationBase) this.annotations.get(a));
-//				if (((type == null) || type.equals(ab.type)) && (ab.absoluteStartIndex >= baseAbsoluteStartIndex) && (ab.getEndIndex() <= absoluteStartIndexLimit))
-//					annotationList.add(ab);
-//				if (ab.absoluteStartIndex >= absoluteStartIndexLimit)
-//					return ((AnnotationBase[]) annotationList.toArray(new AnnotationBase[annotationList.size()]));
-//			}
-//			return ((AnnotationBase[]) annotationList.toArray(new AnnotationBase[annotationList.size()]));
-//		}
-//		
-//		/**	retrieve all Annotations contained in this AnnotationStore that lay inside a given range
-//		 * @param	absoluteStartIndex	the start index of the range
-//		 * @param	size		the size of the range
-//		 * @return all Annotations contained in this AnnotationStore that lay inside the specified range, packed in an array
-//		 */
-//		String[] getAnnotationTypes() {
-//			StringVector types = new StringVector();
-//			for (int a = 0; a < this.annotations.size(); a++)
-//				types.addElementIgnoreDuplicates(((AnnotationBase) this.annotations.get(a)).getType());
-//			types.sortLexicographically(false, false);
-//			return types.toStringArray();
-//		}
-//		
-//		/**	retrieve all Annotations contained in this AnnotationStore that lay inside a given range
-//		 * @param	absoluteStartIndex	the start index of the range
-//		 * @param	size		the size of the range
-//		 * @return all Annotations contained in this AnnotationStore that lay inside the specified range, packed in an array
-//		 */
-//		String[] getAnnotationTypes(AnnotationBase base) {
-//			int baseAbsoluteStartIndex = base.getAbsoluteStartIndex();
-//			int start = -1;
-//			
-//			//	binary search first annotation, start searching insertion point at end points
-//			int left = 0;
-//			int right = this.annotations.size();
-//			
-//			//	narrow staring point with binary search down to a 2 interval
-//			int c = -1;
-//			int middle;
-//			while ((start == -1) && ((right - left) > 2)) {
-//				middle = ((left + right) / 2);
-//				
-//				//	start linear search if interval down to 4
-//				if ((right - left) < 4) c = 0;
-//				else c = (((AnnotationBase) this.annotations.get(middle)).absoluteStartIndex - baseAbsoluteStartIndex);
-//				
-//				if (c < 0) left = middle; // starting point is right of middle
-//				else if (c == 0) { // start of Annotation at middle is equal to base Annotation, search insertion point leftward not to miss an Annotation
-//					start = middle;
-//					while ((start != 0) && (((AnnotationBase) this.annotations.get(start)).absoluteStartIndex == baseAbsoluteStartIndex))
-//						start --; // count down to 0 at most
-//				} else right = middle;  // starting point is left of middle
-//			}
-//			
-//			//	ensure valid index
-//			start = Math.max(start, 0);
-//			
-//			//	move right to exact staring point
-//			while ((start < this.annotations.size()) && (((AnnotationBase) this.annotations.get(start)).absoluteStartIndex < baseAbsoluteStartIndex))
-//				start++;
-//			
-//			//	collect types
-//			int absoluteStartIndexLimit = base.getAbsoluteStartIndex() + base.size();
-//			StringVector types = new StringVector();
-//			AnnotationBase ab;
-//			for (int a = start; a < this.annotations.size(); a++) {
-//				ab = ((AnnotationBase) this.annotations.get(a));
-//				if ((ab.absoluteStartIndex >= baseAbsoluteStartIndex) && (ab.getEndIndex() <= absoluteStartIndexLimit)) types.addElementIgnoreDuplicates(ab.type);
-//				if (ab.absoluteStartIndex >= absoluteStartIndexLimit) return types.toStringArray();
-//			}
-//			return types.toStringArray();
-//		}
-//		
-//		/**	remove an Annotation from this AnnotationStore
-//		 * @param	annotation	the Annotation to be removed
-//		 * @return the Annotation that was just removed, or null, if the Annotation was not contained in this AnnotationStore
-//		 */
-//		AnnotationBase removeAnnotation(int baseStartIndex, Annotation annotation) {
-//			
-//			//	find Annotation
-//			AnnotationBase ab = null;
-//			
-//			int absoluteStartIndex = baseStartIndex + annotation.getStartIndex(); // start index of base to remove
-//			int annotationSize = annotation.size();
-//			int start = -1;
-//			
-//			//	binary search first annotation, start searching insertion point at end points
-//			int left = 0;
-//			int right = this.annotations.size();
-//			
-//			//	narrow staring point with binary search down to a 2 interval
-//			int c = -1;
-//			int middle;
-//			while ((start == -1) && ((right - left) > 2)) {
-//				middle = ((left + right) / 2);
-//				
-//				//	start linear search if interval down to 4
-//				if ((right - left) < 4)
-//					c = 0;
-//				else c = (((AnnotationBase) this.annotations.get(middle)).absoluteStartIndex - absoluteStartIndex);
-//				
-//				if (c < 0)
-//					left = middle; // starting point is right of middle
-//				else if (c == 0) { // start of Annotation at middle is equal to base Annotation, search insertion point leftward not to miss an Annotation
-//					start = middle;
-//					while ((start != 0) && (((AnnotationBase) this.annotations.get(start)).absoluteStartIndex == absoluteStartIndex))
-//						start --; // count down to 0 at most
-//				}
-//				else right = middle;  // starting point is left of middle
-//			}
-//			
-//			//	ensure valid index
-//			start = Math.min(start, (this.annotations.size() - 1));
-//			
-//			//	move left to exact staring point
-//			while ((start > -1) && (((AnnotationBase) this.annotations.get(start)).absoluteStartIndex >= absoluteStartIndex))
-//				start--;
-//			
-//			//	ensure valid index
-//			start = Math.max(start, 0);
-//			
-//			//	move rigth to exact staring point
-//			while ((start < this.annotations.size()) && (((AnnotationBase) this.annotations.get(start)).absoluteStartIndex < absoluteStartIndex)) start++;
-//			
-//			//	find Annotation
-//			for (int a = start; a < this.annotations.size(); a++) {
-//				ab = ((AnnotationBase) this.annotations.get(a));
-//				
-//				//	annotation not found
-//				if (ab.absoluteStartIndex > absoluteStartIndex)
-//					return null;
-//				
-//				//	matching start index & size
-//				else if ((ab.absoluteStartIndex == absoluteStartIndex) && (ab.size == annotationSize)) {
-//					
-//					//	ID match, do not attempt type / attribute match
-//					if (this.annotationIDs.contains(annotation.getAnnotationID())) {
-//						
-//						//	matching IDs
-//						if (ab.annotationId.equals(annotation.getAnnotationID())) {
-//							this.annotations.remove(a);
-//							this.annotationIDs.remove(ab.annotationId);
-//							return ab;
-//						}
-//					}
-//					
-//					//	type / attribute match
-//					else if (ab.type.equals(annotation.getType()) && AttributeUtils.hasEqualAttributes(ab, annotation)) {
-//						this.annotations.remove(a);
-//						this.annotationIDs.remove(ab.annotationId);
-//						return ab;
-//					}
-//				}
-//			}
-//			
-//			//	Annotation not found
-//			return ab;
-//		}
-//		
-//		/**	check if this store contains an Annotation
-//		 * @param	ab	the Annotation to search for
-//		 * @return true if and only if this AnnotationStore contains the specified Annotation
-//		 */
-//		boolean containsAnnotation(AnnotationBase ab) {
-//			return ((ab != null) && this.annotationIDs.contains(ab.annotationId));
-//		}
-//		
-//		/* (non-Javadoc)
-//		 * @see de.gamta.TokenSequenceListener#tokenSequenceChanged(de.gamta.MutableTokenSequence.TokenSequenceEvent)
-//		 */
-//		synchronized void tokenSequenceChanged(TokenSequenceEvent change) {
-//			
-//			//	prepare changes
-//			for (int a = 0; (a < this.annotations.size()); a++)
-//				((AnnotationBase) this.annotations.get(a)).tokenSequeceChanged(change);
-//			
-//			//	commit changes
-//			for (int a = 0; (a < this.annotations.size()); a++)
-//				((AnnotationBase) this.annotations.get(a)).commitChange();
-//			
-//			//	clean up
-//			this.cleanup();
-//		}
-//		
-//		/**	remove all empty Annotations from the store
-//		 */
-//		void cleanup() {
-//			int a = 0;
-//			while (a < this.annotations.size()) {
-//				AnnotationBase ab = ((AnnotationBase) this.annotations.get(a));
-//				if (ab.size() <= 0) {
-//					this.annotations.remove(a);
-//					if (AnnotationBase.DEBUG_CHANGE || ab.printDebugInfo())
-//						System.out.println("REMOVED: " + ab.type + " at " + ab.absoluteStartIndex + " sized " + ab.size);
-//				}
-//				else a++;
-//			}
-//		}
-//		
-//		/**	delete all Annotations contained in this AnnotationStore
-//		 */
-//		void clear() {
-//			this.annotations.clear();
-//			this.annotationIDs.clear();
-//		}
-//	}
 }
