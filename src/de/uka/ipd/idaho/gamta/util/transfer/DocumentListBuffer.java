@@ -93,7 +93,7 @@ public class DocumentListBuffer extends StringRelation implements LiteratureCons
 		
 		while (data.hasNextDocument()) {
 			DocumentListElement dle = data.getNextDocument();
-			StringTupel st = new StringTupel();
+			StringTupel st = new StringTupel(this.listFieldNames.length);
 			for (int f = 0; f < this.listFieldNames.length; f++) {
 				Object value = dle.getAttribute(this.listFieldNames[f]);
 				if ((value != null) && (value instanceof String))
