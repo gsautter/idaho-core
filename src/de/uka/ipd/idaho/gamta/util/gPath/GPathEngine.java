@@ -1651,16 +1651,20 @@ public class GPathEngine implements GPathConstants {
 	}
 	
 	private static class GPathDocument extends GPathAnnotation {
-		private HashMap pathResultCache = new HashMap();
+		private HashMap pathResultCache = null;//new HashMap();
 		void cachePathResult(String path, GPathAnnotationSet pathResult) {
+			if (this.pathResultCache == null)
+				this.pathResultCache = new HashMap();
 			this.pathResultCache.put(path, pathResult);
 		}
 		GPathAnnotationSet getPathResult(String path) {
-			return ((GPathAnnotationSet) this.pathResultCache.get(path));
+			return ((this.pathResultCache == null) ? null : ((GPathAnnotationSet) this.pathResultCache.get(path)));
 		}
 		
-		private HashMap annotationViewsById = new HashMap();
+		private HashMap annotationViewsById = null;
 		GPathAnnotationView getViewOf(QueriableAnnotation data) {
+			if (this.annotationViewsById == null)
+				this.annotationViewsById = new HashMap();
 			GPathAnnotationView view = ((GPathAnnotationView) this.annotationViewsById.get(data.getAnnotationID()));
 			if (view == null) {
 				view = new GPathAnnotationView(data, this, this);
