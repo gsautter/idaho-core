@@ -99,6 +99,7 @@ public class MultipartFormData {
 	
 	private Properties headers = new Properties();
 	private ArrayList parameters = new ArrayList(2);
+	private int responseCode = -1;
 	
 	/**
 	 * Add a request parameter whose value lies in a file. Each request can have
@@ -235,6 +236,9 @@ public class MultipartFormData {
 		this.headers = null;
 		this.parameters = null;
 		
+		//	get response code
+		this.responseCode = con.getResponseCode();
+		
 		//	return input stream for reading server response
 		return new BufferedInputStream(con.getInputStream()) {
 			public void close() throws IOException {
@@ -242,6 +246,18 @@ public class MultipartFormData {
 				con.disconnect();
 			}
 		};
+	}
+	
+	/**
+	 * Retrieve the response code returned by the server on sending. If this
+	 * method is called before the postTo() method, an IllegalStateException
+	 * will be thrown.
+	 * @return the response code
+	 */
+	public int getResponseCode() {
+		if (this.responseCode == -1)
+			throw new IllegalStateException("Request not sent yet");
+		return this.responseCode;
 	}
 	
 	private static final byte[] lineBreakBytes = {((byte) '\r'), ((byte) '\n')};
