@@ -63,6 +63,12 @@ public abstract class Grammar {
 	/** the character separating an attribute name from the attribute's value, default is '=' */
 	protected final char tagAttributeValueSeparator = '=';
 	
+	/** the character starting all start markers, default is '<' */
+	protected final char startMarkerStartChar = '<';
+	
+	/** the character ending all end markers, default is '>' */
+	protected final char endMarkerEndChar = '>';
+	
 	/** the character sequence starting a comment, default is '<!--' */
 	protected final String commentStartMarker = "<!--";
 	
@@ -129,6 +135,22 @@ public abstract class Grammar {
 	 */
 	public String getStandardIndent() {
 		return this.standardIndent;
+	}
+
+	/**
+	 * @return the character all start markers start with, or 0, if there is no
+	 *         such character
+	 */
+	public char getStartMarkerStartChar() {
+		return this.startMarkerStartChar;
+	}
+
+	/**
+	 * @return the character all end markers end with, or 0, if there is no
+	 *         such character
+	 */
+	public char getEndMarkerEndChar() {
+		return this.endMarkerEndChar;
 	}
 
 	/**

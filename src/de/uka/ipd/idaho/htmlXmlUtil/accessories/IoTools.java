@@ -555,7 +555,7 @@ public class IoTools {
 					if (report) System.out.print("Storing page to " + fileName + " ... ");
 					TokenReceiver receiver = TokenReceiver.getTokenReceiver(getFile(fileName));
 					try {
-						pageRoot.treeToCode(receiver, "  ");
+						pageRoot.treeToTokens(receiver, "  ");
 					}
 					catch (IOException ioe) {
 						writeFile(getFile(fileName), pageRoot.treeToCode("  "));

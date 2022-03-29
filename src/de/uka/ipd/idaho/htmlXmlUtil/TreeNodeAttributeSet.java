@@ -30,8 +30,7 @@ package de.uka.ipd.idaho.htmlXmlUtil;
 
 import java.io.IOException;
 import java.io.StringReader;
-import java.util.ArrayList;
-import java.util.Properties;
+import java.util.TreeMap;
 
 import de.uka.ipd.idaho.htmlXmlUtil.exceptions.ParseException;
 import de.uka.ipd.idaho.htmlXmlUtil.exceptions.UnexpectedCharacterException;
@@ -47,24 +46,15 @@ import de.uka.ipd.idaho.htmlXmlUtil.xPath.exceptions.InvalidArgumentsException;
  * @author sautter
  */
 public class TreeNodeAttributeSet {
-	
+	private static final Grammar defaultGrammar = new StandardGrammar();
 	private Grammar grammar;
-	
-	//	map for case-insensitive access
-	private Properties names = new Properties();
-	
-	//	map for name / value pairs
-	private Properties values = new Properties();
-	
-	//	list for sequential access
-	private ArrayList nameList = new ArrayList();
+	private TreeMap data = null;
 	
 	private TreeNodeAttributeSet() {
-		this(new StandardGrammar());
+		this(null);
 	}
-	
 	private TreeNodeAttributeSet(Grammar grammar) {
-		this.grammar = grammar;
+		this.grammar = ((grammar == null) ? defaultGrammar : grammar);
 	}
 	
 	/**	check if the TreeNodeAttributeSet contains a given attribute
@@ -72,8 +62,7 @@ public class TreeNodeAttributeSet {
 	 * @return true if and only if this TreeNodeAttributeSet contains the attribute identified by the specified name
 	 */
 	public boolean containsAttribute(String attributeName) {
-		String key = this.getKey(attributeName);
-		return this.values.containsKey(key);
+		return ((this.data != null) && this.data.containsKey(attributeName));
 	}
 	
 	/**	read the value of an attribute
@@ -81,8 +70,7 @@ public class TreeNodeAttributeSet {
 	 * @return	the value of the specified attribute, or null, if there is no such attribute
 	 */
 	public String getAttribute(String attributeName) {
-		String key = this.getKey(attributeName);
-		return this.values.getProperty(key);
+		return this.getAttribute(attributeName, null);
 	}
 	
 	/**	read the value of an attribute
@@ -91,8 +79,10 @@ public class TreeNodeAttributeSet {
 	 * @return	the value of the specified attribute, or def, if there is no such attribute
 	 */
 	public String getAttribute(String attributeName, String def) {
-		String key = this.getKey(attributeName);
-		return this.values.getProperty(key, def);
+		if (this.data == null)
+			return def;
+		String value = ((String) this.data.get(attributeName));
+		return ((value == null) ? def : value);
 	}
 	
 	/**	add a attribute / value pair
@@ -102,12 +92,11 @@ public class TreeNodeAttributeSet {
 	 * 	Note: if the specified attribute is already set for this node, it's value is changed to the specified value 
 	 */
 	public String setAttribute(String attributeName, String value) {
-		String key = this.getKey(attributeName);
-		String oldValue = this.values.getProperty(key);
-		this.names.setProperty(key, attributeName);
-		this.values.setProperty(key, value);
-		if (!this.nameList.contains(key)) this.nameList.add(key);
-		return oldValue;
+		if (value == null)
+			return this.removeAttribute(attributeName);
+		if (this.data == null)
+			this.data = new TreeMap(String.CASE_INSENSITIVE_ORDER);
+		return ((String) this.data.put(attributeName, value));
 	}
 	
 	/**	remove an attribute
@@ -115,21 +104,13 @@ public class TreeNodeAttributeSet {
 	 * @return the attribute's value
 	 */
 	public String removeAttribute(String attributeName) {
-		String key = this.getKey(attributeName);
-		String oldValue = this.values.getProperty(key);
-		this.names.remove(key);
-		this.values.remove(key);
-		this.nameList.remove(key);
-		return oldValue;
+		return ((this.data == null) ? null : ((String) this.data.remove(attributeName)));
 	}
 	
 	/**	@return	all attribute names in an array
 	 */
 	public String[] getAttributeNames() {
-		String[] ret = new String[this.nameList.size()];
-		for (int i = 0; i < ret.length; i++)
-			ret[i] = this.names.getProperty((String) this.nameList.get(i));
-		return ret;
+		return ((this.data == null) ? new String[0] : ((String[]) this.data.keySet().toArray(new String[this.data.size()])));
 	}
 	
 	/**	@return	all attribute / value pairs in an array
@@ -147,23 +128,28 @@ public class TreeNodeAttributeSet {
 	/**	@return	all attribute / value pairs in an array
 	 */
 	public String[] getAttributeValuePairs(char attributeValueSeparator, char quoter, Grammar grammar) {
-		String[] ret = this.getAttributeNames();
-		for (int i = 0; i < ret.length; i++) {
-			String value = this.getAttribute(ret[i], ret[i]);
+		if (this.data == null)
+			return new String[0];
+		String[] result = this.getAttributeNames();
+		for (int n = 0; n < result.length; n++) {
+			String value = this.getAttribute(result[n], result[n]);
 			if (value != null)
-				ret[i] += (attributeValueSeparator + "" + quoter + "" + grammar.escape(value) + "" + quoter);
+				result[n] += (attributeValueSeparator + "" + quoter + "" + grammar.escape(value) + "" + quoter);
 		}
-		return ret;
+		return result;
 	}
 	
 	/**	@return	all attribute / value pairs listed in a single String
 	 */
 	public String getAttributeValueString(Grammar grammar) {
+		if (this.data == null)
+			return "";
 		String[] attributes = this.getAttributeValuePairs(grammar);
 		StringBuffer assembler = new StringBuffer();
-		for (int i = 0; i < attributes.length; i++) {
-			if (i != 0) assembler.append(grammar.getTagAttributeSeparator());
-			assembler.append(attributes[i]);
+		for (int a = 0; a < attributes.length; a++) {
+			if (a != 0)
+				assembler.append(grammar.getTagAttributeSeparator());
+			assembler.append(attributes[a]);
 		}
 		return assembler.toString();
 	}
@@ -171,11 +157,14 @@ public class TreeNodeAttributeSet {
 	/**	@return	all attribute / value pairs listed in a single String
 	 */
 	public String getAttributeValueString(char attributeSeparator, char attributeValueSeparator, char quoter) {
+		if (this.data == null)
+			return "";
 		String[] attributes = this.getAttributeValuePairs(attributeValueSeparator, quoter);
 		StringBuffer assembler = new StringBuffer();
-		for (int i = 0; i < attributes.length; i++) {
-			if (i != 0) assembler.append(attributeSeparator);
-			assembler.append(attributes[i]);
+		for (int a = 0; a < attributes.length; a++) {
+			if (a != 0)
+				assembler.append(attributeSeparator);
+			assembler.append(attributes[a]);
 		}
 		return assembler.toString();
 	}
@@ -183,28 +172,23 @@ public class TreeNodeAttributeSet {
 	/**	remove all attribute / value pairs
 	 */
 	public void clear() {
-		this.names.clear();
-		this.values.clear();
-		this.nameList.clear();
+		if (this.data == null)
+			return;
+		this.data.clear();
+		this.data = null;
 	}
 	
 	/** check whether this TreeNodeAttributeSet is empty
 	 * @return true if and only if this TreeNodeAttributeSet contains no key/value pairs
 	 */
 	public boolean isEmpty() {
-		return this.names.isEmpty();
+		return ((this.data == null) || this.data.isEmpty());
 	}
 	
 	/**	@return	the number of key/value pairs contained in this TreeNodeAttributeSet
 	 */
 	public int size() {
-		return this.names.size();
-	}
-	
-	/**	@return	a key value for the HashMaps produced from the specified String
-	 */
-	protected String getKey(String string) {
-		return ((string != null) ? string.toLowerCase() : null);
+		return ((this.data == null) ? 0 : this.data.size());
 	}
 	
 	/**	parse the attribute / value pairs out of the specified tag
@@ -214,7 +198,9 @@ public class TreeNodeAttributeSet {
 	 */
 	public static TreeNodeAttributeSet getTagAttributes(String tag, Grammar grammar) {
 		TreeNodeAttributeSet attributes = new TreeNodeAttributeSet(grammar);
-		if ((tag != null) || (grammar != null)) try {
+		if ((tag == null) || (grammar == null))
+			return attributes;
+		try {
 //			watchParse(tag);
 			fillTagAttributeSet(tag, grammar, attributes, -1);
 		}

@@ -43,6 +43,7 @@ import de.uka.ipd.idaho.htmlXmlUtil.TreeNode;
  * @author sautter
  */
 public class TreeTools {
+	//	TODO Add XML namespace cleansing facility akin to GANTA AnnotationUtils
 	
   /**
 	 * get all nodes of the the specified type

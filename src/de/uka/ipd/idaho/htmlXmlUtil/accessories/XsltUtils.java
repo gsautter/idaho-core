@@ -27,11 +27,14 @@
  */
 package de.uka.ipd.idaho.htmlXmlUtil.accessories;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.FilterOutputStream;
 import java.io.FilterWriter;
 import java.io.IOException;
@@ -45,11 +48,14 @@ import java.io.PipedWriter;
 import java.io.Reader;
 import java.io.UnsupportedEncodingException;
 import java.io.Writer;
+import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.LinkedList;
+import java.util.Map.Entry;
 import java.util.Properties;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -80,37 +86,46 @@ import de.uka.ipd.idaho.htmlXmlUtil.grammars.StandardGrammar;
  * @author sautter
  */
 public class XsltUtils {
-	
-	//	!!! for test purposes only !!!
-	public static void main(String[] args) throws Exception {
-		File cXsltFile1 = new File("./Components/GgServerPlaziWCSData/gg2wiki.xslt");
-		getTransformer(cXsltFile1);
-		getTransformer(cXsltFile1, false);
-		if (true)
-			return;
-		
-//		File xsltFile1 = new File("E:/Projektdaten/XSLT Round Trip/gg2taxonx.xsl");
-//		File xsltFile2 = new File("E:/Projektdaten/XSLT Round Trip/taxonx2gg.xsl");
-//		Transformer trf1 = getTransformer(xsltFile1);
-//		Transformer trf2 = getTransformer(xsltFile2);
+//	
+//	//	!!! for test purposes only !!!
+//	public static void main(String[] args) throws Exception {
+//		ApplicationHttpsEnabler.enableHttps();
+//		URL xsltUrl = new URL("https://raw.githubusercontent.com/plazi/ggxml2taxpub-treatments/main/xslt/gg2tp_l1.xsl");
+////		URL xsltUrl = new URL("http://tb.plazi.org/GgServer/gg2tp_l1.xsl");
+//		File xsltCache = new File("E:/Temp/XsltCache");
+//		getTransformer(xsltUrl, xsltCache);
 //		
-////		MutableAnnotation doc = SgmlDocumentReader.readDocument(new File("E:/Projektdaten/TaxonxTest/21211_gg1.xml"));
-////		Reader reader = new AnnotationReader(doc);
-////		reader = chain(reader, trf1);
-////		reader = chain(reader, trf2);
-////		reader = chain(reader, trf1);
+////		File xsltFile = new File("E:/Projektdaten/TaxPubOutput/gg2tp_l1.xsl");
+////		getTransformer(xsltFile);
+//		
+////		File cXsltFile1 = new File("./Components/GgServerPlaziWCSData/gg2wiki.xslt");
+////		getTransformer(cXsltFile1);
+////		getTransformer(cXsltFile1, false);
+////		if (true)
+////			return;
+//		
+////		File xsltFile1 = new File("E:/Projektdaten/XSLT Round Trip/gg2taxonx.xsl");
+////		File xsltFile2 = new File("E:/Projektdaten/XSLT Round Trip/taxonx2gg.xsl");
+////		Transformer trf1 = getTransformer(xsltFile1);
+////		Transformer trf2 = getTransformer(xsltFile2);
 ////		
-////		char[] buffer = new char[1024];
-////		int read;
-////		while ((read = reader.read(buffer, 0, buffer.length)) != -1)
-////			System.out.print(new String(buffer, 0, read));
-//		MutableAnnotation doc = SgmlDocumentReader.readDocument(new File("E:/Projektdaten/TaxonxTest/21211_gg1.xml"));
-//		Writer writer = new OutputStreamWriter(System.out);
-//		writer = wrap(writer, trf2);
-//		writer = wrap(writer, trf1);
-//		AnnotationUtils.writeXML(doc, writer, null, null, true);
-//		writer.close();
-	}
+//////		MutableAnnotation doc = SgmlDocumentReader.readDocument(new File("E:/Projektdaten/TaxonxTest/21211_gg1.xml"));
+//////		Reader reader = new AnnotationReader(doc);
+//////		reader = chain(reader, trf1);
+//////		reader = chain(reader, trf2);
+//////		reader = chain(reader, trf1);
+//////		
+//////		char[] buffer = new char[1024];
+//////		int read;
+//////		while ((read = reader.read(buffer, 0, buffer.length)) != -1)
+//////			System.out.print(new String(buffer, 0, read));
+////		MutableAnnotation doc = SgmlDocumentReader.readDocument(new File("E:/Projektdaten/TaxonxTest/21211_gg1.xml"));
+////		Writer writer = new OutputStreamWriter(System.out);
+////		writer = wrap(writer, trf2);
+////		writer = wrap(writer, trf1);
+////		AnnotationUtils.writeXML(doc, writer, null, null, true);
+////		writer.close();
+//	}
 	
 	/**
 	 * Produce an InputStream that provides the output of a given XSLT
@@ -617,7 +632,7 @@ public class XsltUtils {
 			}
 			/*
 			 * no need for overwriting the other methods for writing, they all
-			 * refer to the one-argument and three-argument write() methods
+			 * call one of the the one-argument and three-argument write() methods
 			 */
 		};
 	}
@@ -630,7 +645,22 @@ public class XsltUtils {
 	 * @throws IOException
 	 */
 	public static TransformerPool getTransformer(URL xsltUrl) throws IOException {
-		return getTransformer(xsltUrl, true);
+		return getTransformer(xsltUrl, true, null);
+	}
+	
+	/**
+	 * Produce an XSLT transformer pool from a stylesheet located at a URL. If
+	 * the argument cache folder is not null, the downloaded XSLT is cached in
+	 * a file located there after download, and a download failure will fall
+	 * back to previously cached files.
+	 * @param xsltUrl the URL of the stylesheet to load
+	 * @param cacheFolder the folder to cache an XSLT to after download
+	 * @return an XSLT transformer produced from the stylesheet located at the
+	 *         specified URL
+	 * @throws IOException
+	 */
+	public static TransformerPool getTransformer(URL xsltUrl, File cacheFolder) throws IOException {
+		return getTransformer(xsltUrl, true, cacheFolder);
 	}
 	
 	/**
@@ -643,9 +673,26 @@ public class XsltUtils {
 	 * @throws IOException
 	 */
 	public static TransformerPool getTransformer(URL xsltUrl, boolean allowCache) throws IOException {
+		return getTransformer(xsltUrl, allowCache, null);
+	}
+	
+	/**
+	 * Produce an XSLT transformer pool from a stylesheet located at a URL. If
+	 * the argument cache folder is not null, the downloaded XSLT is cached in
+	 * a file located there after download, and a download failure will fall
+	 * back to previously cached files even if cache usage is not allowed.
+	 * @param xsltUrl the URL of the stylesheet to load
+	 * @param allowCache allow using cached transformers? Specifying false
+	 *            forces loading the transformer from the specified URL.
+	 * @param cacheFolder the folder to cache an XSLT to after download
+	 * @return an XSLT transformer produced from the stylesheet located at the
+	 *         specified URL
+	 * @throws IOException
+	 */
+	public static TransformerPool getTransformer(URL xsltUrl, boolean allowCache, File cacheFolder) throws IOException {
 		if (xsltUrl == null)
 			return null;
-		InputStream xsltIn = new OnDemandInputStream(xsltUrl);
+		InputStream xsltIn = new XsltInputStream(xsltUrl, cacheFolder);
 		try {
 			return getTransformer(xsltUrl.toString(), xsltIn, allowCache);
 		}
@@ -677,7 +724,7 @@ public class XsltUtils {
 	public static TransformerPool getTransformer(File xsltFile, boolean allowCache) throws IOException {
 		if (xsltFile == null)
 			return null;
-		InputStream xsltIn = new OnDemandInputStream(xsltFile);
+		InputStream xsltIn = new XsltInputStream(xsltFile);
 		try {
 			return getTransformer(xsltFile.getAbsolutePath(), xsltIn, allowCache);
 		}
@@ -701,6 +748,23 @@ public class XsltUtils {
 	
 	/**
 	 * Produce an XSLT transformer pool from a stylesheet located in a file or
+	 * at a URL. If the specified address starts with  &quot;http://&quot;, it
+	 * is interpreted as a URL, otherwise as a file name. If the argument
+	 * string is a URL and the argument cache folder is not null, a downloaded
+	 * XSLT is cached in a file located there after download, and a download
+	 * failure will fall back to previously cached files.
+	 * @param xsltAddress the address containing the stylesheet to load
+	 * @param cacheFolder the folder to cache an XSLT to after download
+	 * @return an XSLT transformer produced from the stylesheet located at the
+	 *         specified address
+	 * @throws IOException
+	 */
+	public static TransformerPool getTransformer(String xsltAddress, File cacheFolder) throws IOException {
+		return getTransformer(xsltAddress, true, cacheFolder);
+	}
+	
+	/**
+	 * Produce an XSLT transformer pool from a stylesheet located in a file or
 	 * at a URL. If the specified address starts with &quot;http://&quot;, it
 	 * is interpreted as a URL, otherwise as a file name.
 	 * @param xsltAddress the address containing the stylesheet to load
@@ -711,39 +775,70 @@ public class XsltUtils {
 	 * @throws IOException
 	 */
 	public static synchronized TransformerPool getTransformer(String xsltAddress, boolean allowCache) throws IOException {
-		InputStream xsltIn;
+		return getTransformer(xsltAddress, allowCache, null);
+	}
+	
+	/**
+	 * Produce an XSLT transformer pool from a stylesheet located in a file or
+	 * at a URL. If the specified address starts with &quot;http://&quot;, it
+	 * is interpreted as a URL, otherwise as a file name. If the argument
+	 * string is a URL and the argument cache folder is not null, a downloaded
+	 * XSLT is cached in a file located there after download, and a download
+	 * failure will fall back to previously cached files even if cache usage is
+	 * not allowed.
+	 * @param xsltAddress the address containing the stylesheet to load
+	 * @param allowCache allow using cached transformers? Specifying false
+	 *            forces loading the transformer from the specified address.
+	 * @param cacheFolder the folder to cache an XSLT to after download
+	 * @return an XSLT transformer produced from the stylesheet located at the
+	 *         specified address
+	 * @throws IOException
+	 */
+	public static synchronized TransformerPool getTransformer(String xsltAddress, boolean allowCache, File cacheFolder) throws IOException {
 		if (xsltAddress.startsWith("http://") || xsltAddress.startsWith("https://"))
-			xsltIn = new OnDemandInputStream(new URL(xsltAddress));
-		else xsltIn = new OnDemandInputStream(new File(xsltAddress));
-		try {
-			return getTransformer(xsltAddress, xsltIn, allowCache);
-		}
-		finally {
-			xsltIn.close();
-		}
+			return getTransformer(new URL(xsltAddress), allowCache, cacheFolder);
+		else return getTransformer(new File(xsltAddress), allowCache);
 	}
 	
 	/* this class allows us to open an actual input stream only after a cache miss */
-	private static class OnDemandInputStream extends InputStream {
+	private static class XsltInputStream extends InputStream {
 		private final File file;
 		private final URL url;
-		private InputStream in;
-		OnDemandInputStream(File file) {
+		private long urlModTime;
+		private final File urlCacheFolder;
+		private BufferedInputStream in;
+		XsltInputStream(File file) {
 			this.file = file;
 			this.url = null;
+			this.urlCacheFolder = null;
 		}
-		OnDemandInputStream(URL url) {
+		XsltInputStream(URL url, File cacheFolder) {
 			this.file = null;
 			this.url = url;
+			this.urlCacheFolder = cacheFolder;
 		}
 		private InputStream getInputStream() throws IOException {
 			if (this.in != null)
 				return this.in;
 			if (this.file != null)
-				this.in = new FileInputStream(this.file);
-			if (this.url != null)
-				this.in = this.url.openStream();
-			return this.in;
+				this.in = new BufferedInputStream(new FileInputStream(this.file));
+			if (this.url != null) try {
+				HttpURLConnection urlCon = ((HttpURLConnection) this.url.openConnection());
+				urlCon.connect();
+				this.in = new BufferedInputStream(urlCon.getInputStream());
+				this.urlModTime = urlCon.getLastModified();
+			}
+			catch (IOException ioe) /* try to fall back to cached result of previous download */ {
+				File urlCacheFile = this.getUrlCacheFile();
+				if ((urlCacheFile != null) && urlCacheFile.exists()) {
+					System.out.println("XsltUtils: error loading XSLT from URL '" + this.url.toString() + "': " + ioe.getMessage());
+					System.out.println("XsltUtils: falling back to local cache file '" + urlCacheFile.getAbsolutePath() + "'.");
+					this.in = new BufferedInputStream(new FileInputStream(urlCacheFile));
+					this.urlModTime = urlCacheFile.lastModified();
+				}
+				else throw ioe;
+			}
+ 			return this.in;
 		}
 		public int read() throws IOException {
 			return this.getInputStream().read();
@@ -780,6 +875,40 @@ public class XsltUtils {
 				return false;
 			}
 		}
+		private File getUrlCacheFile() {
+			if (this.url == null)
+				return null;
+			if (this.urlCacheFolder == null)
+				return null;
+			String urlStr = this.url.toString();
+			while (urlStr.endsWith("/"))
+				urlStr = urlStr.substring(0, (urlStr.length() - "/".length()));
+			urlStr = urlStr.replaceAll("[^A-Za-z0-9\\_\\-\\.]+", "_");
+			return new File(this.urlCacheFolder, (urlStr + ".cached"));
+		}
+		void cacheDownloadResult(byte[] xsltBytes) {
+			File urlCacheFile = this.getUrlCacheFile();
+			if (urlCacheFile == null)
+				return;
+			if (urlCacheFile.exists() && (urlCacheFile.length() == xsltBytes.length) && (Math.abs(this.urlModTime - urlCacheFile.lastModified()) < 1000)) {
+				System.out.println("XsltUtils: local cache file '" + urlCacheFile.getAbsolutePath() + "' up to date.");
+				return;
+			}
+			try {
+				this.urlCacheFolder.mkdirs();
+				BufferedOutputStream xbOut = new BufferedOutputStream(new FileOutputStream(urlCacheFile));
+				xbOut.write(xsltBytes);
+				xbOut.flush();
+				xbOut.close();
+				if (this.urlModTime > 0)
+					urlCacheFile.setLastModified(this.urlModTime);
+				System.out.println("XsltUtils: cached XSLT from URL '" + this.url.toString() + "' in '" + urlCacheFile.getAbsolutePath() + "'.");
+			}
+			catch (IOException ioe) {
+				System.out.println("XsltUtils: error caching XSLT from URL '" + this.url.toString() + "' in '" + urlCacheFile.getAbsolutePath() + "': " + ioe.getMessage());
+				ioe.printStackTrace(System.out);
+			}
+		}
 	}
 	
 	/**
@@ -813,12 +942,16 @@ public class XsltUtils {
 			return ((TransformerPool) transformerCache.get(name));
 		}
 		InputStream tis = new ByteOrderMarkFilterInputStream(xsltIn);
-		ByteArrayOutputStream xsltBytes = new ByteArrayOutputStream();
+		ByteArrayOutputStream xsltByteBuf = new ByteArrayOutputStream();
 		byte[] byteBuffer = new byte[1024];
 		for (int r; (r = tis.read(byteBuffer, 0, byteBuffer.length)) != -1;)
-			xsltBytes.write(byteBuffer, 0, r);
+			xsltByteBuf.write(byteBuffer, 0, r);
 		tis.close();
-		return doGetTransformer(name, xsltBytes.toByteArray(), allowCache);
+		byte[] xsltBytes = xsltByteBuf.toByteArray();
+		TransformerPool tp = doGetTransformer(name, xsltBytes, allowCache);
+		if (xsltIn instanceof XsltInputStream)
+			((XsltInputStream) xsltIn).cacheDownloadResult(xsltBytes);
+		return tp;
 	}
 	
 	/**
@@ -922,7 +1055,11 @@ public class XsltUtils {
 		}
 	}
 	
-	private static HashMap transformerCache = new HashMap();
+	private static HashMap transformerCache = new LinkedHashMap(32, 0.75f, true) {
+		protected boolean removeEldestEntry(Entry eldest) {
+			return (this.size() > 256);
+		}
+	}; // no need for synchronized map, accessed only from synchronized code
 	
 	private static boolean transformerFactoryTestedForCaching = false;
 	private static TransformerFactory transformerFactory = null;
@@ -980,7 +1117,6 @@ public class XsltUtils {
 	 * @author sautter
 	 */
 	public static class TransformerPool extends Transformer {
-		
 		private byte[] stylesheet;
 		private Transformer model;
 		private HashSet usedElementNames = null;

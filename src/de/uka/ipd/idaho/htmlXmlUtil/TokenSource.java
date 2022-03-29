@@ -39,6 +39,7 @@ import java.util.Vector;
 
 import de.uka.ipd.idaho.htmlXmlUtil.exceptions.UnexpectedCharacterException;
 import de.uka.ipd.idaho.htmlXmlUtil.grammars.Grammar;
+import de.uka.ipd.idaho.htmlXmlUtil.grammars.Html;
 import de.uka.ipd.idaho.htmlXmlUtil.grammars.StandardGrammar;
 
 /**
@@ -143,28 +144,20 @@ public class TokenSource {
 		
 		//	refill buffer
 		while ((this.charSource.peek() != -1) && ((this.tokenBuffer.size() < this.tokenLookahead) || (awaitedEndTag != null))) {
-//			int tokenStart = this.charSource.readThusFar();
-//			String token = this.produceToken((awaitedEndTag == null) ? null : ("" + this.tagStart + "" + this.endTagMarker + "" + awaitedEndTag + "" + this.tagEnd));
 			Token token = this.produceToken((awaitedEndTag == null) ? null : ("" + this.tagStart + "" + this.endTagMarker + "" + awaitedEndTag + "" + this.tagEnd));
 			if (DEBUG) System.out.println("TokenSource got token: " + token);
-//			if (token.length() == 0)
 			if (token.value.length() == 0)
 				continue;
 			
 			//	tag token, might have to wait for end tag
-//			if (this.grammar.isTag(token)) {
 			if (this.grammar.isTag(token.value)) {
-//				if ((awaitedEndTag != null) && this.grammar.isEndTag(token) && awaitedEndTag.equalsIgnoreCase(this.grammar.getType(token)))
 				if ((awaitedEndTag != null) && this.grammar.isEndTag(token.value) && awaitedEndTag.equalsIgnoreCase(this.grammar.getType(token.value)))
 					awaitedEndTag = null;
-//				else if (this.grammar.waitForEndTag(token))
 				else if (this.grammar.waitForEndTag(token.value))
-//					awaitedEndTag = this.grammar.getType(token);
 					awaitedEndTag = this.grammar.getType(token.value);
 			}
 			
 			//	store token
-//			this.tokenBuffer.addElement(new Token(token, tokenStart));
 			this.tokenBuffer.addElement(token);
 		}
 		
@@ -259,7 +252,6 @@ public class TokenSource {
 		}
 		
 		//	finally ...
-//		return token.toString();
 		return new Token(token.toString(), tokenStart);
 	}
 	
@@ -383,7 +375,6 @@ public class TokenSource {
 		
 		//	finally ...
 		if (DEBUG) System.out.println("Tag full: " + tag.toString());
-//		return tag.toString();
 		return new Token(tag.toString(), tokenStart);
 	}
 	
@@ -439,7 +430,6 @@ public class TokenSource {
 		}
 		
 		//	finally ...
-//		return data.toString();
 		return new Token(data.toString(), tokenStart);
 	}
 	
@@ -524,35 +514,35 @@ public class TokenSource {
 	public static TokenSource getTokenSource(File file, Grammar grammar) throws IOException {
 		return getTokenSource(new FileInputStream(file), grammar);
 	}
-//	
-//	public static void main(String[] args) throws Exception {
-////		String html = "<?xml screw=it?><!element is><!element it><!element now><html>\r\n  <head><script>some & crap < with --> bad <!-- char > sequences</script></head>\r\n  <body test=test with space test2=with' width='100% hight=100%\">  Test  </body>\r\n<!-- comment -></html>";
-////		TokenSource ts = getTokenSource(html, new Html());
-////		while (ts.hasMoreTokens())
-////			System.out.println("Token: '" + ts.retrieveToken() + "'");
-////		TokenSource ts = getTokenSource((new URL("http://www.plantsystematics.org/taxpage/0/genus/Agave.html").openStream()), html);
-//		
-//		File f = new File("E:/Projektdaten/Antfiles/Species  Camponotus (Camponotus) vagus - AntWeb.raw.htm");
-//		InputStream in = new FileInputStream(f);
-//		TokenSource ts = getTokenSource(in, new Html());
-//		
-//		//	Tokenizes OK
-////		TokenSource ts = getTokenSource(new StringReader("<t a=\"value with \"invalid\" chars\">text</t>"), new StandardGrammar());
-//		//	Tokenizes OK
-////		TokenSource ts = getTokenSource(new StringReader("<t a=\"Stop-Bowitz, C. (1992) Polychetes pelagiques des Campagnes de \" L'ombango \" dans les eaux equatoriales et tropicales ouest-africaines. Editions de l'ORSTOM. Coll. Etudes et Theses. Paris, 115 pp.\">text</t>"), new StandardGrammar());
-//		//	Tokenizes BULLSHIT ==> TODO improve it !!!
-////		TokenSource ts = getTokenSource(new StringReader("<t a=\"Stop-Bowitz, C. (1992) Polychetes pelagiques des Campagnes de \" L'ombango \" dans les eaux equatoriales et tropicales ouest-africaines. Editions de l'ORSTOM. Coll. Etudes et Theses. Paris, 115 pp.\">text</t>"), new StandardGrammar());
-//		while (ts.hasMoreTokens()) {
-////			String token = ts.retrieveToken();
-//			Token token = ts.retrieveToken();
-////			if (!DEBUG) System.out.println("Token: '" + token + "'");
-//			if (!DEBUG) System.out.println("Token: '" + token.value + "'");
-////			if (html.isTag(token) && !html.isEndTag(token)) {
-////				TreeNodeAttributeSet tnas = TreeNodeAttributeSet.getTagAttributes(token, html);
-////				String[] ans = tnas.getAttributeNames();
-////				for (int a = 0; a < ans.length; a++)
-////					System.out.println(ans[a] + " = " + tnas.getAttribute(ans[a]));
-////			}
-//		}
-//	}
+	
+	public static void main(String[] args) throws Exception {
+//		String html = "<?xml screw=it?><!element is><!element it><!element now><html>\r\n  <head><script>some & crap < with --> bad <!-- char > sequences</script></head>\r\n  <body test=test with space test2=with' width='100% hight=100%\">  Test  </body>\r\n<!-- comment -></html>";
+//		TokenSource ts = getTokenSource(html, new Html());
+//		while (ts.hasMoreTokens())
+//			System.out.println("Token: '" + ts.retrieveToken() + "'");
+//		TokenSource ts = getTokenSource((new URL("http://www.plantsystematics.org/taxpage/0/genus/Agave.html").openStream()), html);
+		
+		File f = new File("E:/Projektdaten/Antfiles/Species  Camponotus (Camponotus) vagus - AntWeb.raw.htm");
+		InputStream in = new FileInputStream(f);
+		TokenSource ts = getTokenSource(in, new Html());
+		
+		//	Tokenizes OK
+//		TokenSource ts = getTokenSource(new StringReader("<t a=\"value with \"invalid\" chars\">text</t>"), new StandardGrammar());
+		//	Tokenizes OK
+//		TokenSource ts = getTokenSource(new StringReader("<t a=\"Stop-Bowitz, C. (1992) Polychetes pelagiques des Campagnes de \" L'ombango \" dans les eaux equatoriales et tropicales ouest-africaines. Editions de l'ORSTOM. Coll. Etudes et Theses. Paris, 115 pp.\">text</t>"), new StandardGrammar());
+		//	Tokenizes BULLSHIT ==> TODO improve it !!!
+//		TokenSource ts = getTokenSource(new StringReader("<t a=\"Stop-Bowitz, C. (1992) Polychetes pelagiques des Campagnes de \" L'ombango \" dans les eaux equatoriales et tropicales ouest-africaines. Editions de l'ORSTOM. Coll. Etudes et Theses. Paris, 115 pp.\">text</t>"), new StandardGrammar());
+		while (ts.hasMoreTokens()) {
+//			String token = ts.retrieveToken();
+			Token token = ts.retrieveToken();
+//			if (!DEBUG) System.out.println("Token: '" + token + "'");
+			if (!DEBUG) System.out.println("Token: '" + token.value + "'");
+//			if (html.isTag(token) && !html.isEndTag(token)) {
+//				TreeNodeAttributeSet tnas = TreeNodeAttributeSet.getTagAttributes(token, html);
+//				String[] ans = tnas.getAttributeNames();
+//				for (int a = 0; a < ans.length; a++)
+//					System.out.println(ans[a] + " = " + tnas.getAttribute(ans[a]));
+//			}
+		}
+	}
 }

@@ -486,7 +486,7 @@ public class Parser {
 					}
 					
 					//	create new node and link it to the tree
-					newNode = new TreeNode(this.node, grammar.translateTag(tagType), "", TreeNodeAttributeSet.getTagAttributes(token, grammar));
+					newNode = new TreeNode(this.node, grammar.translateTag(tagType), TreeNodeAttributeSet.getTagAttributes(token, grammar));
 					this.node.addChildNode(newNode);
 					
 					//	descend to new node if tag not singular, and write start tag

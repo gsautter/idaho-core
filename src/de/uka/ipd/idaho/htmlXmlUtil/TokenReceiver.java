@@ -50,7 +50,6 @@ import java.util.List;
  * @author sautter
  */
 public abstract class TokenReceiver {
-	
 	protected TokenReceiver() throws IOException {}
 	
 	/**	take over a token for storage
@@ -110,28 +109,14 @@ public abstract class TokenReceiver {
 //	}
 
 	private static class StreamTokenReceiver extends TokenReceiver {
-		
-		private OutputStream output;
 		private BufferedWriter writer;
-		
-		/**	Constructor
-		 * @param 	output	the OutputStream to write the tokens to
-		 * @throws 	IOException
-		 */
-		public StreamTokenReceiver(OutputStream output) throws IOException {
-			this.output = output;
-			this.writer = new BufferedWriter(new OutputStreamWriter(this.output));
+		StreamTokenReceiver(OutputStream output) throws IOException {
+			this.writer = new BufferedWriter(new OutputStreamWriter(output));
 		}
-		
-		/**	@see	TokenReceiver#storeToken(String)
-		 */
 		public void storeToken(String token, int treeDepth) throws IOException {
 			this.writer.write(token);
 			this.writer.newLine();
 		}
-		
-		/**	@see	TokenReceiver#close()
-		 */
 		public void close() throws IOException {
 			this.writer.flush();
 			this.writer.close();
@@ -139,29 +124,14 @@ public abstract class TokenReceiver {
 	}
 
 	private static class WriterTokenReceiver extends TokenReceiver {
-		
-//		private Writer output;
 		private BufferedWriter writer;
-		
-		/**	Constructor
-		 * @param 	output	the Writer to write the tokens to
-		 * @throws 	IOException
-		 */
-		public WriterTokenReceiver(Writer output) throws IOException {
-//			this.output = output;
-//			this.writer = new BufferedWriter(this.output);
+		WriterTokenReceiver(Writer output) throws IOException {
 			this.writer = ((output instanceof BufferedWriter) ? ((BufferedWriter) output) : new BufferedWriter(output));
 		}
-		
-		/**	@see	TokenReceiver#storeToken(String)
-		 */
 		public void storeToken(String token, int treeDepth) throws IOException {
 			this.writer.write(token);
 			this.writer.newLine();
 		}
-		
-		/**	@see	TokenReceiver#close()
-		 */
 		public void close() throws IOException {
 			this.writer.flush();
 			this.writer.close();
@@ -169,48 +139,24 @@ public abstract class TokenReceiver {
 	}
 
 	private static class StringTokenReceiver extends TokenReceiver {
-		
 		private StringBuffer output; 
-		
-		/**	Constructor
-		 * @param 	output	the StringBuffer to collect the tokens in
-		 * @throws 	IOException
-		 */
-		public StringTokenReceiver(StringBuffer output) throws IOException {
+		StringTokenReceiver(StringBuffer output) throws IOException {
 			this.output = output;
 		}
-		
-		/**	@see	TokenReceiver#storeToken(String)
-		 */
 		public void storeToken(String token, int treeDepth) throws IOException {
 			this.output.append(token + "\n");
 		}
-		
-		/**	@see	TokenReceiver#close()
-		 */
 		public void close() throws IOException {}
 	}
 
 	private static class ListTokenReceiver extends TokenReceiver {
-		
 		private List output; 
-		
-		/**	Constructor
-		 * @param 	output	the java.util.List to collect the tokens in
-		 * @throws 	IOException
-		 */
-		public ListTokenReceiver(List output) throws IOException {
+		ListTokenReceiver(List output) throws IOException {
 			this.output = output;
 		}
-		
-		/**	@see	TokenReceiver#storeToken(String)
-		 */
 		public void storeToken(String token, int treeDepth) throws IOException {
 			this.output.add(token);
 		}
-		
-		/**	@see	TokenReceiver#close()
-		 */
 		public void close() throws IOException {}
 	}
 }
