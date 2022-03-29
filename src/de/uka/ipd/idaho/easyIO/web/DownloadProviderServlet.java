@@ -34,6 +34,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.Writer;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -147,6 +148,25 @@ public class DownloadProviderServlet extends WebServlet {
 		if (sourceFile == null) {
 			response.sendError(HttpServletResponse.SC_NOT_FOUND);
 			return;
+		}
+		
+		//	check 'If-Modified-Since' header (also HTTP timestamp)
+		String ifModSince = request.getHeader("If-Modified-Since");
+		if (ifModSince != null) try {
+			long minModTime = MOD_TIME_DATE_FORMAT.parse(ifModSince).getTime();
+			if (sourceFile.lastModified() < (minModTime + 1000 /* account for plain second based Linux file timestamps */)) {
+				response.setHeader("Cache-Control", "no-cache");
+				response.setHeader("Last-Modified", MOD_TIME_DATE_FORMAT.format(new Date(sourceFile.lastModified())));
+				response.setStatus(HttpServletResponse.SC_NOT_MODIFIED);
+				Writer w = response.getWriter();
+				w.write("");
+				w.flush();
+				return;
+			}
+		}
+		catch (Exception e) {
+			System.out.println("Error checking 'If-Modified-Since' header: " + e.getMessage());
+			e.printStackTrace(System.out);
 		}
 		
 		//	set remaining headers
