@@ -45,10 +45,10 @@ import de.uka.ipd.idaho.htmlXmlUtil.grammars.Html;
 
 /**
  * HelpChapter loading its content on demand from a File or URL. This avoids
- * loading all content of a halp into memory on startup, thus preventing pages
+ * loading all content of a help into memory on startup, thus preventing pages
  * being loaded that may never be displayed. The first access to the page
  * represented by an instance of this class, however, might take longer, since
- * the page's content has to be loaded dynamically.
+ * the page content has to be loaded dynamically.
  * 
  * @author sautter
  */
@@ -61,9 +61,9 @@ public class DynamicHelpChapter extends HelpChapter {
 	
 	private StringBuffer contentBuffer = null;
 	
-	/**	Constructor
-	 * @param	title		the title for this help chapter
-	 * @param	contentUrl	the String representation of the URL to load the content form
+	/**	Constructor for instances obtaining the page content form a URL
+	 * @param title the title for this help chapter
+	 * @param contentUrl the String representation of the URL to load the content form
 	 */
 	public DynamicHelpChapter(String title, String contentUrl) {
 		super(title, ("<HTML>The content of this chapter will be loaded from<BR><TT>" + contentUrl + "</TT><BR>on demand.</HTML>"));
@@ -72,34 +72,36 @@ public class DynamicHelpChapter extends HelpChapter {
 		} catch (MalformedURLException mue) {}
 	}
 	
-	/**	Constructor
-	 * @param	title			the title for this help chapter
-	 * @param	contentFile		the file to load the content form
+	/**	Constructor for instances obtaining the page content form a file
+	 * @param title the title for this help chapter
+	 * @param contentFile the file to load the content form
 	 */
 	public DynamicHelpChapter(String title, File contentFile) {
 		super(title, ("<HTML>The content of this chapter will be loaded from<BR><TT>" + contentFile.getAbsolutePath() + "</TT><BR>on demand.</HTML>"));
 		this.contentFile = contentFile;
 	}
 	
-	/**	Constructor
-	 * @param	title		the title for this help chapter
-	 * @param	contentUrl	the URL to load the content form
+	/**	Constructor for instances obtaining the page content form a URL
+	 * @param title the title for this help chapter
+	 * @param contentUrl the URL to load the content form
 	 */
 	public DynamicHelpChapter(String title, URL contentUrl) {
 		super(title, ("<HTML>The content of this chapter will be loaded from<BR><TT>" + contentUrl.toString() + "</TT><BR>on demand.</HTML>"));
 		this.contentUrl = contentUrl;
 	}
 	
-	/**	Constructor
-	 * @param	title		the title for this help chapter
-	 * @param	contentReader	the reader to load the content form
+	/**	Constructor for instances obtaining the page content form an arbitrary
+	 * source through a reader.
+	 * @param title the title for this help chapter
+	 * @param contentReader the reader to load the content form
 	 */
 	public DynamicHelpChapter(String title, Reader contentReader) {
 		super(title, ("<HTML>The content of this chapter will be loaded on demand.</HTML>"));
 		this.contentReader = contentReader;
 	}
 	
-	/** @see de.uka.ipd.idaho.easyIO.help.HelpChapter#getTextReader()
+	/* (non-Javadoc)
+	 * @see de.uka.ipd.idaho.easyIO.help.HelpChapter#getTextReader()
 	 */
 	public Reader getTextReader() {
 		
