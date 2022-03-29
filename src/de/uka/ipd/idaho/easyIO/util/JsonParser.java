@@ -612,7 +612,7 @@ public class JsonParser {
 //		if (in instanceof PeekReader)
 //			return cropNext(((PeekReader) in), false, null);
 //		else return cropNext(new PeekReader(in, 5), false, null);
-		return cropNext(new JsonReader(in), false, null);
+		return cropNext(new JsonReader(in), false);
 	}
 	
 	/**
@@ -628,7 +628,7 @@ public class JsonParser {
 //		if (in instanceof PeekReader)
 //			cropNext(((PeekReader) in), false, receiver);
 //		else cropNext(new PeekReader(in, 5), false, receiver);
-		cropNext(new JsonReader(in), false, receiver);
+		streamNext(new JsonReader(in), false, receiver);
 	}
 	
 	private static class JsonReader extends PeekReader {
@@ -655,59 +655,77 @@ public class JsonParser {
 		}
 	}
 	
-	private static Object cropNext(JsonReader jr, boolean inArrayOrObject, JsonReceiver receiver) throws IOException {
+	private static Object cropNext(JsonReader jr, boolean inArrayOrObject) throws IOException {
 		jr.skipSpace();
 		if (jr.peek() == '"')
-			return cropString(jr, '"', true, receiver);
+			return cropString(jr, '"', true);
 		else if (jr.peek() == '\'')
-			return cropString(jr, '\'', true, receiver);
+			return cropString(jr, '\'', true);
 		else if (jr.peek() == '{')
-			return cropObject(jr, receiver);
+			return cropObject(jr);
 		else if (jr.peek() == '[')
-			return cropArray(jr, receiver);
+			return cropArray(jr);
 		else if ("-0123456789".indexOf(jr.peek()) != -1)
-			return cropNumber(jr, receiver);
+			return cropNumber(jr);
 		else if (jr.startsWith("null", false)) {
-			jr.skip(4);
-			if (receiver != null)
-				receiver.nullRead();
+			jr.skip("null".length());
 			return null;
 		}
 		else if (jr.startsWith("true", false)) {
-			jr.skip(4);
-			if (receiver != null)
-				receiver.booleanRead(true);
+			jr.skip("true".length());
 			return Boolean.TRUE;
 		}
 		else if (jr.startsWith("false", false)) {
-			jr.skip(5);
-			if (receiver != null)
-				receiver.booleanRead(false);
+			jr.skip("false".length());
 			return Boolean.FALSE;
 		}
 		else if (inArrayOrObject && ((jr.peek() == ',') || (jr.peek() == '}') || (jr.peek() == ']')))
 			return null;
 		else throw new UnexpectedCharacterException(((char) jr.peek()), jr.position, ("\", ', {, [, -, digits, " + (inArrayOrObject ? "comma, }, ], " : "" ) + "'true', 'false', or 'null'"));
 	}
+	private static void streamNext(JsonReader jr, boolean inArrayOrObject, JsonReceiver receiver) throws IOException {
+		jr.skipSpace();
+		if (jr.peek() == '"')
+			receiver.stringRead(cropString(jr, '"', true));
+		else if (jr.peek() == '\'')
+			receiver.stringRead(cropString(jr, '\'', true));
+		else if (jr.peek() == '{')
+			streamObject(jr, receiver);
+		else if (jr.peek() == '[')
+			streamArray(jr, receiver);
+		else if ("-0123456789".indexOf(jr.peek()) != -1)
+			receiver.numberRead(cropNumber(jr));
+		else if (jr.startsWith("null", false)) {
+			jr.skip("null".length());
+			receiver.nullRead();
+		}
+		else if (jr.startsWith("true", false)) {
+			jr.skip("true".length());
+			receiver.booleanRead(true);
+		}
+		else if (jr.startsWith("false", false)) {
+			jr.skip("false".length());
+			receiver.booleanRead(false);
+		}
+		else if (inArrayOrObject && ((jr.peek() == ',') || (jr.peek() == '}') || (jr.peek() == ']')))
+			return;
+		else throw new UnexpectedCharacterException(((char) jr.peek()), jr.position, ("\", ', {, [, -, digits, " + (inArrayOrObject ? "comma, }, ], " : "" ) + "'true', 'false', or 'null'"));
+	}
 	
-	private static Map cropObject(JsonReader jr, JsonReceiver receiver) throws IOException {
+	private static Map cropObject(JsonReader jr) throws IOException {
 		jr.read(); // consume opening curly bracket
 		jr.skipSpace();
-		if (receiver != null)
-			receiver.objectStarted();
-		Map map = new LinkedHashMap();
+		Map object = new LinkedHashMap();
 		while (jr.peek() != '}') {
 			if ((jr.peek() != '"') && (jr.peek() != '\''))
 				throw new UnexpectedCharacterException(((char) jr.peek()), jr.position, "\" or '");
-			String key = cropString(jr, ((char) jr.peek()), false, receiver);
+			String key = cropString(jr, ((char) jr.peek()), false);
 			jr.skipSpace();
-			if (receiver != null)
-				receiver.objectPropertyRead(key);
 			if (jr.peek() != ':')
 				throw new UnexpectedCharacterException(((char) jr.peek()), jr.position, ":");
 			jr.read(); // consume colon
-			Object value = cropNext(jr, true, receiver);
-			map.put(key, value);
+			Object value = cropNext(jr, true);
+			object.put(key, value);
 			jr.skipSpace();
 			if (jr.peek() == ',') {
 				jr.read(); // consume comma (also consumes a dangling one)
@@ -717,19 +735,40 @@ public class JsonParser {
 				throw new UnexpectedCharacterException(((char) jr.peek()), jr.position, "comma or }");
 		}
 		jr.read(); // consume closing curly bracket
-		if (receiver != null)
-			receiver.objectEnded();
-		return map;
+		return object;
+	}
+	private static void streamObject(JsonReader jr, JsonReceiver receiver) throws IOException {
+		jr.read(); // consume opening curly bracket
+		jr.skipSpace();
+		receiver.objectStarted();
+		while (jr.peek() != '}') {
+			if ((jr.peek() != '"') && (jr.peek() != '\''))
+				throw new UnexpectedCharacterException(((char) jr.peek()), jr.position, "\" or '");
+			String key = cropString(jr, ((char) jr.peek()), false);
+			jr.skipSpace();
+			receiver.objectPropertyRead(key);
+			if (jr.peek() != ':')
+				throw new UnexpectedCharacterException(((char) jr.peek()), jr.position, ":");
+			jr.read(); // consume colon
+			streamNext(jr, true, receiver);
+			jr.skipSpace();
+			if (jr.peek() == ',') {
+				jr.read(); // consume comma (also consumes a dangling one)
+				jr.skipSpace();
+			}
+			else if (jr.peek() != '}')
+				throw new UnexpectedCharacterException(((char) jr.peek()), jr.position, "comma or }");
+		}
+		jr.read(); // consume closing curly bracket
+		receiver.objectEnded();
 	}
 	
-	private static List cropArray(JsonReader jr, JsonReceiver receiver) throws IOException {
+	private static List cropArray(JsonReader jr) throws IOException {
 		jr.read(); // consume opening square bracket
 		jr.skipSpace();
-		if (receiver != null)
-			receiver.arrayStarted();
 		List array = new ArrayList();
 		while (jr.peek() != ']') {
-			Object value = cropNext(jr, true, receiver);
+			Object value = cropNext(jr, true);
 			array.add(value);
 			jr.skipSpace();
 			if (jr.peek() == ',') {
@@ -740,12 +779,27 @@ public class JsonParser {
 				throw new UnexpectedCharacterException(((char) jr.peek()), jr.position, "comma or ]");
 		}
 		jr.read(); // consume closing square bracket
-		if (receiver != null)
-			receiver.arrayEnded();
 		return array;
 	}
+	private static void streamArray(JsonReader jr, JsonReceiver receiver) throws IOException {
+		jr.read(); // consume opening square bracket
+		jr.skipSpace();
+		receiver.arrayStarted();
+		while (jr.peek() != ']') {
+			streamNext(jr, true, receiver);
+			jr.skipSpace();
+			if (jr.peek() == ',') {
+				jr.read(); // consume comma (also consumes a dangling one)
+				jr.skipSpace();
+			}
+			else if (jr.peek() != ']')
+				throw new UnexpectedCharacterException(((char) jr.peek()), jr.position, "comma or ]");
+		}
+		jr.read(); // consume closing square bracket
+		receiver.arrayEnded();
+	}
 	
-	private static String cropString(JsonReader jr, char quot, boolean isValue, JsonReceiver receiver) throws IOException {
+	private static String cropString(JsonReader jr, char quot, boolean isValue) throws IOException {
 		jr.read(); // consume opening quotes
 		boolean escaped = false;
 		StringBuffer string = new StringBuffer();
@@ -783,14 +837,10 @@ public class JsonParser {
 		}
 		if (quot != 0) // check whether or not string was properly terminated
 			throw new MissingCharacterException("" + quot);
-		if (isValue && (receiver != null)) {
-			receiver.stringRead(string.toString());
-			return null;
-		}
-		else return string.toString();
+		return string.toString();
 	}
 	
-	private static Number cropNumber(JsonReader jr, JsonReceiver receiver) throws IOException {
+	private static Number cropNumber(JsonReader jr) throws IOException {
 		StringBuffer numBuf = new StringBuffer();
 		if (jr.peek() == '-') {
 			numBuf.append((char) jr.peek());
@@ -833,12 +883,7 @@ public class JsonParser {
 		if ((fracBuf.length() + expBuf.length()) == 0)
 			num = new Long(numBuf.toString());
 		else num = new Double(numBuf.toString());
-		if (receiver == null)
-			return num;
-		else {
-			receiver.numberRead(num);
-			return null;
-		}
+		return num;
 	}
 	
 	//	!!! EXCLSIVELY FOR TEST PURPOSES !!!
