@@ -63,6 +63,8 @@ import javax.mail.internet.InternetAddress;
 import javax.mail.internet.MimeMessage;
 
 import de.uka.ipd.idaho.easyIO.settings.Settings;
+import de.uka.ipd.idaho.easyIO.sql.ResultSizeLimitationClause;
+import de.uka.ipd.idaho.easyIO.sql.SyntaxHelper;
 import de.uka.ipd.idaho.easyIO.sql.TableDefinition;
 import de.uka.ipd.idaho.stringUtils.StringUtils;
 
@@ -94,6 +96,31 @@ public class EasyIO {
 		 * @return an IO Provider configured based upon the argument settings
 		 */
 		public abstract IoProvider getIoProvider(Settings configuration);
+		
+		/**
+		 * Create an IO Provider configured based upon the specified settings.
+		 * If the argument requester is not null, its class loader will be used
+		 * to load any JDBC drivers or other required classes, rather than the
+		 * system class loader. This is helpful in situations where classes
+		 * loaded through subordinate class loaders need to contribute JARs the
+		 * system class loader does not have access to.
+		 * @param configuration the Properties object containing the settings
+		 * @param requester the object requesting the IO provider
+		 * @return an IO Provider configured based upon the argument settings
+		 */
+		public abstract IoProvider getIoProvider(Settings configuration, Object requester);
+		
+		/**
+		 * Create an IO Provider configured based upon the specified settings.
+		 * If the argument class loader is not null, it will be used to load
+		 * any JDBC drivers or other required classes, rather than the system
+		 * class loader. This is helpful in situations where classes loaded
+		 * through subordinate class loaders need to contribute JARs the system
+		 * class loader does not have access to.
+		 * @param configuration the Properties object containing the settings
+		 * @return an IO Provider configured based upon the argument settings
+		 */
+		public abstract IoProvider getIoProvider(Settings configuration, ClassLoader classLoader);
 	}
 	
 	/**
@@ -175,13 +202,46 @@ public class EasyIO {
 	 */
 	public static IoProvider getIoProvider(Settings configuration) {
 		if (ioProviderFactory == null)
-			return ((configuration == null) ? null : new StandardIoProvider(configuration));
+			return getIoProvider(configuration, null);
 		else return ioProviderFactory.getIoProvider(configuration);
 	}
 	
+	/**
+	 * Create an IO Provider configured based upon the specified settings.
+	 * If the argument requester is not null, its class loader will be used
+	 * to load any JDBC drivers or other required classes, rather than the
+	 * system class loader. This is helpful in situations where classes
+	 * loaded through subordinate class loaders need to contribute JARs the
+	 * system class loader does not have access to.
+	 * @param configuration the Properties object containing the settings
+	 * @param requester the object requesting the IO provider
+	 * @return an IO Provider configured based upon the argument settings
+	 */
+	public static IoProvider getIoProvider(Settings configuration, Object requester) {
+		if (ioProviderFactory == null)
+			return getIoProvider(configuration, ((requester == null) ? null : requester.getClass().getClassLoader()));
+		else return ioProviderFactory.getIoProvider(configuration, requester);
+	}
+	
+	/**
+	 * Create an IO Provider configured based upon the specified settings.
+	 * If the argument class loader is not null, it will be used to load
+	 * any JDBC drivers or other required classes, rather than the system
+	 * class loader. This is helpful in situations where classes loaded
+	 * through subordinate class loaders need to contribute JARs the system
+	 * class loader does not have access to.
+	 * @param configuration the Properties object containing the settings
+	 * @return an IO Provider configured based upon the argument settings
+	 */
+	public static IoProvider getIoProvider(Settings configuration, ClassLoader classLoader) {
+		if (ioProviderFactory == null)
+			return ((configuration == null) ? null : new StandardIoProvider(configuration, classLoader));
+		else return ioProviderFactory.getIoProvider(configuration, classLoader);
+	}
+	
 	private static class StandardIoProvider implements IoProvider {
-		
 		private Settings configuration;
+		private ClassLoader classLoader;
 		
 		private boolean wwwValid = false;
 		private boolean smtpValid = false;
@@ -230,10 +290,9 @@ public class EasyIO {
 		 * @param configuration the parameters for the StandardIoProvider,
 		 *            contained in a Settings
 		 */
-		StandardIoProvider(Settings configuration) {
-			
-			//	get configuration
+		StandardIoProvider(Settings configuration, ClassLoader classLoader) {
 			this.configuration = configuration;
+			this.classLoader = classLoader;
 			
 			//	initialize www io
 			this.wwwProxyNeeded = "YES".equalsIgnoreCase(this.configuration.getSetting("WWW.UseProxy"));
@@ -300,7 +359,7 @@ public class EasyIO {
 			
 			//	load product specific database features
 			if (this.jdbcValid)
-				this.jdbcSyntax = TableDefinition.loadJdbcSyntax(this.jdbcDriverClassName);
+				this.jdbcSyntax = SyntaxHelper.loadJdbcSyntax(this.jdbcDriverClassName);
 		}
 		
 		/* (non-Javadoc)
@@ -328,7 +387,7 @@ public class EasyIO {
 			try {
 				
 				//	make sure JDBC driver loaded and registered
-				ensureJdbcDriverLoaded(this.jdbcDriverClassName, this.jdbcDriverClassPath);
+				ensureJdbcDriverLoaded(this.jdbcDriverClassName, this.jdbcDriverClassPath, this.classLoader);
 				
 				//	using user/password authentication
 				String url;
@@ -396,7 +455,7 @@ public class EasyIO {
 		}
 		
 		private static HashSet loadedJdbcDriverClasses = new HashSet(4);
-		private static synchronized void ensureJdbcDriverLoaded(String className, String classPath) throws Exception {
+		private static synchronized void ensureJdbcDriverLoaded(String className, String classPath, ClassLoader classLoader) throws Exception {
 			classPath = classPath.trim();
 			String classKey = (className + "@" + classPath);
 			if (loadedJdbcDriverClasses.contains(classKey)) {
@@ -419,13 +478,12 @@ public class EasyIO {
 			}
 			
 			//	create class loader
-			ClassLoader classLoader;
-			if (urlList.isEmpty())
-				classLoader = StandardIoProvider.class.getClassLoader();
-			else classLoader = new URLClassLoader(((URL[]) urlList.toArray(new URL[urlList.size()])), StandardIoProvider.class.getClassLoader());
+			ClassLoader driverClassLoader = ((classLoader == null) ? StandardIoProvider.class.getClassLoader() : classLoader);
+			if (urlList.size() != 0)
+				driverClassLoader = new URLClassLoader(((URL[]) urlList.toArray(new URL[urlList.size()])), driverClassLoader);
 			
 			//	load JDBC driver
-			Class driverClass = classLoader.loadClass(className);
+			Class driverClass = driverClassLoader.loadClass(className);
 			System.out.println("StandardIoProvider: got JDBC driver class '" + className + "'");
 			
 			//	wrap and register driver instance
@@ -647,9 +705,9 @@ public class EasyIO {
 			//	create primary key constraint
 			String constraintName = (table + "_PK_" + column);
 			String createQuery = this.jdbcSyntax.getProperty(TableDefinition.SYNTAX_CREATE_PRIMARY_KEY);
-			createQuery = TableDefinition.replaceVariable(createQuery, TableDefinition.SYNTAX_KEY_CONSTRAINT_NAME_VARIABLE, constraintName);
-			createQuery = TableDefinition.replaceVariable(createQuery, TableDefinition.SYNTAX_KEYED_TABLE_VARIABLE, table);
-			createQuery = TableDefinition.replaceVariable(createQuery, TableDefinition.SYNTAX_KEYED_COLUMN_VARIABLE, column);
+			createQuery = SyntaxHelper.replaceVariable(createQuery, TableDefinition.SYNTAX_KEY_CONSTRAINT_NAME_VARIABLE, constraintName);
+			createQuery = SyntaxHelper.replaceVariable(createQuery, TableDefinition.SYNTAX_KEYED_TABLE_VARIABLE, table);
+			createQuery = SyntaxHelper.replaceVariable(createQuery, TableDefinition.SYNTAX_KEYED_COLUMN_VARIABLE, column);
 			try {
 				System.out.println("StandardIoProvider: creating primary key constraint\n  " + createQuery);
 				this.executeUpdateQuery(createQuery);
@@ -705,11 +763,11 @@ public class EasyIO {
 			//	create foreign key constraint
 			String constraintName = (table + "_" + column + "_FK_" + refTable + "_" + refColumn);
 			String createQuery = this.jdbcSyntax.getProperty(TableDefinition.SYNTAX_CREATE_FOREIGN_KEY);
-			createQuery = TableDefinition.replaceVariable(createQuery, TableDefinition.SYNTAX_KEY_CONSTRAINT_NAME_VARIABLE, constraintName);
-			createQuery = TableDefinition.replaceVariable(createQuery, TableDefinition.SYNTAX_KEYED_TABLE_VARIABLE, table);
-			createQuery = TableDefinition.replaceVariable(createQuery, TableDefinition.SYNTAX_KEYED_COLUMN_VARIABLE, column);
-			createQuery = TableDefinition.replaceVariable(createQuery, TableDefinition.SYNTAX_REFERENCED_TABLE_VARIABLE, refTable);
-			createQuery = TableDefinition.replaceVariable(createQuery, TableDefinition.SYNTAX_REFERENCED_COLUMN_VARIABLE, refColumn);
+			createQuery = SyntaxHelper.replaceVariable(createQuery, TableDefinition.SYNTAX_KEY_CONSTRAINT_NAME_VARIABLE, constraintName);
+			createQuery = SyntaxHelper.replaceVariable(createQuery, TableDefinition.SYNTAX_KEYED_TABLE_VARIABLE, table);
+			createQuery = SyntaxHelper.replaceVariable(createQuery, TableDefinition.SYNTAX_KEYED_COLUMN_VARIABLE, column);
+			createQuery = SyntaxHelper.replaceVariable(createQuery, TableDefinition.SYNTAX_REFERENCED_TABLE_VARIABLE, refTable);
+			createQuery = SyntaxHelper.replaceVariable(createQuery, TableDefinition.SYNTAX_REFERENCED_COLUMN_VARIABLE, refColumn);
 			try {
 				System.out.println("StandardIoProvider: creating foreign key constraint\n  " + createQuery);
 				this.executeUpdateQuery(createQuery);
@@ -783,9 +841,9 @@ public class EasyIO {
 				indexColumns.append(columns[c]);
 			}
 			String createQuery = this.jdbcSyntax.getProperty(TableDefinition.SYNTAX_CREATE_INDEX);
-			createQuery = TableDefinition.replaceVariable(createQuery, TableDefinition.SYNTAX_INDEX_NAME_VARIABLE, indexName.toString());
-			createQuery = TableDefinition.replaceVariable(createQuery, TableDefinition.SYNTAX_INDEXED_TABLE_VARIABLE, table);
-			createQuery = TableDefinition.replaceVariable(createQuery, TableDefinition.SYNTAX_INDEXED_COLUMNS_VARIABLE, indexColumns.toString());
+			createQuery = SyntaxHelper.replaceVariable(createQuery, TableDefinition.SYNTAX_INDEX_NAME_VARIABLE, indexName.toString());
+			createQuery = SyntaxHelper.replaceVariable(createQuery, TableDefinition.SYNTAX_INDEXED_TABLE_VARIABLE, table);
+			createQuery = SyntaxHelper.replaceVariable(createQuery, TableDefinition.SYNTAX_INDEXED_COLUMNS_VARIABLE, indexColumns.toString());
 			try {
 				System.out.println("StandardIoProvider: creating index\n  " + createQuery);
 				this.executeUpdateQuery(createQuery);
@@ -822,6 +880,13 @@ public class EasyIO {
 				return true;
 			
 			return false;
+		}
+		
+		/* (non-Javadoc)
+		 * @see de.uka.ipd.idaho.easyIO.IoProvider#getSelectResultSizeLimit(int, int)
+		 */
+		public ResultSizeLimitationClause getSelectResultSizeLimit(int offset, int limit) {
+			return ResultSizeLimitationClause.createResultSizeLimitationClause(offset, limit, this.jdbcSyntax);
 		}
 		
 		/**	execute a select query
@@ -955,7 +1020,7 @@ public class EasyIO {
 		/* (non-Javadoc)
 		 * @see de.uka.ipd.idaho.easyIO.IoProvider#getJdbcMetaData()
 		 */
-		public Properties getJdbcMetaData() {
+		public Properties getJdbcMetadata() {
 			if (!this.isJdbcAvailable())
 				return null;
 			Properties jmd = new Properties();

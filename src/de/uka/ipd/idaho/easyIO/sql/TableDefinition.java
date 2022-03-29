@@ -28,13 +28,9 @@
 package de.uka.ipd.idaho.easyIO.sql;
 
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.Properties;
 import java.util.Vector;
 
@@ -396,17 +392,17 @@ public class TableDefinition {
 	/**
 	 * Produce a CREATE TABLE query to create the SQT table. The argument
 	 * IoProvider supplies product specific database properties.
-	 * @param syntax a Properties object holding templates that mask product
+	 * @param sqlSyntax a Properties object holding templates that mask product
 	 *            specific database features
 	 * @return a CREATE TABLE query to create the SQT table
 	 */
-	public String getCreationQuery(Properties syntax) {
+	public String getCreationQuery(Properties sqlSyntax) {
 		StringBuffer columnString = new StringBuffer("CREATE TABLE " + this.tableName + " (");
 		for (int c = 0; c < this.columns.size(); c++) {
 			if (c != 0)
 				columnString.append(", ");
 			TableColumnDefinition tcd = ((TableColumnDefinition) this.columns.get(c));
-			columnString.append(tcd.getCreationQuery(syntax));
+			columnString.append(tcd.getCreationQuery(sqlSyntax));
 		}
 		columnString.append(");");
 		return columnString.toString();
@@ -418,20 +414,20 @@ public class TableDefinition {
 	 * add or widen them. The argument IoProvider supplies product specific
 	 * database properties.
 	 * @param oldDef the old TableDefinition according to the existing SQL table
-	 * @param syntax a Properties object holding templates that mask product
+	 * @param sqlSyntax a Properties object holding templates that mask product
 	 *            specific database features
 	 * @return a set of ALTER TABLE queries to update the SQL table
 	 */
-	public String[] getUpdateQueries(TableDefinition oldDef, Properties syntax) {
+	public String[] getUpdateQueries(TableDefinition oldDef, Properties sqlSyntax) {
 		ArrayList queries = new ArrayList();
 		if (oldDef == null)
-			queries.add(this.getCreationQuery(syntax));
+			queries.add(this.getCreationQuery(sqlSyntax));
 		else if (this.tableName.equalsIgnoreCase(oldDef.tableName) && !this.equals(oldDef)) {
 			for (int c = 0; c < this.columns.size(); c++) {
 				TableColumnDefinition tcd = ((TableColumnDefinition) this.columns.get(c));
 				TableColumnDefinition oldTcd = oldDef.getColumn(tcd.getColumnName());
 				if (!tcd.equals(oldTcd)) {
-					String query = tcd.getUpdateQuery(oldTcd, syntax);
+					String query = tcd.getUpdateQuery(oldTcd, sqlSyntax);
 					if (query != null)
 						queries.add("ALTER TABLE " + this.tableName + " " + query + ";");
 				}
@@ -527,71 +523,5 @@ public class TableDefinition {
 			assembler.append("  " + ((TableColumnDefinition) this.columns.get(c)).toXML() + "\n");
 		assembler.append("</" + TABLE_TAG + ">\n");
 		return assembler.toString();
-	}
-	
-	/**
-	 * Load the product specific syntax resource for a given database system,
-	 * identified by the class name of the JDBC driver. If the syntax resource
-	 * is not found, this method returns an empty Properties object, but never
-	 * null.
-	 * @param jdbcDriverClassName the class name of the JDBC driver
-	 * @return the product specific syntax resource
-	 */
-	public static synchronized Properties loadJdbcSyntax(String jdbcDriverClassName) {
-		if (jdbcSyntaxFileMappings == null) try {
-			jdbcSyntaxFileMappings = loadProperties("JdbcDriversToSyntaxResources.txt", false);
-			jdbcSyntaxDefault = loadProperties("default.syntax.txt", false);
-		}
-		catch (IOException ioe) {
-			System.out.println("TableDefinition: could not load JDBC syntax file mappings: " + ioe.getMessage());
-			ioe.printStackTrace(System.out);
-		}
-		String jdbcSyntaxFileName = jdbcSyntaxFileMappings.getProperty(jdbcDriverClassName);
-		try {
-			return loadProperties(jdbcSyntaxFileName, true);
-		}
-		catch (IOException ioe) {
-			System.out.println("TableDefinition: could not load JDBC syntax file: " + ioe.getMessage());
-			ioe.printStackTrace(System.out);
-			return new Properties(jdbcSyntaxDefault);
-		}
-	}
-	private static Properties loadProperties(String name, boolean setDefaults) throws IOException {
-		String tdcrn = TableDefinition.class.getName().replaceAll("\\.", "/");
-		Properties props = new Properties(setDefaults ? jdbcSyntaxDefault : null);
-		InputStream propIn = TableDefinition.class.getClassLoader().getResourceAsStream(tdcrn.substring(0, tdcrn.lastIndexOf('/')) + "/" + name);
-		if (propIn == null)
-			return props;
-		BufferedReader propBr = new BufferedReader(new InputStreamReader(propIn));
-		String prop;
-		while ((prop = propBr.readLine()) != null) {
-			prop = prop.trim();
-			if ((prop.length() == 0) || prop.startsWith("//"))
-				continue;
-			String[] propParts = prop.split("\\s*\\=\\s*", 2);
-			if (propParts.length == 2)
-				props.setProperty(propParts[0], propParts[1]);
-		}
-		propBr.close();
-		return props;
-	}
-	private static Properties jdbcSyntaxFileMappings = null;
-	private static Properties jdbcSyntaxDefault = null;
-	
-	/**
-	 * Replace a variable in a template with its value. The value must not
-	 * include the variable.
-	 * @param template the template
-	 * @param variable the variable to replace
-	 * @param value the value of the variable
-	 * @return the template with the variable replaced
-	 */
-	public static String replaceVariable(String template, String variable, String value) {
-		if (!variable.startsWith("@"))
-			variable = ("@" + variable);
-		int offset;
-		while ((offset = template.indexOf(variable)) != -1)
-			template = template.substring(0, offset) + value + template.substring(offset + variable.length());
-		return template;
 	}
 }

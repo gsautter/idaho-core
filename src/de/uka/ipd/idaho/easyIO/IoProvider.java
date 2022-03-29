@@ -31,6 +31,7 @@ package de.uka.ipd.idaho.easyIO;
 import java.sql.SQLException;
 import java.util.Properties;
 
+import de.uka.ipd.idaho.easyIO.sql.ResultSizeLimitationClause;
 import de.uka.ipd.idaho.easyIO.sql.TableDefinition;
 
 ///**
@@ -294,6 +295,15 @@ public interface IoProvider {
 //	public abstract String getDropIndexPart(String colName, String indexType);// (indexName = colName+indexType+'Index');
 	
 	/**
+	 * Create a query result size limitation clause using the configured SQL
+	 * syntax dialect.
+	 * @param offset the offset to use
+	 * @param limit the number of rows to return
+	 * @return the result size limitation clause
+	 */
+	public abstract ResultSizeLimitationClause getSelectResultSizeLimit(int offset, int limit);
+	
+	/**
 	 * Execute a select query on the centrally configured database.
 	 * @param query the query to execute
 	 * @param copy copy the result of the query to the result object (faster in
@@ -333,7 +343,7 @@ public interface IoProvider {
 	 * is undefined.
 	 * @return a properties object holding the JDBC meta data as key/value pairs
 	 */
-	public abstract Properties getJdbcMetaData();
+	public abstract Properties getJdbcMetadata();
 	
 	/**
 	 * Close the IoProvider, i.e., cloase all embedded connections. After

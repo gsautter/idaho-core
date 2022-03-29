@@ -47,7 +47,6 @@ import java.util.ArrayList;
  * @author sautter
  */
 public class SqlQueryResult {
-	
 	private static final String noLengthTypes = ";bigint;bit;datetime;float;image;int;money;ntext;real;smalldatetime;smallint;smallmoney;text;timestamp;tinyint;";
 	
 	//	query execution data

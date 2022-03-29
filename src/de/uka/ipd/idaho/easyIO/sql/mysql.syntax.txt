@@ -1,3 +1,7 @@
 WIDEN_COLUMN = CHANGE @colName @colName @dataType(@length)
 
 CREATE_INDEX = CREATE INDEX @indexName ON @table (@columns) USING BTREE
+
+OFFSET_CLAUSE = OFFSET @offset
+LIMIT_CLAUSE = LIMIT @limit
+OFFSET_LIMIT_CLAUSE = OFFSET @offset LIMIT @limit

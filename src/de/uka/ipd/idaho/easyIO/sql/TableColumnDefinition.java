@@ -37,7 +37,6 @@ import java.util.Properties;
  * @author sautter
  */
 public class TableColumnDefinition implements Comparable {
-	
 	protected String columnName;
 	protected String dataType;
 	protected int length;
@@ -122,28 +121,28 @@ public class TableColumnDefinition implements Comparable {
 	}
 	
 	/**
-	 * create an ALTER TABLE query to update the column in the SQT table
-	 * @param oldDef the old TableColumnDefinition according to the existing SQL
+	 * Create an ALTER TABLE query to update the column in a database table.
+	 * The returned query never shortens columns, only adds or extends them.
+	 * @param oldDef the old TableColumnDefinition according to the existing
 	 *            table
-	 * @param syntax a Properties object holding templates that mask product
+	 * @param sqlSyntax a Properties object holding templates that mask product
 	 *            specific database features
-	 * @return an ALTER TABLE query to update the column in the SQT table Note:
-	 *         The query shorten columns, only add or extend them
+	 * @return an ALTER TABLE query to update the column in the database table
 	 */
-	public String getUpdateQuery(TableColumnDefinition oldDef, Properties syntax) {
+	public String getUpdateQuery(TableColumnDefinition oldDef, Properties sqlSyntax) {
 		if ((oldDef == null) || !this.columnName.equalsIgnoreCase(oldDef.columnName))
-			return this.replaceVariables(syntax.getProperty((this.length > 0) ? TableDefinition.SYNTAX_ADD_COLUMN_VAR_LENGTH : TableDefinition.SYNTAX_ADD_COLUMN_FIX_LENGTH));
+			return this.replaceVariables(sqlSyntax.getProperty((this.length > 0) ? TableDefinition.SYNTAX_ADD_COLUMN_VAR_LENGTH : TableDefinition.SYNTAX_ADD_COLUMN_FIX_LENGTH));
 		if (this.dataType.equalsIgnoreCase(oldDef.dataType) && (this.length > oldDef.length))
-			return this.replaceVariables(syntax.getProperty(TableDefinition.SYNTAX_WIDEN_COLUMN));
+			return this.replaceVariables(sqlSyntax.getProperty(TableDefinition.SYNTAX_WIDEN_COLUMN));
 		else return null;
 	}
 	
 	private String replaceVariables(String template) {
-		template = TableDefinition.replaceVariable(template, TableDefinition.SYNTAX_COLUMN_NAME_VARIABLE, this.columnName);
-		template = TableDefinition.replaceVariable(template, TableDefinition.SYNTAX_DATA_TYPE_VARIABLE, this.dataType);
-		template = TableDefinition.replaceVariable(template, TableDefinition.SYNTAX_DEFAULT_VALUE_VARIABLE, (TableDefinition.isEscapedType(this.dataType) ? "''" : "0"));
+		template = SyntaxHelper.replaceVariable(template, TableDefinition.SYNTAX_COLUMN_NAME_VARIABLE, this.columnName);
+		template = SyntaxHelper.replaceVariable(template, TableDefinition.SYNTAX_DATA_TYPE_VARIABLE, this.dataType);
+		template = SyntaxHelper.replaceVariable(template, TableDefinition.SYNTAX_DEFAULT_VALUE_VARIABLE, (TableDefinition.isEscapedType(this.dataType) ? "''" : "0"));
 		if (this.length > 0)
-			template = TableDefinition.replaceVariable(template, TableDefinition.SYNTAX_COLUMN_LENGTH_VARIABLE, ("" + this.length));
+			template = SyntaxHelper.replaceVariable(template, TableDefinition.SYNTAX_COLUMN_LENGTH_VARIABLE, ("" + this.length));
 		return template;
 	}
 	
