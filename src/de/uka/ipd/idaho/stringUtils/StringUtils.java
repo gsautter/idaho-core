@@ -100,11 +100,62 @@ public class StringUtils {
 \u2028 --> line separator
 \u2029 --> paragraph separator
 \u202F --> narrow non-breaking space
-\u205F --> medium match space
+\u205F --> medium math space
 \u3000 --> ideographic space
 	 */
 	/** string constant containing all Unicode spaces */
 	public static final String SPACES = "\u0020\u0085\u00A0\u1680\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200A\u2028\u2029\u202F\u205F\u3000";
+	
+	/*
+\u200B --> zero-width space
+\u200C --> zero-width non-joiner
+\u200D --> zero-width joiner
+\u200E --> left-to-right mark
+\u200F --> right-to-left mark
+\u202A --> left-to-right embedding
+\u202B --> right-to-left embedding
+\u202C --> pop directional formatting
+\u202D --> left-to-right override
+\u202E --> right-to-left override
+\u2060 --> word joiner
+\u2061 --> function application
+\u2062 --> invisible times
+\u2063 --> invisible separator
+\u2064 --> invisible plus
+\u2065 --> <unnamed invisible character>
+\u2066 --> left-to-right isolate
+\u2067 --> right-to-left isolate
+\u2068 --> first strong isolate
+\u2069 --> pop directional isolate
+\u206A --> inhibit symmetric swapping
+\u206B --> activate symmetric swapping
+\u206C --> inhibit Arabic form shaping
+\u206D --> activate Arabic form shaping
+\u206E --> national digit shapes
+\u206F --> nominal digit shapes
+\uFE00 --> variation selector 1
+\uFE01 --> variation selector 2
+\uFE02 --> variation selector 3
+\uFE03 --> variation selector 4
+\uFE04 --> variation selector 5
+\uFE05 --> variation selector 6
+\uFE06 --> variation selector 7
+\uFE07 --> variation selector 8
+\uFE08 --> variation selector 9
+\uFE09 --> variation selector 10
+\uFE0A --> variation selector 11
+\uFE0B --> variation selector 12
+\uFE0C --> variation selector 13
+\uFE0D --> variation selector 14
+\uFE0E --> variation selector 15
+\uFE0F --> variation selector 16
+\uFEFF --> zero-width non-breaking space
+\uFFF9 --> interlinear annotation anchor
+\uFFFA --> interlinear annotation separator
+\uFFFB --> interlinear annotation terminator
+	 */
+	/** string constant containing all invisible Unicode characters, like zero-width spaces ad word joiners */
+	public static final String INVISIBLE_CHARACRES = "\u200B\u200C\u200D\u200E\u200F\u202A\u202B\u202C\u202D\u202E\u2060\u2061\u2062\u2063\u2064\u2065\u2066\u2067\u2068\u2069\u206A\u206B\u206C\u206D\u206E\u206F\uFE00\uFE01\uFE02\uFE03\uFE04\uFE05\uFE06\uFE07\uFE08\uFE09\uFE0A\uFE0B\uFE0C\uFE0D\uFE0E\uFE0F\uFEFF\uFFF9\uFFFA\uFFFB";
 	
 	/*
 - --> ASCII dash/hyphen/minus
@@ -972,7 +1023,7 @@ public class StringUtils {
 
 	/**	check if a String has a space between the previous String and itself
 	 * @param	string	the String to be tested
-	 * @return true if and only if the specified Stringe has a space between the previous String and itself
+	 * @return true if and only if the specified String has a space between the previous String and itself
 	 */
 	public static boolean spaceBefore(CharSequence string) {
 		if ((string == null) || (string.length() == 0))
@@ -1663,6 +1714,8 @@ public class StringUtils {
 			return '"';
 		if (SINGLE_QUOTES.indexOf(ch) != -1)
 			return '\'';
+		if (INVISIBLE_CHARACRES.indexOf(ch) != -1)
+			return ' ';
 		if (!initCharacters())
 			return ch;
 		if (selfBasedChars.contains(new Character(ch)))
@@ -1718,8 +1771,8 @@ public class StringUtils {
 			return "-";
 		if (DOUBLE_QUOTES.indexOf(ch) != -1)
 			return "\"";
-		if (SINGLE_QUOTES.indexOf(ch) != -1)
-			return "'";
+		if (INVISIBLE_CHARACRES.indexOf(ch) != -1)
+			return "";
 		if (!initCharacters())
 			return ("" + ch);
 		if (ligatureMappings.containsKey(new Character(ch)))
@@ -1884,6 +1937,31 @@ public class StringUtils {
 	}
 	
 	/**
+	 * Normalize a the spaces in a string. This method replaces any visible
+	 * spaces with the <code>0x0020</code> ASCII space, and also removes any
+	 * invisible characters (e.g. zero-width spaces). However, this method is
+	 * <b>not</b> a replacement for <code>java.lang.String.trim()</code>, as it
+	 * does not remove any leading or tailing spaces altogether.
+	 * @param str the string to space-normalize
+	 * @return the space-normalized string
+	 */
+	public static String normalizeSpaces(String str) {
+		if (str == null)
+			return null;
+		StringBuffer nStr = new StringBuffer();
+		for (int c = 0; c < str.length(); c++) {
+			char ch = str.charAt(c);
+			if (ch <= ' ')
+				nStr.append(' ');
+			else if (SPACES.indexOf(ch) != -1)
+				nStr.append(' ');
+			else if (INVISIBLE_CHARACRES.indexOf(ch) != -1) { /* simply ignore invisible characters */ }
+			else nStr.append(ch);
+		}
+		return nStr.toString();
+	}
+	
+	/**
 	 * Normalize a whole string. This method is essentially a shorthand for
 	 * calling <code>getNormalForm()</code> on each individual character in the
 	 * argument string. On top of that, this method also normalizes any spaces.
@@ -1898,10 +1976,13 @@ public class StringUtils {
 			char ch = str.charAt(c);
 			if (DASHES.indexOf(ch) != -1)
 				nStr.append('-');
-			else if (ch <= ' ')
+			else if (ch <= ' ') // <= 0x20
 				nStr.append(' ');
 			else if (SPACES.indexOf(ch) != -1)
 				nStr.append(' ');
+			else if ((0x0300 <= ch) && (ch <= 0x036F)) { /* simply ignore combining diacritic markers (we're here to get rid of those) */ }
+			else if (ch == 0x7F) { /* ignore 'delete' character */ }
+			else if (INVISIBLE_CHARACRES.indexOf(ch) != -1) { /* simply ignore invisible characters */ }
 			else nStr.append(getNormalForm(ch));
 		}
 		return nStr.toString();
@@ -2529,7 +2610,6 @@ public class StringUtils {
 	 * Note: a threshold of 0 will compute the entire editing distance, regardless of its value
 	 */
 	public static int getLevenshteinDistance(String string1, String string2, int threshold, boolean caseSensitive, int insertCost, int deleteCost) {
-		
 		int[][] distanceMatrix; // matrix
 		int length1; // length of s
 		int length2; // length of t
@@ -2547,7 +2627,8 @@ public class StringUtils {
 		minLength = ((length1 > length2) ? length2 : length1);
 		
 		//	Step 1.5
-		if ((Math.abs(length1 - length2) > threshold) && (threshold > 0)) return (threshold + 1);
+		if ((Math.abs(length1 - length2) > threshold) && (threshold > 0))
+			return (threshold + 1);
 		
 		// Step 2
 		distanceMatrix = new int[length1 + 1][length2 + 1];
@@ -2574,11 +2655,12 @@ public class StringUtils {
 			//	compute new corner
 			cost = getCost(string1.charAt(limit - 1), string2.charAt(limit - 1), substitutionFactor, caseSensitive);
 			distance = min3(distanceMatrix[limit - 1][limit] + deleteCost, distanceMatrix[limit][limit - 1] + insertCost, distanceMatrix[limit - 1][limit - 1] + cost);
-			if ((distance > threshold) && (threshold > 0)) return (threshold + 1);
+			if ((distance > threshold) && (threshold > 0))
+				return (threshold + 1);
 			distanceMatrix[limit][limit] = distance;
 			
 			//	increment limit
-			limit ++;
+			limit++;
 		}
 		
 		//	Step 2.5 (compute remaining columns)
@@ -2591,10 +2673,11 @@ public class StringUtils {
 				distance = min3(distanceMatrix[limit - 1][l] + deleteCost, distanceMatrix[limit][l - 1] + insertCost, distanceMatrix[limit - 1][l - 1] + cost);
 				distanceMatrix[limit][l] = distance;
 			}
-			if ((distance > threshold) && (threshold > 0)) return (threshold + 1);
+			if ((distance > threshold) && (threshold > 0))
+				return (threshold + 1);
 			
 			//	increment limit
-			limit ++;
+			limit++;
 		}
 		
 		//	Step 2.5b (compute remaining rows)
@@ -2607,10 +2690,11 @@ public class StringUtils {
 				distance = min3(distanceMatrix[c - 1][limit] + deleteCost, distanceMatrix[c][limit - 1] + insertCost, distanceMatrix[c - 1][limit - 1] + cost);
 				distanceMatrix[c][limit] = distance;
 			}
-			if ((distance > threshold) && (threshold > 0)) return (threshold + 1);
+			if ((distance > threshold) && (threshold > 0))
+				return (threshold + 1);
 			
 			//	increment limit
-			limit ++;
+			limit++;
 		}
 		
 		// Step 7
@@ -2951,8 +3035,10 @@ public class StringUtils {
 		for (int f = 0; f < full.length(); f++) {
 			
 			//	we've reached the end of the abbreviation, so it fits
-			if (a == abbreviation.length())
+			if (a == abbreviation.length()) {
+				if (DEBUG_ABBREVIATIONS) System.out.println(" ==> match");
 				return true;
+			}
 			
 			//	get next character of full form
 			char fch = (caseSensitive ? full.charAt(f) : Character.toLowerCase(full.charAt(f)));
@@ -2969,8 +3055,10 @@ public class StringUtils {
 			//	jump over internal high commas (may mark omission in abbreviations like "Intern'l")
 			if (ach == '\'') {
 				a++;
-				if (a == abbreviation.length())
+				if (a == abbreviation.length()) {
+					if (DEBUG_ABBREVIATIONS) System.out.println(" ==> match");
 					return true;
+				}
 				ach = (caseSensitive ? abbreviation.charAt(a) : Character.toLowerCase(abbreviation.charAt(a)));
 			}
 			
@@ -2982,7 +3070,14 @@ public class StringUtils {
 		}
 		
 		//	we have a match if we have reached the end of the abbreviation
-		return (a == abbreviation.length());
+		if (a == abbreviation.length()) {
+			if (DEBUG_ABBREVIATIONS) System.out.println(" ==> match");
+			return true;
+		}
+		else {
+			if (DEBUG_ABBREVIATIONS) System.out.println(" ==> mis-match, only got to " + abbreviation.subSequence(0, a));
+			return false;
+		}
 	}
 	private static CharSequence removeDots(CharSequence str) {
 		StringBuffer dotFreeStr = new StringBuffer();

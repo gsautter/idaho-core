@@ -116,9 +116,9 @@ public class ApplicationHttpsEnabler extends AbstractHttpsEnabler {
 			message.append("<BR/>");
 			message.append("<I>" + chain[c].getIssuerX500Principal().getName() + "</I>");
 			message.append("<BR/>");
-			message.append("SHA1: <TT>" + HashUtils.getSha1(chain[c].getEncoded()) + "</TT>");
+			message.append("SHA1: <TT>" + HashUtils.getSha1String(chain[c].getEncoded()) + "</TT>");
 			message.append("<BR/>");
-			message.append("MD5: <TT>" + HashUtils.getMd5(chain[c].getEncoded()) + "</TT>");
+			message.append("MD5: <TT>" + HashUtils.getMd5String(chain[c].getEncoded()) + "</TT>");
 			message.append("<BR/>");
 		}
 		message.append("</HTML>");

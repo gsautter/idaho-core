@@ -388,6 +388,10 @@ public class AnnotationUtils {
 			}
 		}
 		
+		//	anything to clean up?
+		if (docXmlns.isEmpty())
+			return false;
+		
 		//	track namespace declaration removals
 		boolean docModified = false;
 		
@@ -594,7 +598,7 @@ public class AnnotationUtils {
 		public boolean includeIDs(String annotType) {
 			return false;
 		}
-		public boolean escapeTokes() {
+		public boolean escapeTokens() {
 			return true;
 		}
 		public boolean escapeAttributeValues() {
@@ -611,7 +615,7 @@ public class AnnotationUtils {
 		public boolean includeIDs(String annotType) {
 			return true;
 		}
-		public boolean escapeTokes() {
+		public boolean escapeTokens() {
 			return true;
 		}
 		public boolean escapeAttributeValues() {
@@ -669,6 +673,25 @@ public class AnnotationUtils {
 	
 	/**
 	 * Write the content of a Queriable Annotation marked up with XML to the
+	 * specified Writer. This method outputs all the annotations in the
+	 * argument array. It is up to client code to ensure that (a) there is a
+	 * root element around the output and (b) that the order of the argument
+	 * annotation array is in line with nesting rules regarding the extent of
+	 * the annotations. If the latter is violated, output may be arbitrary.
+	 * This method includes all attributes in the start tags, escaping their
+	 * values. For more fine-grained control, use the five argument version of
+	 * this method.
+	 * @param data the Annotation to write
+	 * @param annotations the annotations whose tags to output
+	 * @param output the Writer to write to
+	 * @return true if and only if the output was written successfully
+	 */
+	public static boolean writeXML(QueriableAnnotation data, Annotation[] annotations, Writer output) throws IOException {
+		return writeXML(data, annotations, output, null, true);
+	}
+	
+	/**
+	 * Write the content of a Queriable Annotation marked up with XML to the
 	 * specified Writer. The specified annotation type set (if any) is checked
 	 * for the individual annotation types solely by means of its contains()
 	 * method; this facilitates filtering out specific annotation types by
@@ -686,7 +709,27 @@ public class AnnotationUtils {
 	public static boolean writeXML(QueriableAnnotation data, Writer output, boolean writeIDs, Set annotationTypes) throws IOException {
 		if (annotationTypes == null) // avoids frequent creation of option wrapper (just too many external calls)
 			return writeXML(data, output, (writeIDs ? xmlWriteOptionsWithId : xmlWriteOptionsNoId));
-		return writeXML(data, output, writeIDs, annotationTypes, null, true);
+		else return writeXML(data, output, writeIDs, annotationTypes, null, true);
+	}
+	
+	/**
+	 * Write the content of a Queriable Annotation marked up with XML to the
+	 * specified Writer. This method outputs all the annotations in the
+	 * argument array. It is up to client code to ensure that (a) there is a
+	 * root element around the output and (b) that the order of the argument
+	 * annotation array is in line with nesting rules regarding the extent of
+	 * the annotations. If the latter is violated, output may be arbitrary.
+	 * This method includes all attributes in the start tags, escaping their
+	 * values. For more fine-grained control, use the five argument version of
+	 * this method.
+	 * @param data the Annotation to write
+	 * @param annotations the annotations whose tags to output
+	 * @param output the Writer to write to
+	 * @param writeIDs include annotation IDs in the output?
+	 * @return true if and only if the output was written successfully
+	 */
+	public static boolean writeXML(QueriableAnnotation data, Annotation[] annotations, Writer output, boolean writeIDs) throws IOException {
+		return writeXML(data, annotations, output, writeIDs, null, true);
 	}
 	
 	/**
@@ -711,7 +754,32 @@ public class AnnotationUtils {
 	public static boolean writeXML(QueriableAnnotation data, Writer output, Set annotationTypes, Set attributeFilter, boolean escape) throws IOException {
 		if ((annotationTypes == null) && (attributeFilter == null) && escape) // avoids frequent creation of option wrapper (just too many external calls)
 			return writeXML(data, output, xmlWriteOptionsNoId);
-		return writeXML(data, output, false, annotationTypes, attributeFilter, escape);
+		else return writeXML(data, output, false, annotationTypes, attributeFilter, escape);
+	}
+	
+	/**
+	 * Write the content of a Queriable Annotation marked up with XML to the
+	 * specified Writer. This method outputs all the annotations in the
+	 * argument array. It is up to client code to ensure that (a) there is a
+	 * root element around the output and (b) that the order of the argument
+	 * annotation array is in line with nesting rules regarding the extent of
+	 * the annotations. If the latter is violated, output may be arbitrary.
+	 * Attribute output is controlled by The argument attribute filter set.
+	 * @param data the Annotation to write
+	 * @param annotations the annotations whose tags to output
+	 * @param output the Writer to write to
+	 * @param attributeFilter a set containing the names of the attributes to
+	 *            include in the tags (specifying null will include all
+	 *            attributes)
+	 * @param escape check and if necessary escape text data and attribute
+	 *            values (transform '&amp;' to '&amp;amp;', '&quot;' to
+	 *            '&amp;quot;', etc.)
+	 * @return true if and only if the output was written successfully
+	 */
+	public static boolean writeXML(QueriableAnnotation data, Annotation[] annotations, Writer output, Set attributeFilter, boolean escape) throws IOException {
+		if ((attributeFilter == null) && escape) // avoids frequent creation of option wrapper (just too many external calls)
+			return writeXML(data, annotations, output, xmlWriteOptionsNoId);
+		else return writeXML(data, annotations, output, false, attributeFilter, escape);
 	}
 	
 	/**
@@ -745,6 +813,40 @@ public class AnnotationUtils {
 			options.setAttributeNames(attributeFilter, false);
 		options.setEscape(escape);
 		return writeXML(data, output, options);
+	}
+	
+	/**
+	 * Write the content of a Queriable Annotation marked up with XML to the
+	 * specified Writer. This method outputs all the annotations in the
+	 * argument array. It is up to client code to ensure that (a) there is a
+	 * root element around the output and (b) that the order of the argument
+	 * annotation array is in line with nesting rules regarding the extent of
+	 * the annotations. If the latter is violated, output may be arbitrary. The
+	 * specified attribute filter set (if any) is checked for the individual
+	 * attribute names solely by means of its contains() method; this
+	 * facilitates filtering out specific attributes by excluding them
+	 * explicitly, returning true for all other types.
+	 * @param data the Annotation to write
+	 * @param annotations the annotations whose tags to output
+	 * @param output the Writer to write to
+	 * @param writeIDs include annotation IDs in the output?
+	 * @param attributeFilter a set containing the names of the attributes to
+	 *            include in the tags (specifying null will include all
+	 *            attributes)
+	 * @param escape check and if necessary escape text data and attribute
+	 *            values (transform '&amp;' to '&amp;amp;', '&quot;' to
+	 *            '&amp;quot;', etc.)
+	 * @return true if and only if the output was written successfully
+	 */
+	public static boolean writeXML(QueriableAnnotation data, Annotation[] annotations, Writer output, boolean writeIDs, Set attributeFilter, boolean escape) throws IOException {
+		if ((attributeFilter == null) && escape) // avoids frequent creation of option wrapper (just too many external calls)
+			return writeXML(data, annotations, output, (writeIDs ? xmlWriteOptionsWithId : xmlWriteOptionsNoId));
+		XmlOutputOptions options = new XmlOutputOptions();
+		options.setIncludeIdTypes(Collections.emptySet(), writeIDs);
+		if (attributeFilter != null)
+			options.setAttributeNames(attributeFilter, false);
+		options.setEscape(escape);
+		return writeXML(data, annotations, output, options);
 	}
 	
 	/**
@@ -922,7 +1024,7 @@ public class AnnotationUtils {
 		 * Check whether or not to escape textual content tokens in the output.
 		 * @return true if textual content tokens should be escaped
 		 */
-		public boolean escapeTokes() {
+		public boolean escapeTokens() {
 			return this.escape;
 		}
 		
@@ -944,6 +1046,7 @@ public class AnnotationUtils {
 		 * @return the character sequence to output for a space
 		 */
 		public String getSpace() {
+			//	TODO add context information (after token or tag, before token or tag)
 			return this.space;
 		}
 		
@@ -957,8 +1060,26 @@ public class AnnotationUtils {
 		 * @return the character sequence to output for a line break
 		 */
 		public String getLineBreak() {
+			//	TODO add context information (after token or tag, before token or tag)
 			return this.lineBreak;
 		}
+		
+		/* TODO Facilitate controlling whitespace in GAMTA XML output:
+- line breaks before and after start and end tags ...
+  ==> add respective getters to XML output options
+- ... as well as indentation after line breaks
+  ==> track stack depth ...
+  ==> ... and add getter for per-level indent to XML output options
+- space between tokens ...
+- ... depending upon immediately preceding end tag(s) ...
+- ... as well as upcoming start tag(s)
+  ==> implement latter by tracking preceding end tags (boolean) ...
+  ==> ... and collecting subsequent start tags before actually anything
+==> default all of this to current behavior
+==> facilitates escaping standalone spaces right there ...
+==> ... as well as single-line output ...
+==> ... and nicely indented pretty-print
+		 */
 	}
 	
 	/**
@@ -970,25 +1091,46 @@ public class AnnotationUtils {
 	 * @return true if and only if the output was written successfully
 	 */
 	public static boolean writeXML(QueriableAnnotation data, Writer output, XmlOutputOptions options) throws IOException {
-		BufferedWriter buf = ((output instanceof BufferedWriter) ? ((BufferedWriter) output) : new BufferedWriter(output));
 		
 		//	get annotations
-		Annotation[] nestedAnnotations = data.getAnnotations();
+		Annotation[] annotations = data.getAnnotations();
 		
 		//	filter annotations
 		ArrayList annotationList = new ArrayList();
-		for (int a = 0; a < nestedAnnotations.length; a++)
-			if (options.writeAnnotations(nestedAnnotations[a].getType()))
-				annotationList.add(nestedAnnotations[a]);
-		nestedAnnotations = ((Annotation[]) annotationList.toArray(new Annotation[annotationList.size()]));
+		for (int a = 0; a < annotations.length; a++)
+			if (options.writeAnnotations(annotations[a].getType()))
+				annotationList.add(annotations[a]);
+		annotations = ((Annotation[]) annotationList.toArray(new Annotation[annotationList.size()]));
 		
 		//	make sure there is a root element
-		if ((nestedAnnotations.length == 0) || (nestedAnnotations[0].size() < data.size())) {
-			Annotation[] newNestedAnnotations = new Annotation[nestedAnnotations.length + 1];
+		if ((annotations.length == 0) || (annotations[0].size() < data.size())) {
+			Annotation[] newNestedAnnotations = new Annotation[annotations.length + 1];
 			newNestedAnnotations[0] = data;
-			System.arraycopy(nestedAnnotations, 0, newNestedAnnotations, 1, nestedAnnotations.length);
-			nestedAnnotations = newNestedAnnotations;
+			System.arraycopy(annotations, 0, newNestedAnnotations, 1, annotations.length);
+			annotations = newNestedAnnotations;
 		}
+		
+		//	output the whole stuff
+		return writeXML(data, annotations, output, options);
+	}
+	
+	/**
+	 * Write the content of a Queriable Annotation marked up with XML to the
+	 * specified Writer, using the argument options. Regardless of the latter,
+	 * this method outputs all the annotations in the argument array, and any
+	 * type based filtering on the part of the argument options is ignored. It
+	 * is up to client code to ensure that (a) there is a root element around
+	 * the output and (b) that the order of the argument annotation array is in
+	 * line with nesting rules regarding the extent of the annotations. If the
+	 * latter is violated, output may be arbitrary.
+	 * @param data the Annotation to write
+	 * @param annotations the annotations whose tags to output
+	 * @param output the Writer to write to
+	 * @param options an object holding the output options.
+	 * @return true if and only if the output was written successfully
+	 */
+	public static boolean writeXML(QueriableAnnotation data, Annotation[] annotations, Writer output, XmlOutputOptions options) throws IOException {
+		BufferedWriter buf = ((output instanceof BufferedWriter) ? ((BufferedWriter) output) : new BufferedWriter(output));
 		
 		Stack stack = new Stack();
 		int annotationPointer = 0;
@@ -996,9 +1138,7 @@ public class AnnotationUtils {
 		Token token = null;
 		Token lastToken;
 		
-		//boolean lastWasTag = false;
 		boolean lastWasLineBreak = true;
-		
 		HashSet lineBroken = new HashSet();
 		
 		for (int t = 0; t < data.size(); t++) {
@@ -1018,7 +1158,6 @@ public class AnnotationUtils {
 				//	write tag and line break
 				buf.write(produceEndTag(annotation));
 				lastWasLineBreak = false;
-				//lastWasTag = true;
 				
 				//	line break (omit if in-line)
 				if (options.writeInLine(annotation.getType()))
@@ -1034,15 +1173,18 @@ public class AnnotationUtils {
 			}
 			
 			//	skip space character before unspaced punctuation (e.g. ','), after line breaks and tags, and if there is no whitespace in the token sequence
-			if (/*!lastWasTag && */!lastWasLineBreak && 
+			if (!lastWasLineBreak && 
 					(lastToken != null) && !lastToken.hasAttribute(Token.PARAGRAPH_END_ATTRIBUTE) && 
 					Gamta.insertSpace(lastToken, token) &&
 					(t != 0) && (data.getWhitespaceAfter(t-1).length() != 0)
 				) buf.write(options.getSpace());
 			
 			//	write start tags for annotations beginning at current token
-			while ((annotationPointer < nestedAnnotations.length) && (nestedAnnotations[annotationPointer].getStartIndex() == t)) {
-				Annotation annotation = nestedAnnotations[annotationPointer++];
+//			while ((annotationPointer < annotations.length) && (annotations[annotationPointer].getStartIndex() == t)) {
+			while ((annotationPointer < annotations.length) && (annotations[annotationPointer].getStartIndex() <= t)) {
+				Annotation annotation = annotations[annotationPointer++];
+				if (annotation.getStartIndex() < t)
+					continue;
 				stack.push(annotation);
 				
 				//	line break (omit if in-line)
@@ -1051,13 +1193,12 @@ public class AnnotationUtils {
 				
 				//	add start tag
 				buf.write(produceStartTag(annotation, options));
-				//lastWasTag = true;
 				lastWasLineBreak = false;
 				
 				//	line break only if nested annotations (omit if in-line)
 				if (options.writeInLine(annotation.getType()))
 					continue;
-				if ((annotationPointer < nestedAnnotations.length) && AnnotationUtils.contains(annotation, nestedAnnotations[annotationPointer])) {
+				if ((annotationPointer < annotations.length) && AnnotationUtils.contains(annotation, annotations[annotationPointer])) {
 					buf.write(options.getLineBreak());
 					lastWasLineBreak = true;
 					lineBroken.add(annotation.getAnnotationID());
@@ -1065,7 +1206,7 @@ public class AnnotationUtils {
 			}
 			
 			//	append current token
-			if (options.escapeTokes())
+			if (options.escapeTokens())
 				buf.write(escapeForXml(token.getValue()));
 			else buf.write(token.getValue());
 			
@@ -1121,7 +1262,8 @@ public class AnnotationUtils {
 //				escapedString.append("&apos;");
 			else if (ch == '&')
 				escapedString.append("&amp;");
-			else if ((ch < 32) || (ch == 127) || (ch == 129) || (ch == 141) || (ch == 143) || (ch == 144) || (ch == 157)) {
+//			else if ((ch < 32) || (ch == 127) || (ch == 129) || (ch == 141) || (ch == 143) || (ch == 144) || (ch == 157)) {
+			else if ((ch < 0x0020) || (ch == 0x007F) || (ch == 0x0081) || (ch == 0x008D) || (ch == 0x008F) || (ch == 0x0090) || (ch == 0x009D)) {
 				if (escapeControl && ((ch == '\t') || (ch == '\n') || (ch == '\r')))
 					escapedString.append("&#x" + Integer.toString(((int) ch), 16).toUpperCase() + ";");
 				else escapedString.append(' ');
@@ -1164,8 +1306,8 @@ public class AnnotationUtils {
 				}
 				else if (escapedString.startsWith("#x", (c+1))) {
 					int sci = escapedString.indexOf(';', (c+2));
-					if ((sci != -1) && (sci <= (c+4))) try {
-						ch = ((char) Integer.parseInt(escapedString.substring((c+3), sci), 16));
+					if ((sci != -1) && (sci <= (c + "6#x".length() + 4))) try {
+						ch = ((char) Integer.parseInt(escapedString.substring((c + "&#x".length()), sci), 16));
 						c = sci;
 					} catch (Exception e) {}
 					string.append(ch);
@@ -1173,8 +1315,8 @@ public class AnnotationUtils {
 				}
 				else if (escapedString.startsWith("#", (c+1))) {
 					int sci = escapedString.indexOf(';', (c+1));
-					if ((sci != -1) && (sci <= (c+4))) try {
-						ch = ((char) Integer.parseInt(escapedString.substring((c+2), sci)));
+					if ((sci != -1) && (sci <= (c + "&#".length() + 4))) try {
+						ch = ((char) Integer.parseInt(escapedString.substring((c + "&#".length()), sci)));
 						c = sci;
 					} catch (Exception e) {}
 					string.append(ch);
@@ -1183,7 +1325,7 @@ public class AnnotationUtils {
 				else if (escapedString.startsWith("x", (c+1))) {
 					int sci = escapedString.indexOf(';', (c+1));
 					if ((sci != -1) && (sci <= (c+4))) try {
-						ch = ((char) Integer.parseInt(escapedString.substring((c+2), sci), 16));
+						ch = ((char) Integer.parseInt(escapedString.substring((c + "&x".length()), sci), 16));
 						c = sci;
 					} catch (Exception e) {}
 					string.append(ch);

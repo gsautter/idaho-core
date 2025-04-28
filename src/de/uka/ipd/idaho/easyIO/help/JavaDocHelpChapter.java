@@ -28,6 +28,7 @@
 package de.uka.ipd.idaho.easyIO.help;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Reader;
@@ -36,6 +37,8 @@ import java.util.ArrayList;
 
 import de.uka.ipd.idaho.easyIO.streams.CharSequenceReader;
 import de.uka.ipd.idaho.easyIO.streams.PeekReader;
+import de.uka.ipd.idaho.easyIO.util.JarClassLoader;
+import de.uka.ipd.idaho.gamta.util.AnnotationPatternMatcher;
 import de.uka.ipd.idaho.htmlXmlUtil.Parser;
 import de.uka.ipd.idaho.htmlXmlUtil.TokenReceiver;
 import de.uka.ipd.idaho.htmlXmlUtil.grammars.Html;
@@ -115,42 +118,44 @@ public class JavaDocHelpChapter extends HelpChapter {
 			return new StringReader("<HTML><TT>" + e.getClass().getName() + "</TT><BR>(" + e.getMessage() + ")<BR>while creating content reader, sorry.</HTML>");
 		}
 	}
-//	
-//	public static void main(String[] args) throws Exception {
-//		Class subjectClass = AnnotationPatternMatcher.class;
-//		
-//		//	get hold of source file
-//		String subjectClassSourceResName = subjectClass.getName();
-//		subjectClassSourceResName = (subjectClassSourceResName.replace('.', '/') + ".java");
-//		System.out.println("Resource is " + subjectClassSourceResName);
-//		String subjectClassName = subjectClass.getName();
-//		subjectClassName = subjectClassName.substring(subjectClassName.lastIndexOf(".") + ".".length());
-//		System.out.println("Class name is " + subjectClassName);
-//		
-//		//	extract class top JavaDoc
+	
+	public static void main(String[] args) throws Exception {
+		Class subjectClass = AnnotationPatternMatcher.class;
+		
+		//	get hold of source file
+		String subjectClassSourceResName = subjectClass.getName();
+		subjectClassSourceResName = (subjectClassSourceResName.replace('.', '/') + ".java");
+		System.out.println("Resource is " + subjectClassSourceResName);
+		String subjectClassName = subjectClass.getName();
+		subjectClassName = subjectClassName.substring(subjectClassName.lastIndexOf(".") + ".".length());
+		System.out.println("Class name is " + subjectClassName);
+		
+		//	extract class top JavaDoc
 //		ClassLoader subjectClassLoader = subjectClass.getClassLoader();
-//		StringBuffer javaDoc = new StringBuffer("<html><head>");
-//		javaDoc.append("<title>" + HTML.escape(subjectClassName) + "</title>");
-//		javaDoc.append("</head><body><div>");
-//		BufferedReader jdBr = new BufferedReader(new InputStreamReader(subjectClassLoader.getResourceAsStream(subjectClassSourceResName)));
-//		extractJavaDoc(jdBr, subjectClassName, javaDoc);
-//		jdBr.close();
-//		javaDoc.append("</div></body></html>");
-//		System.out.println(javaDoc);
-//		final StringBuffer contentBuffer = new StringBuffer();
-//		
-//		//	stream content into buffer
-//		HTML_PARSER.stream(new BufferedReader(new CharSequenceReader(javaDoc)), new TokenReceiver() {
-//			public void storeToken(String token, int treeDepth) throws IOException {
-//				if (!token.toLowerCase().startsWith("<meta "))
-//					contentBuffer.append(token.startsWith("<") ? token : token.replaceAll("\\x20+", " "));
-//				else if (token.toLowerCase().indexOf("content-type") == -1)
-//					contentBuffer.append(token.startsWith("<") ? token : token.replaceAll("\\x20+", " "));
-//			}
-//			public void close() throws IOException {}
-//		});
-//		System.out.println(contentBuffer);
-//	}
+		JarClassLoader subjectClassLoader = JarClassLoader.createClassLoader(subjectClass);
+		subjectClassLoader.addJar(new File("./dist/Gamta.jar"));
+		StringBuffer javaDoc = new StringBuffer("<html><head>");
+		javaDoc.append("<title>" + HTML.escape(subjectClassName) + "</title>");
+		javaDoc.append("</head><body><div>");
+		BufferedReader jdBr = new BufferedReader(new InputStreamReader(subjectClassLoader.getResourceAsStream(subjectClassSourceResName)));
+		extractJavaDoc(jdBr, subjectClassName, javaDoc);
+		jdBr.close();
+		javaDoc.append("</div></body></html>");
+		System.out.println(javaDoc);
+		final StringBuffer contentBuffer = new StringBuffer();
+		
+		//	stream content into buffer
+		HTML_PARSER.stream(new BufferedReader(new CharSequenceReader(javaDoc)), new TokenReceiver() {
+			public void storeToken(String token, int treeDepth) throws IOException {
+				if (!token.toLowerCase().startsWith("<meta "))
+					contentBuffer.append(token.startsWith("<") ? token : token.replaceAll("\\x20+", " "));
+				else if (token.toLowerCase().indexOf("content-type") == -1)
+					contentBuffer.append(token.startsWith("<") ? token : token.replaceAll("\\x20+", " "));
+			}
+			public void close() throws IOException {}
+		});
+		System.out.println(contentBuffer);
+	}
 	
 	private static void extractJavaDoc(BufferedReader sourceBr, String forClassName, StringBuffer javaDoc) throws IOException {
 		PeekReader pr = new PeekReader(sourceBr, "/**".length());
@@ -234,7 +239,7 @@ public class JavaDocHelpChapter extends HelpChapter {
 	}
 	
 	private static void appendJavaDoc(String rawJavaDoc, StringBuffer javaDoc) throws IOException {
-		/* TODO format this !!!:
+		/* TODO format this shit !!!:
 		 * - translate {@<xyz> ...} into HTML
 		 * - maybe remove @author, @since, @deprecated tags
 		 */

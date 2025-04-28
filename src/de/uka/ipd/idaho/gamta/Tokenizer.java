@@ -69,7 +69,7 @@ public interface Tokenizer {
 	/**
 	 * a Tokenizer for producing the token overlay on a char sequence. This
 	 * tokenizer processes the char sequence block by block, i.e. in portions
-	 * limited by whitespace characters. For the underlaying char sequence, it is
+	 * limited by whitespace characters. For the underlying char sequence, it is
 	 * therefore sufficient to provide the char data between two whitespaces at a
 	 * time. This behavior enables lazy, on-demand style loading of the char data to
 	 * be tokenized.
@@ -80,7 +80,7 @@ public interface Tokenizer {
 		
 		/**	the char sequence to work on
 		 */
-		protected java.lang.CharSequence charData;
+		protected CharSequence charData;
 		
 		/**	the current offset in the char sequence
 		 */
@@ -92,7 +92,7 @@ public interface Tokenizer {
 		/** Constructor
 		 * @param	charData	the char sequence to tokenize
 		 */
-		protected TokenIterator(java.lang.CharSequence charData) {
+		protected TokenIterator(CharSequence charData) {
 			this.charData = charData;
 		}
 		
@@ -138,7 +138,8 @@ public interface Tokenizer {
 				this.currentOffset++;
 			
 			//	check for end of char data
-			if (blockStart == this.currentOffset) return;
+			if (blockStart == this.currentOffset)
+				return;
 			
 			//	get token borders
 			int[] borders = this.tokenize(this.charData.subSequence(blockStart, this.currentOffset));
@@ -153,9 +154,9 @@ public interface Tokenizer {
 			this.tokens.add(new CharSequenceToken((blockStart + borders[borders.length - 1]), this.currentOffset));
 		}
 		
-		/**	tokenize a portion of the underlaying char sequence
-		 * @param	chars	the portion of the underlaying char sequence to tokenize (guarantied not to contain any whitespace characters)
-		 * @return an array of int marking the starts of the individual tokens in the specified portion of the underlaying char sequence
+		/**	tokenize a portion of the underlying char sequence
+		 * @param	chars	the portion of the underlying char sequence to tokenize (guaranteed not to contain any whitespace characters)
+		 * @return an array of ints marking the starts of the individual tokens in the specified portion of the underlying char sequence
 		 */
 		protected abstract int[] tokenize(CharSequence chars);
 		
@@ -171,32 +172,55 @@ public interface Tokenizer {
 		 *         otherwise
 		 */
 		protected static final boolean isSpace(char ch) {
-			if (ch < 33)
+			//	covers basic controls and \u0020 --> ASCII space
+			if (ch < 0x0021)
 				return true;
-			if (ch < 160)
+			//	we're good up until DEL
+			if (ch < 0x007F)
 				return false;
-			if (ch == 160)
+			//	covers high control and \u00A0 --> non-breaking space
+			if (ch < 0x00A1)
 				return true;
-			if (ch < 8192)
+			//	\u1680 --> ogham space
+			if (ch == 0x1680)
+				return true;
+			//	we're good up until space block
+			if (ch < 0x2000)
 				return false;
-			if (ch <= 8205)
+			//	covers \u2000 --> en quad through \u200B --> zero-width space, and some controls to follow
+			if (ch < 0x2010)
 				return true;
-			if (ch < 8239)
+			//	we're good up until separator characters
+			if (ch < 0x2028)
 				return false;
-			if (ch == 8239)
+			//	covers \u2028 --> line separator through \u202F --> narrow non-breaking space
+			if (ch < 0x2030)
 				return true;
-			if (ch < 8287)
+			//	we're good up until math space
+			if (ch < 0x205F)
 				return false;
-			if (ch <= 8288)
+			//	covers all sorts of text flow control characters and \u205F --> medium math space
+			if (ch < 0x2070)
 				return true;
-			if (ch < 12288)
+			//	we're good up until ideographic descriptor void
+			if (ch < 0x2FFC)
 				return false;
-			if (ch == 12288)
+			//	covers some voids and \u3000 --> ideographic space
+			if (ch < 0x3001)
 				return true;
-			if (ch < 65279)
+			//	we're good up until variation selectors
+			if (ch < 0xFE00)
 				return false;
-			if (ch == 65279)
+			//	variation selectors
+			if (ch < 0xFE10)
 				return true;
+			//	we're good up until \uFEFF --> zero-width non-breaking space
+			if (ch < 0xFEFF)
+				return false;
+			//	covers \uFEFF --> zero-width non-breaking space and its subsequent void
+			if (ch < 0xFF01)
+				return true;
+			//	rest of UTF-16 range should be good
 			return false;
 		}
 	}

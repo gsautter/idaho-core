@@ -79,7 +79,7 @@ public class AnnotationFilter {
 			for (int d = (a+1); d < annotations.length; d++) {
 				if (AnnotationUtils.equals(annotations[a], annotations[d])) {
 					
-					//	copy attributes, give priority to annnotation not removed
+					//	copy attributes, give priority to annotation not removed
 					AttributeUtils.copyAttributes(annotations[d], annotations[a], AttributeUtils.ADD_ATTRIBUTE_COPY_MODE);
 					
 					//	remove annotation

@@ -102,7 +102,7 @@ public interface QueriableAnnotation extends Annotation {
 	/**
 	 * Retrieve the Annotations nested in this one that overlap with a range of
 	 * Tokens. This returns all nested Annotations whose start index is less
-	 * than to the argument end index and whose end index is larger than the
+	 * than the argument end index and whose end index is larger than the
 	 * argument start index. Implementations must interpret the argument start
 	 * and end index relative to this QueriableAnnotation.
 	 * @param startIndex the index of the first Token
@@ -114,8 +114,8 @@ public interface QueriableAnnotation extends Annotation {
 	/**
 	 * Retrieve the Annotations of a given type that are nested in this one and
 	 * overlap with a range of Tokens. This returns all nested Annotations of
-	 * the argument type whose start index is less than to the argument end
-	 * index and whose end index is larger than the argument start index.
+	 * the argument type whose start index is less than the argument end index
+	 * and whose end index is larger than the argument start index.
 	 * Implementations must interpret the argument start and end index relative
 	 * to this QueriableAnnotation.
 	 * @param type the type of the Annotations to get

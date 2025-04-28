@@ -84,11 +84,11 @@ public class RegExTokenizer implements Tokenizer {
 			Matcher matcher = RegExTokenizer.this.pattern.matcher(chars);
 			while (matcher.find()) {
 				/*
-				 * extends offset array by one on overflow. while this approach
+				 * Extends offset array by one on overflow. while this approach
 				 * incurs an array extension for every single token from the
-				 * second on, more than one token in a whitespace-free block
-				 * seldom occurs (~20%, for punctuation), and more than two are
-				 * very rare.
+				 * second onwards, more than one token in a whitespace-free
+				 * block rarely occurs (~20%, for punctuation), and more than
+				 * two are very rare.
 				 * 
 				 * TODO: For screwed patterns, it might occur more often, however,
 				 * so (later on) decide on increment based on a statistics of the

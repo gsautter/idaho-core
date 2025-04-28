@@ -167,16 +167,16 @@ public class RuleBox implements LiteratureConstants {
 		 *         representation
 		 */
 		public static Rule getRule(String ruleString) {
+			
 			//	find split
 			int split = ruleString.indexOf("==>");
-			if (split != -1) {
-				
-				//	generate rule
-				String predicate = ruleString.substring(0, split).trim();
-				String category = ruleString.substring(split + 3).trim();
-				return new Rule(predicate, category);
-			}
-			else throw new IllegalArgumentException("'" + ruleString + "' is not a valid rule, '==>' missing.");
+			if (split == -1)
+				throw new IllegalArgumentException("'" + ruleString + "' is not a valid rule, '==>' missing.");
+			
+			//	generate rule
+			String predicate = ruleString.substring(0, split).trim();
+			String category = ruleString.substring(split + 3).trim();
+			return new Rule(predicate, category);
 		}
 	}
 	
@@ -373,7 +373,7 @@ public class RuleBox implements LiteratureConstants {
 		
 		//	no rule applied, set variables & return default
 		variables.setVariable(previousRuleNumber, new GPathString("" + (this.rules.size() + 1)));
-		variables.setVariable(previousCategory, new GPathString("" + this.defaultCategory));
+		variables.setVariable(previousCategory, new GPathString(this.defaultCategory));
 		return this.defaultCategory;
 	}
 	

@@ -185,7 +185,7 @@ public class AnnotationReader extends Reader {
 		public boolean includeIDs(String annotType) {
 			return false;
 		}
-		public boolean escapeTokes() {
+		public boolean escapeTokens() {
 			return true;
 		}
 		public boolean escapeAttributeValues() {
@@ -202,7 +202,7 @@ public class AnnotationReader extends Reader {
 		public boolean includeIDs(String annotType) {
 			return true;
 		}
-		public boolean escapeTokes() {
+		public boolean escapeTokens() {
 			return true;
 		}
 		public boolean escapeAttributeValues() {

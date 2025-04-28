@@ -41,12 +41,18 @@ import de.uka.ipd.idaho.gamta.MutableCharSequence;
  */
 public abstract class AbstractMutableCharSequence implements MutableCharSequence {
 	
-	private ArrayList listeners = new ArrayList();
+	private ArrayList listeners = null;
 	
 	/* (non-Javadoc)
 	 * @see de.gamta.MutableCharSequence#addCharSequenceListener(de.gamta.CharSequenceListener)
 	 */
 	public void addCharSequenceListener(CharSequenceListener csl) {
+		if (csl == null)
+			return;
+		if (this.listeners == null)
+			this.listeners = new ArrayList(2);
+		else if (this.listeners.contains(csl))
+			return;
 		this.listeners.add(csl);
 	}
 	
@@ -54,7 +60,8 @@ public abstract class AbstractMutableCharSequence implements MutableCharSequence
 	 * @see de.gamta.MutableCharSequence#removeCharSequenceListener(de.gamta.CharSequenceListener)
 	 */
 	public void removeCharSequenceListener(CharSequenceListener csl) {
-		this.listeners.remove(csl);
+		if (this.listeners != null)
+			this.listeners.remove(csl);
 	}
 	
 	/**	notify this listener that a portion of this MutableCharSequence has been changed
@@ -70,6 +77,8 @@ public abstract class AbstractMutableCharSequence implements MutableCharSequence
 	 * @param	cse		the CharSequenceEvent holding the details of the cange
 	 */
 	protected void notifyCharSequenceChanged(CharSequenceEvent cse) {
+		if (this.listeners == null)
+			return;
 		for (int l = 0; l < this.listeners.size(); l++)
 			((CharSequenceListener) this.listeners.get(l)).charSequenceChanged(cse);
 	}

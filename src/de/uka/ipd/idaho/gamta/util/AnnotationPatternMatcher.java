@@ -135,7 +135,8 @@ public class AnnotationPatternMatcher {
 	 * @return the argument annotation pattern in its flattened out form
 	 */
 	public static String normalizePattern(String pattern) {
-		AnnotationPattern ap = getPattern(Gamta.INNER_PUNCTUATION_TOKENIZER, pattern);
+//		AnnotationPattern ap = getPattern(Gamta.INNER_PUNCTUATION_TOKENIZER, pattern);
+		AnnotationPattern ap = getPattern(Gamta.getDefaultTokenizer(), pattern);
 		return ap.toString(null);
 	}
 	
@@ -146,7 +147,8 @@ public class AnnotationPatternMatcher {
 	 * @return the argument annotation pattern in a form readable for users
 	 */
 	public static String explodePattern(String pattern) {
-		AnnotationPattern ap = getPattern(Gamta.INNER_PUNCTUATION_TOKENIZER, pattern);
+//		AnnotationPattern ap = getPattern(Gamta.INNER_PUNCTUATION_TOKENIZER, pattern);
+		AnnotationPattern ap = getPattern(Gamta.getDefaultTokenizer(), pattern);
 		return ap.toString("");
 	}
 	

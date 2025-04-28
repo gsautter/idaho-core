@@ -577,6 +577,7 @@ TODO Move whole bit pushing methods (plus some missing ones for other primitive 
 - provide conversion methods to and from hex for primitive data types (and arrays thereof)
   ==> might move that over from RandomByteSource or HashUtils
   ==> add optional "lower case" flag
+
 TODO ALSO, simply use UTF-16BE (or whatever the leading 0s are ...) in WeenieObjectUtils:
 - just provide ASCII, ANSI, and UTF-16, forget about UTF-8 (too much hassle to compare)
 - provide same options in string comparison methods
@@ -584,6 +585,7 @@ TODO ALSO, simply use UTF-16BE (or whatever the leading 0s are ...) in WeenieObj
 - ... using respective CharSequence implementations
 ==> and then, do provide UTF-8, but with hint that processing might be slower (if more compact) ...
 ==> ... and internally decode to and compare UTF-16
+
 TODO Put WeenieObjectUtils in to-create EasyIO.primitives ...
 ... and add some other data structures for each primitive type:
 - mainly, add lists/buffers for each type (with array doubling functions) ...
@@ -596,9 +598,25 @@ TODO Put WeenieObjectUtils in to-create EasyIO.primitives ...
   - name PrimitiveXyzKeyedMap
   - use primitive array for keys ...
   - ... and parallel object array for values
+
 TODO Add list compression for sequential numbers for all primitive integer types in WeenieObjectUtils:
 - make damn clear in JavaDoc that compression only viable for lists of non-negative numbers
 - provide argument specifying number of bytes to use for sequence length
+
+TODO Enable WeenieObjectUtils to work with larger arrays:
+- allow using short[], nt[], and long[] with current byte[]-bound signatures
+  ==> allows client code more freedom as to what type of array to use
+- setting byte in larger primitive type pretty much is:
+  - setting to zeros using AND with respective (otherwise FF) bitmask ...
+  - ... and then setting via OR with respectively shifted value
+- implementation basically copies what exists ...
+- ... adding modulo <byteCount> and byte offset computations
+  ==> keep above bitmasks in arrays, to ue with modulus
+==> facilitates storing up to 16 GB (minus 8 bytes) in primitive long[], with Integer.MAX_VALUE (2 GB minus 1 byte) still array size limit
+==> also, rename whole thing "WeenyObjectUtils" ...
+==> ... and update ColLocal accordingly
+  ==> best copy whole thing to avoid any dependency trouble ...
+  ==> ... and add above extensions to new version
 	 */
 	
 	//	FOR TEST PURPOSES ONLY

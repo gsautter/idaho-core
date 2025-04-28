@@ -27,6 +27,10 @@
  */
 package de.uka.ipd.idaho.gamta;
 
+import java.lang.ref.WeakReference;
+
+import de.uka.ipd.idaho.gamta.MutableCharSequence.CharSequenceEvent;
+
 
 /**
  * A listener observing the changes to a MutableCharSequence
@@ -39,4 +43,46 @@ public interface CharSequenceListener {
 	 * @param	change	a CharSequenceEvent object holding the details of the change
 	 */
 	public abstract void charSequenceChanged(MutableCharSequence.CharSequenceEvent change);
+	
+	/**
+	 * Weak reference wrapper for char sequence listeners. Client code that
+	 * needs to be eligible for reclaiming by GC despite a sole strong
+	 * reference to it still existing in a listener added to an char sequence
+	 * it wants to observe can use this class to add a weak reference link to
+	 * the actual listener.
+	 * 
+	 * @author sautter
+	 */
+	public static class WeakCharSequenceListener implements CharSequenceListener {
+		private WeakReference cslWeakRef;
+		private MutableCharSequence chars;
+		
+		/** Constructor
+		 * @param csl the char sequence listener to wrap
+		 * @param chars the char sequence observed by the argument listener
+		 */
+		public WeakCharSequenceListener(CharSequenceListener csl, MutableCharSequence chars) {
+			this.cslWeakRef = new WeakReference(csl);
+			this.chars = chars;
+		}
+		
+		private CharSequenceListener getCharSequenceListener() {
+			CharSequenceListener csl = ((CharSequenceListener) this.cslWeakRef.get());
+			if (csl == null) {
+				if (this.chars != null)
+					this.chars.removeCharSequenceListener(this);
+				this.chars = null;
+			}
+			return csl;
+		}
+		
+		/* (non-Javadoc)
+		 * @see de.uka.ipd.idaho.gamta.CharSequenceListener#charSequenceChanged(de.uka.ipd.idaho.gamta.MutableCharSequence.CharSequenceEvent)
+		 */
+		public void charSequenceChanged(CharSequenceEvent change) {
+			CharSequenceListener tsl = this.getCharSequenceListener();
+			if (tsl != null)
+				tsl.charSequenceChanged(change);
+		}
+	}
 }

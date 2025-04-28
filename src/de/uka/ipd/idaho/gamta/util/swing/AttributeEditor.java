@@ -49,9 +49,11 @@ import java.awt.event.MouseEvent;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.Map;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
@@ -66,6 +68,7 @@ import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.ListCellRenderer;
+import javax.swing.SwingUtilities;
 import javax.swing.text.JTextComponent;
 
 import de.uka.ipd.idaho.gamta.Annotation;
@@ -208,6 +211,273 @@ public class AttributeEditor extends JPanel {
 		return ((AttributeValueProvider[]) attributeValueProviders.toArray(new AttributeValueProvider[attributeValueProviders.size()]));
 	}
 	
+//	
+//	/**
+//	 * A provider of attribute and value suggestions for given attributed
+//	 * objects.
+//	 * 
+//	 * @author sautter
+//	 */
+//	public static interface AttributeDataProvider {
+//		
+//		/*
+//	TODO Establish restriction levels for attribute values:
+//	- unrestricted (code U): the default
+//	- suggestion (code S): with value suggestions, but free for input
+//	  - examples (maybe): types of subSection and subSubSection, type of typeStatus
+//	  - value editable
+//	  - attribute removable
+//	  - border: yellow if selected value not suggested
+//	- pattern match constraint (code M): attributes whose values must match some pattern
+//	  - examples: count in specimenCount, value in date, value in geoCoordinate
+//	- controlled (code C): only specific list provided values allowed
+//	  - examples (maybe) types of subSection and subSubSection, type of typeStatus
+//	  - attribute removable
+//	  - value not editable, only selectable from list
+//	  - color code: light gray
+//	  - border: red if selected value not allowed
+//	- referencing (code R): references some other attribute value in the document
+//	  - examples: citedRefId of bibRefCitation, targetBox of caption, (rows|cols)Continue(In|From) of table, connection attributes of image, captionStartId of figureCitation and tableCitation, fontName and fontCharCodes of ImWord, documentStyleName and documentStyleId of ImDocument, ..., think of more
+//	  - attribute removable
+//	  - value not editable, only selectable from list
+//	  - color code: light gray
+//	  - border: red if selected value not in list
+//	- reference-target (code T): referenced by some other attribute
+//	  - examples: refId of bibRef, startId of caption
+//	  - attribute not removable
+//	  - value not editable, not even selectable
+//	  - color code: gray
+//	- implicit (code I): implicit (computed)
+//	  - examples: pageId and lastPageId of annotations in ImDocumentRoot
+//	  - attribute not removable
+//	  - value not editable, not even selectable
+//	  - color code: gray
+//	- debug tracking (code D): added only by gizmos, and only for tracking purposes
+//	  - examples: _step and _evidence of taxonomicName, _reason of heading
+//	  - attribute not removable
+//	  - value not editable, not even selectable
+//	  - color code: light green
+//	  - text color: dark gray
+//	- functional (code F): added only by gizmos, for any kind of function
+//	  - examples: flags added in feedback dialogs (OCR error on bibRef), error attributes added to subjects in (upcoming) XML QC
+//	  - attribute not removable
+//	  - value not editable, not even selectable
+//	  - color code: light blue
+//	  - text color: dark gray
+//	- hidden (code HJ): added only by gizmos, for any kind of function, invisible in UI
+//	  - examples: flags added in feedback dialogs (OCR error on bibRef), error attributes added to subjects in (upcoming) XML QC
+//	  - attribute not removable
+//	  - value not editable, not even selectable
+//	  - color code: light blue
+//	  - text color: dark gray
+//
+//TODO To efficiently use constraints, allow specifying context document (as instance of Attributed) in attribute editor widget:
+//- evaluate context only on demand if attribute actually selected
+//- cache suggested/permitted values per document ...
+//- ... and re-compute only when document changes
+//==> saves tons of effort on opening attribute editor
+//==> BUT THEN, fails to react to changes in document ...
+//==> ... AND holds on to values for way too long
+//  ==> wrap constraints inside attribute editor widget ...
+//  ==> ... evaluate on demand ...
+//  ==> ... and cache data only  there
+//
+//	TODO Handle restrictions via AttributeDataProvider objects registered with AttributeEditor:
+//	- getAttributeNames(String type) ==> String[]
+//	  - return suggested attribute names for argument object type ...
+//	  - ... comprising at least names of attributes provider has value lists for
+//	- getAttributeValueRestrictionType(String type, String attributeName) ==> char
+//	  - return (char encoded) restriction level
+//	    ==> provide respective constants
+//	  ==> ToDo figure out how to aggregate restriction types (they ain't really sequentially escalating levels ...)
+//	    ==> allows accumulating restrictions in AttributeValueData ...
+//	    ==> ... and thus using them in rendering without loading lists
+//	- getAttributeValues(String type, String attributeName) ==> String[]
+//	  - return list of suggested values
+//	  - most likely compute lists on demand for referential constraints ...
+//	  - ... caching them, and invalidating them on edits
+//	    ==> use document listener for this (no reactions on UNDO)
+//	    ==> should massively reduce effort
+//	- getAttibuteValueError(String type, String attributeName, Object attributeValue) ==> String
+//	  - null indicates "no error"
+//	  - any other value is error message
+//	  ==> helps implement value pattern matches
+//
+//	TODO Centrally provide configured value lists, patterns, and referenced value selectors from AttributeActionProvider:
+//	- TaxonX compliant type of subSection and subSubSection
+//	- type of typeStatus
+//	- citedRefId for bibRefCitations, captionStartId for figureCitation and tableCitation
+//	- ...
+//	  ==> store those lists in "<type>.<attributeName>.cnfg" files
+//	- use "config.cnfg" file for referential constraints
+//	- store patterns in single settings file
+//	...
+//	- AND THEN, use single "config.cnfg" file:
+//	  - store type and attribute name as "<type>.<attributeName>.<number>" prefix
+//	  - store restriction level as "<type>.<attributeName>.<number>.level" = "<levelCodeLetter>" (see above)
+//	  - store type of data gathering as "<type>.<attributeName>.<number>.type" = "<type>" ...
+//	  - ... with types list (explicit list), pattern (regex), and selector (GPath expression getting list from document)
+//	  - store data proper in "<type>.<attributeName>.<number>.data", depending upon type ...
+//	  - ... storing GPath selectors as "<elementRootAnnotationType> (<selectorExpression1>) (<selectorExpression2>) (<selectorExpression3>) ..." ...
+//	  - ... storing lists as "<value1><separator><value2><separator><value3><separator>...<separator><valueN>" ...
+//	  - ... with "<separator>" defaulting to space ...
+//	  - ... but specifiable as "<type>.<attributeName>.<number>.dataSeparator"
+//	    ==> facilitates lists (some of) whose values contain spaces
+//
+//	TODO Also, provide other constraints from respective plug-ins and core classes:
+//	- implicit attributes from IM data model core classes and IM-GAMTA wrapper
+//	  - pageId and lastPageId, pageNumber and lastPageNumber, box
+//	  - blockId and lastBlockId
+//	  - fontName and fontCharCodes
+//	  - bold and italics (for both words and emphasis annotations)
+//	- caption/captionCitation constraints from TextBlockActionProvider
+//	  - startId/captionStartId
+//	  - targetBox/captionTargetBox
+//	  - targetPageId/captionTargetPageId
+//	  - captionStart and captionText
+//	- table connecting attributes from TableActionProvider
+//	- image connecting attributes from IllustrationActionProvider
+//	
+//TODO Better register attribute data providers in AttributeUtils:
+//- most central point to logically do so
+//- keeps logic separate from UI
+//- enables IM classes to know nothing beyond data model utilities and still register their constraints
+//- facilitates constraint check methods in that very utility class
+//  ==> allows for logical use of such a constraint check in QC (Stonks !!!)
+//
+//TODO Make attribute value constraints into objects:
+//- specify "allow adding" as public final boolean
+//  ==> false produces error on name input in attribute editor
+//  ==> no use for that at this point, but we might want to generally offer the option
+//- specify "allow delete" as public final boolean
+//  ==> false deactivates remove button in attribute editor
+//- specify "allow modify" as public final boolean
+//  ==> false deactivates selecting attribute for editing in attribute editor
+//- specify "allow edit" as public final boolean
+//  ==> false makes value uneditable in attribute editor (selecting still allowed)
+//- specify "is referential" as public final boolean
+//  ==> indicates that valid values are data dependent ...
+//  ==> ... and (in JavaDoc) mandate returning same suggested values even for null argument
+//- specify type of attribute bearer and attribute name as public final strings
+//  ==> facilitates indexing in HashMap and thus fast access
+//- provide method checkValue(Attributed attributed, Object attributeValue) ==> String[] errors
+//  - return null if value OK
+//  - return array of error messages otherwise
+//    ==> provide protected wrapError(String error) ==> String[] as static convenience method for array generation
+//- provide method getAttributeValues(Attributed attributed) ==> Object[] values
+//  - returning null by default
+//  - mandate overwriting (in JavaDoc) if modification allowed, but not editing
+//  ==> use for providing suggested values even if editable
+//  ==> use for providing possible values in referencing attributes ...
+//  ==> ... and cache those lists in attribute editor (no need for executing them GPaths time and again ...)
+//  ==> treat as "not editable" in attribute editor if referential and provided values are null
+//    ==> provides way of locking attributes in sub windows of XML view that lack access to whole document (as result of local copy of content MutableAnnotation)
+//    ==> should become _way_ easier to handle with new XML UI, though (better UNDO and write-through handling, and separate editability flags for text and markup)
+//    ==> might still necessitate overwriting getDocument() method in content copy document to return actual root document (or unmodifiable wrapper thereof) independent of nesting depth
+//      ==> create respective "all the way up" wrapper in XML editor dialog (latest with new XML UI)
+//==> aggregate attribute names and use for suggestions
+//==> add attribute name suggestions as "allow all" constraints with no suggested values
+//  ==> more fine granular
+//  ==> easier to aggregate
+//  ==> provide respective convenience method, wrapping bearer type and attribute name
+//==> single point for retrieving suggested attribute names from
+//==> single point for retrieving suggested attribute values from
+//==> single point for checking for attribute errors
+//
+//TODO Also provide registry of object attribute constraints:
+//- specify type as public final string
+//  ==> easy to index
+//  ==> use null as wildcard (for global attributes)
+//- specify "is exclusive" as public final boolean
+//  ==> observe in aggregation (intersection/replacement instead of union)
+//  ==> provides means of creating closed world (for whoever wants that ... not our concern as data model architects ...)
+//- provide method getAttributeNames(String type) ==> String[] attributeNames
+//  - return null by default
+//  - mandate overwriting (in JavaDoc) if exclusive
+//==> allows controlling which attributes are valid on which elements ...
+//==> ... as well as specifying attribute name suggestions in more compact way
+//
+//TODO Maybe, even add registry of annotation type constraints to AnnotationUtils:
+//- specify "is exclusive" as public final boolean
+//  ==> provides means of creating closed world (for whoever wants that ... again, not our concern as data model architects ...)
+//- provides central registry of annotation type suggestions
+//- provide getAnnotationTypes(Attributed document) ==> String[] method
+//==> might be useful for both XML UI and IM UI
+//==> use ImPage as argument for getting region types in IM UI
+//==> register basic type providers from data model classes proper
+//==> use some specific plug-in for registering further suggestions
+//==> more comprehensive lists to choose from
+//		 */
+//		
+//		/**
+//		 * Retrieve a list of suggested attributes for some attributed object.
+//		 * Implementations are suggested to determine the type of the argument
+//		 * attributed object in some way and then loop through to the version
+//		 * of this method that takes a string as an argument.
+//		 * @param attributed the attributed object the suggestions are for
+//		 * @return an array containing the suggestions, or null, if there are
+//		 *            no suggestions available from this provider
+//		 */
+//		public abstract String[] getAttributesFor(Attributed attributed);
+//		
+//		/**
+//		 * Get suggested attribute names for a given object type.
+//		 * @param type the object type to get the attribute names for
+//		 * @return an array holding the suggested attribute names
+//		 */
+//		public abstract String[] getAttributesFor(String type);
+//		
+//		/**
+//		 * Retrieve a list of value suggestions for a given attribute of some
+//		 * attributed object. Implementations are suggested to determine the
+//		 * type of the argument attributed object in some way and then loop
+//		 * through to the version of this method that takes two strings as
+//		 * arguments.
+//		 * @param attributed the attributed object the suggestions are for
+//		 * @param attributeName the name of the attribute to get the
+//		 *            suggestions for
+//		 * @return a list containing the suggestions, or null, if there is no
+//		 *            such list available from this provider
+//		 */
+//		public abstract AttributeValueList getValuesFor(Attributed attributed, String attributeName);
+//		
+//		/**
+//		 * Get suggested values for a given attribute of a given object type.
+//		 * @param type the type of object the attribute belongs to
+//		 * @param attributeName the attribute name to get the values for
+//		 * @return a list holding the suggested attribute values
+//		 */
+//		public abstract AttributeValueList getValuesFor(String type, String attributeName);
+//	}
+//	
+//	private static LinkedHashSet attributeDataProviders = new LinkedHashSet();
+//	
+//	/**
+//	 * Register an attribute data provider so it is available to all future
+//	 * instances of this class.
+//	 * @param avp the attribute data provider to add
+//	 */
+//	public static void addAttributeDataProvider(AttributeDataProvider avp) {
+//		if (avp != null)
+//			attributeDataProviders.add(avp);
+//	}
+//	
+//	/**
+//	 * Remove an attribute data provider.
+//	 * @param avp the attribute data provider to remove
+//	 */
+//	public static void removeAttributeDataProvider(AttributeDataProvider avp) {
+//		attributeDataProviders.remove(avp);
+//	}
+//	
+//	/**
+//	 * Retrieve the attribute data providers currently registered.
+//	 * @return an array holding the attribute data providers
+//	 */
+//	public static AttributeDataProvider[] getAttributeDataProviders() {
+//		return ((AttributeDataProvider[]) attributeDataProviders.toArray(new AttributeDataProvider[attributeDataProviders.size()]));
+//	}
+	
 	private static final String DUMMY_ATTRIBUTE_NAME = "Attribute Name";
 	private static final String DUMMY_ATTRIBUTE_VALUE = "Attribute Value";
 	
@@ -256,7 +526,7 @@ public class AttributeEditor extends JPanel {
 		this(new MultiAttributedWrapper(annotations), context);
 	}
 	private AttributeEditor(MultiAttributedWrapper annotationWraper, QueriableAnnotation context) /* need this ugly intermediate step to access contents of wrapper */ {
-		this(annotationWraper, null, null, ((context == null) ? new Annotation[0] : context.getAnnotations(annotationWraper.getType())));
+		this(annotationWraper, annotationWraper.getType(), annotationWraper.getValue(), ((context == null) ? new Annotation[0] : context.getAnnotations(annotationWraper.getType())));
 		//	TODO maybe use annotations of ALL present types as context ...
 	}
 	
@@ -269,7 +539,10 @@ public class AttributeEditor extends JPanel {
 	 *            suggestions)
 	 */
 	public AttributeEditor(Annotation[] annotations, Attributed[] context) {
-		this(new MultiAttributedWrapper(annotations), null, null, context);
+		this(new MultiAttributedWrapper(annotations), context);
+	}
+	private AttributeEditor(MultiAttributedWrapper annotationWraper, Attributed[] context) /* need this ugly intermediate step to access contents of wrapper */ {
+		this(annotationWraper, annotationWraper.getType(), annotationWraper.getValue(), context);
 	}
 	
 	/**
@@ -344,6 +617,7 @@ public class AttributeEditor extends JPanel {
 				selectedValue = new SelectableAttributeValue(attributeNames[n], multiValueObject, multiValueObject.values.size());
 				selectedValue.inContentCount += multiValueObject.values.size();
 				valueData = new AttributeValueData(attributeNames[n], selectedValue);
+				valueData.inContentCount += multiValueObject.values.size();
 				if (multiValueObject.isAmbiguous()) {
 					Object[] selectableValueObjects = multiValueObject.getValues();
 					for (int v = 0; v < selectableValueObjects.length; v++) {
@@ -358,6 +632,7 @@ public class AttributeEditor extends JPanel {
 				selectedValue = new SelectableAttributeValue(attributeNames[n], valueObject);
 				selectedValue.inContentCount++;
 				valueData = new AttributeValueData(attributeNames[n], selectedValue);
+				valueData.inContentCount++;
 			}
 			this.attributeValues.put(attributeNames[n], valueData);
 		}
@@ -381,12 +656,16 @@ public class AttributeEditor extends JPanel {
 					this.attributeValues.put(attributeNames[n], valueData);
 				}
 				else valueData.addSelectableValue(selectableValue);
+				valueData.inContextCount++;
 			}
 		}
 		
 		//	add attribute name suggestions from providers
 		for (int p = 0; p < attributeValueProviders.size(); p++) {
-			attributeNames = ((AttributeValueProvider) attributeValueProviders.get(p)).getAttributesFor(this.attributed);
+			AttributeValueProvider attributeValueProvider = ((AttributeValueProvider) attributeValueProviders.get(p));
+			attributeNames = attributeValueProvider.getAttributesFor(this.attributed);
+			if (attributeNames == null)
+				attributeNames = attributeValueProvider.getAttributesFor(type);
 			if (attributeNames == null)
 				continue;
 			for (int n = 0; n < attributeNames.length; n++) {
@@ -395,20 +674,20 @@ public class AttributeEditor extends JPanel {
 					valueData = new AttributeValueData(attributeNames[n], null);
 					this.attributeValues.put(attributeNames[n], valueData);
 				}
-//				valueData.fromProviderCount++;
+				valueData.fromProviderCount++;
 			}
 		}
 		
 		//	add attribute value suggestions from providers
-		for (Iterator anit = this.contextAttributeValueSetsByName.keySet().iterator(); anit.hasNext();) {
+		for (Iterator anit = this.attributeValues.keySet().iterator(); anit.hasNext();) {
 			String attributeName = ((String) anit.next());
 			AttributeValueData attributeValueData = ((AttributeValueData) this.attributeValues.get(attributeName));
-			if (attributeValueData == null) {
-				attributeValueData = new AttributeValueData(attributeName, null);
-				this.attributeValues.put(attributeName, attributeValueData);
-			}
 			for (int p = 0; p < attributeValueProviders.size(); p++) {
-				AttributeValueList attributeValueList = ((AttributeValueProvider) attributeValueProviders.get(p)).getValuesFor(this.attributed, attributeName);
+				AttributeValueProvider attributeValueProvider = ((AttributeValueProvider) attributeValueProviders.get(p));
+				AttributeValueList attributeValueList = attributeValueProvider.getValuesFor(this.attributed, attributeName);
+				if (attributeValueList == null)
+					attributeValueList = attributeValueProvider.getValuesFor(type, attributeName);
+				//	TODO make this work in GGI
 				if (attributeValueList == null)
 					continue;
 				String[] attributeValues = attributeValueList.toStringArray();
@@ -425,6 +704,7 @@ public class AttributeEditor extends JPanel {
 		}
 		
 		//	initialize attribute editor fields
+		this.attributeNameField.setRenderer(new AttributeNameListCellRenderer(this.attributeNameField));
 		this.attributeNameField.setBorder(BorderFactory.createLoweredBevelBorder());
 		this.attributeNameField.setEditable(true);
 		this.resetAttributeNameField();
@@ -459,7 +739,6 @@ public class AttributeEditor extends JPanel {
 		this.attributeValueField.setRenderer(new AttributeValueListCellRenderer(this.attributeValueField));
 		this.attributeValueField.setBorder(BorderFactory.createLoweredBevelBorder());
 		this.attributeValueField.setEditable(true);
-		
 		this.resetAttributeValueField();
 		
 		this.attributeValueField.getEditor().getEditorComponent().addFocusListener(new FocusAdapter() {
@@ -618,6 +897,33 @@ public class AttributeEditor extends JPanel {
 		this.add(attributeInputPanel, BorderLayout.SOUTH);
 	}
 	
+	private class AttributeNameListCellRenderer implements ListCellRenderer {
+		private DefaultListCellRenderer defaultRenderer = new DefaultListCellRenderer();
+		private JComboBox target;
+		AttributeNameListCellRenderer(JComboBox target) {
+			this.target = target;
+		}
+		public Component getListCellRendererComponent(JList list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
+			if ((value instanceof AttributeValueData))
+				return this.getListCellRendererComponent(list, ((AttributeValueData) value), index, isSelected, cellHasFocus);
+			else return this.defaultRenderer.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+		}
+		private Component getListCellRendererComponent(JList list, AttributeValueData value, int index, boolean isSelected, boolean cellHasFocus) {
+			String valueStr = ((value.name == null) ? "" : value.name);;
+			Component lcrc = this.defaultRenderer.getListCellRendererComponent(list, valueStr, index, isSelected, cellHasFocus);
+			if (!this.target.isPopupVisible())
+				return lcrc;
+			int fontStyle = Font.PLAIN;
+			if (value.inContentCount != 0)
+				fontStyle |= Font.BOLD;
+			else if ((value.inContextCount == 0) && (value.fromProviderCount != 0))
+				fontStyle |= Font.ITALIC;
+			if (fontStyle != Font.PLAIN)
+				lcrc.setFont(lcrc.getFont().deriveFont(fontStyle));
+			return lcrc;
+		}
+	}
+	
 	private class AttributeValueListCellRenderer implements ListCellRenderer {
 		private DefaultListCellRenderer defaultRenderer = new DefaultListCellRenderer();
 		private JComboBox target;
@@ -630,7 +936,6 @@ public class AttributeEditor extends JPanel {
 			else return this.defaultRenderer.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
 		}
 		private Component getListCellRendererComponent(JList list, SelectableAttributeValue value, int index, boolean isSelected, boolean cellHasFocus) {
-//			Component lcrc = this.defaultRenderer.getListCellRendererComponent(list, value.value, index, isSelected, cellHasFocus);
 			String valueStr;
 			if (value.parentMultiValueSize == 0)
 				valueStr = ((value.value == null) ? "" : value.value.toString());
@@ -643,7 +948,7 @@ public class AttributeEditor extends JPanel {
 			int fontStyle = Font.PLAIN;
 			if (value.inContentCount != 0)
 				fontStyle |= Font.BOLD;
-			if (value.fromProviderCount != 0)
+			else if ((value.inContextCount == 0) && (value.fromProviderCount != 0))
 				fontStyle |= Font.ITALIC;
 			if (fontStyle != Font.PLAIN)
 				lcrc.setFont(lcrc.getFont().deriveFont(fontStyle));
@@ -655,9 +960,9 @@ public class AttributeEditor extends JPanel {
 		final String name; // TODO not sure if we need this ... maybe for "is restricted" lookups
 		SelectableAttributeValue selectedValue;
 		TreeMap selectableValues = new TreeMap(toStringOrder);
-//		int inContentCount = 0;
-//		int inContextCount = 0;
-//		int fromProviderCount = 0;
+		int inContentCount = 0;
+		int inContextCount = 0;
+		int fromProviderCount = 0;
 		AttributeValueData(String name, SelectableAttributeValue selectedValue) {
 			this.name = name;
 			if (selectedValue != null)
@@ -684,6 +989,9 @@ public class AttributeEditor extends JPanel {
 		}
 		SelectableAttributeValue[] getSelectableValues() {
 			return ((SelectableAttributeValue[]) this.selectableValues.values().toArray(new SelectableAttributeValue[this.selectableValues.size()]));
+		}
+		public String toString() {
+			return ((this.name == null) ? "" : this.name);
 		}
 		static final Comparator toStringOrder = new Comparator() {
 			public int compare(Object obj1, Object obj2) {
@@ -949,18 +1257,32 @@ TODO add AttributeValueChecker interface to AttributeUtils (or maybe to Attribut
 	 */
 	
 	private void resetAttributeNameField() {
-		this.attributeNameField.setModel(new DefaultComboBoxModel((String[]) this.attributeValues.keySet().toArray(new String[this.attributeValues.size()])));
+//		this.attributeNameField.setModel(new DefaultComboBoxModel((String[]) this.attributeValues.keySet().toArray(new String[this.attributeValues.size()])));
+		AttributeValueData[] attributeDatas = new AttributeValueData[this.attributeValues.size()];
+		int ani = 0;
+		for (Iterator anit = this.attributeValues.keySet().iterator(); anit.hasNext();) {
+			String attributeName = ((String) anit.next());
+			attributeDatas[ani++] = ((AttributeValueData) this.attributeValues.get(attributeName));
+		}
+		this.attributeNameField.setModel(new DefaultComboBoxModel(attributeDatas));
 		this.attributeNameField.setSelectedItem(DUMMY_ATTRIBUTE_NAME);
 	}
 	
 	private void resetAttributeValueField() {
 		Object nameObj = this.attributeNameField.getSelectedItem();
-		AttributeValueData valueData = (((nameObj == null) || DUMMY_ATTRIBUTE_NAME.equals(nameObj)) ? null : ((AttributeValueData) this.attributeValues.get(nameObj)));
+//		AttributeValueData valueData = (((nameObj == null) || DUMMY_ATTRIBUTE_NAME.equals(nameObj)) ? null : ((AttributeValueData) this.attributeValues.get(nameObj)));
+		AttributeValueData valueData;
+		if ((nameObj == null) || DUMMY_ATTRIBUTE_NAME.equals(nameObj))
+			valueData = null;
+		else if (nameObj instanceof AttributeValueData)
+			valueData = ((AttributeValueData) nameObj);
+		else valueData = ((AttributeValueData) this.attributeValues.get(nameObj.toString()));
 		if (valueData == null) {
 			this.attributeValueField.setModel(new DefaultComboBoxModel(new String[0]));
 			this.attributeValueField.setSelectedItem(DUMMY_ATTRIBUTE_VALUE);
 		}
 		else {
+			//	TODO make sure to not prefill non-present attribute
 			this.attributeValueField.setModel(new DefaultComboBoxModel(valueData.getSelectableValues()));
 			this.attributeValueField.setSelectedItem((valueData.selectedValue == null) ? DUMMY_ATTRIBUTE_VALUE : valueData.selectedValue);
 		}
@@ -995,8 +1317,12 @@ TODO add AttributeValueChecker interface to AttributeUtils (or maybe to Attribut
 		
 		//	get name
 		String name = null;
-		Object nameObj = attributeNameField.getSelectedItem();
-		if (nameObj != null)
+		Object nameObj = this.attributeNameField.getSelectedItem();
+//		if (nameObj != null)
+//			name = nameObj.toString().trim();
+		if (nameObj instanceof AttributeValueData)
+			name = ((AttributeValueData) nameObj).name;
+		else if (nameObj != null)
 			name = nameObj.toString().trim();
 		if ((name == null) || (name.length() == 0) || DUMMY_ATTRIBUTE_NAME.equals(name))
 			return;
@@ -1069,6 +1395,28 @@ TODO add AttributeValueChecker interface to AttributeUtils (or maybe to Attribut
 	}
 	
 	/**
+	 * Set the selected attribute name. This will set the attribute name field
+	 * to the argument name, set the attribute value field to the current
+	 * attribute value, and move the keyboard focus to the latter field. If the
+	 * attributed object (or none of the attributes objects) whose attributes
+	 * are being edited in this panel have the respective attribute, this
+	 * method does nothing.
+	 * @param attributeName the name of the attribute to select for editing
+	 */
+	public void setSelectedAttributeName(String attributeName) {
+		final AttributeValueData attributeValueData = ((AttributeValueData) this.attributeValues.get(attributeName));
+		if (attributeValueData == null)
+			return;
+		if (SwingUtilities.isEventDispatchThread())
+			this.attributeNameField.setSelectedItem(attributeValueData);
+		else SwingUtilities.invokeLater(new Runnable() {
+			public void run() {
+				attributeNameField.setSelectedItem(attributeValueData);
+			}
+		});
+	}
+	
+	/**
 	 * Write the changes made in the editor through to the attributed object
 	 * being edited.
 	 * @return true if there were any changes to be written, false otherwise
@@ -1135,7 +1483,8 @@ TODO add AttributeValueChecker interface to AttributeUtils (or maybe to Attribut
 			for (Iterator anit = attributeNames.iterator(); anit.hasNext();) {
 				String name = ((String) anit.next());
 				AttributeValueData value = ((AttributeValueData) attributeValues.get(name));
-				this.lines.add(new AttributeTableLine(name, value));
+//				this.lines.add(new AttributeTableLine(name, value));
+				this.lines.add(new AttributeTableLine(value));
 			}
 			this.layoutLines();
 		}
@@ -1175,28 +1524,42 @@ TODO add AttributeValueChecker interface to AttributeUtils (or maybe to Attribut
 			this.repaint();
 		}
 		
+		/* TODO make this bugger work on a dark mode desktop:
+- observe default label foreground/text and background colors in attribute editor attribute table ...
+- ... and invert all hard wired colors on background darker than light gray ...
+- ... OR EVEN BETTER, on background darker than foreground
+- also, mix attribute line background colors upon default background with 33% (or so) alpha
+  ==> automatically adjust to while or dark gray base background color
+  ==> far easier on eyes independent of actual base background color
+- best use (likely even static) long based int-to-int map for lookup (akin to DP MT flag sets) ...
+- ... mapping hard wired base ARGB to resultng ARGB to actually use ...
+- ... and most likely also associate long array with equally indexed color object array to avoid creating color objects time and again ...
+- ... if at cost of re-creating color objects whenever we add new key/value long and have to re-sort
+  ==> still _way_ cheaper than creating color objects for every lookup (despite square complexity on inserting new key)
+		 */
 		private class AttributeTableLine {
 			JButton removeButton;
 			JLabel displayLabel;
-			AttributeTableLine(final String name, AttributeValueData value) {
+//			AttributeTableLine(final String name, AttributeValueData value) {
+			AttributeTableLine(final AttributeValueData value) {
 				this.removeButton = new JButton("<HTML>&nbsp;<B>X</B>&nbsp;</HTML>");
-				this.removeButton.setToolTipText("Remove attribute '" + name + "'");
+				this.removeButton.setToolTipText("Remove attribute '" + value.name + "'");
 				this.removeButton.setBorder(BorderFactory.createRaisedBevelBorder());
 				this.removeButton.addActionListener(new ActionListener() {
 					public void actionPerformed(ActionEvent ae) {
-						removeAttribute(name);
+						removeAttribute(value.name);
 						lines.remove(AttributeTableLine.this);
 						layoutLines();
 					}
 				});
 				Color displayLabelBackground = Color.WHITE;
 				if (value.selectedValue == null)
-					this.displayLabel = new JLabel("<HTML>&nbsp;<B>" + name + "</B>:</HTML>");
+					this.displayLabel = new JLabel("<HTML>&nbsp;<B>" + value.name + "</B>:</HTML>");
 				else if (value.selectedValue.value instanceof MultiAttributedWrapper.MultiAttributeValueSet) {
 					MultiAttributedWrapper.MultiAttributeValueSet multiValue = ((MultiAttributedWrapper.MultiAttributeValueSet) value.selectedValue.value);
 					Object valueObj = multiValue.getValue();
 					if (multiValue.areValuesUnique()) {
-						this.displayLabel = new JLabel("<HTML>&nbsp;<B>" + name + "</B>: &lt;" + multiValue.getValueCount(false) + " different unique values&gt;</HTML>");
+						this.displayLabel = new JLabel("<HTML>&nbsp;<B>" + value.name + "</B>: &lt;" + multiValue.getValueCount(false) + " different unique values&gt;</HTML>");
 						StringBuffer allValueObjects = new StringBuffer("<HTML>" + multiValue.getValueCount(false) + " different unique values" + (multiValue.hasEmptyValues() ? (", " + multiValue.getValueCount(null) + " empty ones") : "") + ":<UL>");
 						Object[] valueObjs = multiValue.getValues();
 						for (int v = 0; v < valueObjs.length; v++)
@@ -1206,7 +1569,7 @@ TODO add AttributeValueChecker interface to AttributeUtils (or maybe to Attribut
 						displayLabelBackground = (multiValue.hasEmptyValues() ? Color.PINK : Color.CYAN);
 					}
 					else if (multiValue.getDistinctValueCount() > 1) {
-						this.displayLabel = new JLabel("<HTML>&nbsp;<B>" + name + "</B> [" + multiValue.getValueCount(valueObj) + "/" + multiValue.getValueCount(true) + "]: " + ((valueObj == null) ? "" : valueObj.toString()) + "</HTML>");
+						this.displayLabel = new JLabel("<HTML>&nbsp;<B>" + value.name + "</B> [" + multiValue.getValueCount(valueObj) + "/" + multiValue.getValueCount(true) + "]: " + ((valueObj == null) ? "" : valueObj.toString()) + "</HTML>");
 						StringBuffer allValueObjects = new StringBuffer("<HTML>" + multiValue.getDistinctValueCount() + " different values" + (multiValue.hasEmptyValues() ? (", " + multiValue.getValueCount(null) + " empty ones") : "") + ":<UL>");
 						Object[] valueObjs = multiValue.getValues();
 						for (int v = 0; v < valueObjs.length; v++)
@@ -1216,23 +1579,91 @@ TODO add AttributeValueChecker interface to AttributeUtils (or maybe to Attribut
 						displayLabelBackground = Color.YELLOW;
 					}
 					else if (multiValue.isAmbiguous()) /* only single non-empty value */ {
-						this.displayLabel = new JLabel("<HTML>&nbsp;<B>" + name + "</B> [" + multiValue.getValueCount(valueObj) + "/" + multiValue.getValueCount(true) + "]: " + ((valueObj == null) ? "" : valueObj.toString()) + "</HTML>");
+						this.displayLabel = new JLabel("<HTML>&nbsp;<B>" + value.name + "</B> [" + multiValue.getValueCount(valueObj) + "/" + multiValue.getValueCount(true) + "]: " + ((valueObj == null) ? "" : valueObj.toString()) + "</HTML>");
 						displayLabelBackground = Color_LIME;
 					}
 					else if (multiValue.getValueCount(valueObj) == 1)
-						this.displayLabel = new JLabel("<HTML>&nbsp;<B>" + name + "</B>: " + ((valueObj == null) ? "" : valueObj.toString()) + "</HTML>");
-					else this.displayLabel = new JLabel("<HTML>&nbsp;<B>" + name + "</B> [" + multiValue.getValueCount(valueObj) + "]: " + ((valueObj == null) ? "" : valueObj.toString()) + "</HTML>");
+						this.displayLabel = new JLabel("<HTML>&nbsp;<B>" + value.name + "</B>: " + ((valueObj == null) ? "" : valueObj.toString()) + "</HTML>");
+					else this.displayLabel = new JLabel("<HTML>&nbsp;<B>" + value.name + "</B> [" + multiValue.getValueCount(valueObj) + "]: " + ((valueObj == null) ? "" : valueObj.toString()) + "</HTML>");
 				}
-				else this.displayLabel = new JLabel("<HTML>&nbsp;<B>" + name + "</B>: " + ((value.selectedValue.value == null) ? "" : value.selectedValue.value.toString()) + "</HTML>");
+				else this.displayLabel = new JLabel("<HTML>&nbsp;<B>" + value.name + "</B>: " + ((value.selectedValue.value == null) ? "" : value.selectedValue.value.toString()) + "</HTML>");
 				this.displayLabel.setOpaque(true);
-				this.displayLabel.setBackground(displayLabelBackground);
+//				this.displayLabel.setBackground(displayLabelBackground);
+				this.displayLabel.setBackground(getAttributeBackgroundColor(displayLabelBackground));
 				this.displayLabel.setBorder(BorderFactory.createLineBorder(Color.LIGHT_GRAY));
 				this.displayLabel.addMouseListener(new MouseAdapter() {
 					public void mouseClicked(MouseEvent me) {
-						attributeNameField.setSelectedItem(name);
+//						attributeNameFields.setSelectedItem(name);
+						attributeNameField.setSelectedItem(value);
 					}
 				});
 			}
 		}
+	}
+	
+	/**
+	 * Retrieve the alpha used for adding color codes to attribute backgrounds
+	 * when editing the attributes of multiple objects together.
+	 * @return the attribute background alpha
+	 */
+	public static int getAttributeBackgroundAlpha() {
+		return attributeBackgroundAlpha;
+	}
+	
+	/**
+	 * Set the alpha used for adding color codes to attribute backgrounds when
+	 * editing the attributes of multiple objects together, in the [0x00,0xFF]
+	 * range. The default value is 0x55, corresponding to 33%. Setting this
+	 * parameter to a value outside the [0x00,0xFF] range effectively sets it
+	 * to the closest in-range value. Setting the alpha to 0 deactivates all
+	 * color coding.
+	 * @param aba the attribute background alpha to use
+	 */
+	public static void setAttributeBackgroundAlpha(int aba) {
+		if (aba < 0x00)
+			aba = 0x00;
+		else if (0xFF < aba)
+			aba = 0xFF;
+		if (attributeBackgroundAlpha == aba)
+			return;
+		attributeBackgroundAlpha = aba;
+		attributeBackgroundCache.clear();
+	}
+	
+	private static Map attributeBackgroundCache = Collections.synchronizedMap(new HashMap());
+	private static int attributeBackgroundAlpha = 0x55;
+	static Color getAttributeBackgroundColor(Color abc) {
+		ensureAttributeBackgroundBaseColor();
+		if (abc == null)
+			return attributeBackgroundBaseColor;
+		if (abc == Color.WHITE)
+			return attributeBackgroundBaseColor;
+		if (attributeBackgroundAlpha == 0) // color coding deactivated, we can save the hassle
+			return attributeBackgroundBaseColor;
+		Color useAbc = ((Color) attributeBackgroundCache.get(abc)); // color hashes to wrapped int value, thus makes for good key
+		if (useAbc == null) {
+			int r = ((abc.getRed() * attributeBackgroundAlpha) + (attributeBackgroundBaseColor.getRed() * (0xFF - attributeBackgroundAlpha)));
+			int g = ((abc.getGreen() * attributeBackgroundAlpha) + (attributeBackgroundBaseColor.getGreen() * (0xFF - attributeBackgroundAlpha)));
+			int b = ((abc.getBlue() * attributeBackgroundAlpha) + (attributeBackgroundBaseColor.getBlue() * (0xFF - attributeBackgroundAlpha)));
+			useAbc = new Color((r / 0xFF), (g / 0xFF), (b / 0xFF));
+			attributeBackgroundCache.put(abc, useAbc);
+		}
+		return useAbc;
+	}
+	
+	//	brightness formula below taken from https://stackoverflow.com/questions/596216/formula-to-determine-perceived-brightness-of-rgb-color
+	//	and adjusted for int arithmetics (no need for normalizing, value only needed for comparison)
+	private static Color attributeBackgroundBaseColor = null;
+	private static void ensureAttributeBackgroundBaseColor() {
+		if (attributeBackgroundBaseColor != null)
+			return;
+		JLabel testLabel = new JLabel("TEST");
+		Color tc = testLabel.getForeground();
+		int tcl = ((2126 * tc.getRed()) + (7152 * tc.getGreen()) + (0722 * tc.getBlue())); // (0.2126*R + 0.7152*G + 0.0722*B)
+		Color bc = testLabel.getBackground();
+		int bcl = ((2126 * bc.getRed()) + (7152 * bc.getGreen()) + (0722 * bc.getBlue())); // (0.2126*R + 0.7152*G + 0.0722*B)
+		if (tcl < bcl)
+			attributeBackgroundBaseColor = Color.WHITE; // default to previously hard coded white background if text darker than background
+		else attributeBackgroundBaseColor = bc; // use whichever custom background color otherwise
 	}
 }

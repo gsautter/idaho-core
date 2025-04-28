@@ -10,7 +10,7 @@
  *     * Redistributions in binary form must reproduce the above copyright
  *       notice, this list of conditions and the following disclaimer in the
  *       documentation and/or other materials provided with the distribution.
- *     * Neither the name of the Universitaet Karlsruhe (TH) nor the
+ *     * Neither the name of the Universitaet Karlsruhe (TH) / KIT nor the
  *       names of its contributors may be used to endorse or promote products
  *       derived from this software without specific prior written permission.
  *
@@ -27,45 +27,39 @@
  */
 package de.uka.ipd.idaho.gamta.util;
 
-
+import de.uka.ipd.idaho.gamta.AnnotationRoot;
 import de.uka.ipd.idaho.gamta.DocumentRoot;
 
 /**
- * This class implements a generic wrapper for arbitrary document roots. It loops
- * all method calls through to the wrapped document. The purpose of this class
- * is to provide a standard wrapper implementation of all the methods in
- * DocumentRoot in situations where some few of the methods need to be added
- * functionality through a wrapper class. Wrappers can simply extend this class
- * and overwrite methods as needed while avoiding having to implement all the
- * other methods as well. If Tokens and Annotations retrieved from this wrapper
- * need to be wrapped as well, the respective sub classes of this class should
- * overwrite the wrapToken(), wrapAnnotation() and wrapMutableAnnotation()
- * methods to provide the respective wrappers.
+ * Wrapper enabling implementations of <code>AnnotationRoot</code> to mimic an
+ * instance of <code>DocumentRoot</code>, e.g. be processed by implementations
+ * of <code>Analyzer</code>, provided the latter do not modify the underlying
+ * token and char sequence.
  * 
  * @author sautter
  */
-public class GenericDocumentWrapper extends GenericMutableAnnotationWrapper implements DocumentRoot {
+public class MockDocumentRoot extends MockMutableAnnotation implements DocumentRoot {
 	
 	/** Constructor
-	 * @param	data	the DocumentRoot to wrap
+	 * @param data the editable annotation to wrap
 	 */
-	public GenericDocumentWrapper(DocumentRoot data) {
+	public MockDocumentRoot(AnnotationRoot data) {
 		super(data);
 	}
 	
 	public String setDocumentProperty(String propertyName, String value) {
-		return ((DocumentRoot) this.annotationData).setDocumentProperty(propertyName, value);
+		return ((AnnotationRoot) this.annotationData).setDocumentProperty(propertyName, value);
 	}
 	
 	public String removeDocumentProperty(String propertyName) {
-		return ((DocumentRoot) this.annotationData).removeDocumentProperty(propertyName);
+		return ((AnnotationRoot) this.annotationData).removeDocumentProperty(propertyName);
 	}
 	
 	public void clearDocumentProperties() {
-		((DocumentRoot) this.annotationData).clearDocumentProperties();
+		((AnnotationRoot) this.annotationData).clearDocumentProperties();
 	}
 	
 	public String setAnnotationNestingOrder(String ano) {
-		return ((DocumentRoot) this.annotationData).setAnnotationNestingOrder(ano);
+		return ((AnnotationRoot) this.annotationData).setAnnotationNestingOrder(ano);
 	}
 }

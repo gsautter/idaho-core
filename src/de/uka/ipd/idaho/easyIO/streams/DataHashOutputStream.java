@@ -124,4 +124,27 @@ public class DataHashOutputStream extends FilterOutputStream {
 	public byte[] getDataHashBytes() {
 		return this.dataHashBytes;
 	}
+	
+	/**
+	 * Retrieve the data hash as a HEX string, i.e., the digest of all the
+	 * bytes written to the stream. Before the <code>close()</code> method is
+	 * called. this method returns null.
+	 * @return the digest hash of the data written to the stream
+	 */
+	public String getDataHashString() {
+		return toHexString(this.dataHashBytes);
+	}
+	
+	//	TODO centralize this soon as usage of RandomByteSource conversion faded out !!!
+	private static final String hexDigits = "0123456789ABCDEF";
+	private static String toHexString(byte[] bytes) {
+		if (bytes == null)
+			return null;
+		StringBuffer hex = new StringBuffer();
+		for (int b = 0; b < bytes.length; b++) {
+			hex.append(hexDigits.charAt((bytes[b] >>> 4) & 0x0F));
+			hex.append(hexDigits.charAt(bytes[b] & 0x0F));
+		}
+		return hex.toString();
+	}
 }

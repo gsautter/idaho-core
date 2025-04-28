@@ -30,27 +30,27 @@ package de.uka.ipd.idaho.gamta;
 
 
 /**
- * An annotation mimicing a document, allowing to edit the part of the document
- * it marks as if it were a document for itself
+ * An annotation mimicking a document, allowing to edit the part of the
+ * document it marks as if it were a document in itself.
  * 
  * @author sautter
  */
-public interface MutableAnnotation extends QueriableAnnotation, MutableTokenSequence {
-	
-	/** annotation type for marking a first level section in a document */
-	public static final String SECTION_TYPE = "section";
-	
-	/** annotation type for marking a second level section (sub section) in a document */
-	public static final String SUB_SECTION_TYPE = "subSection";
-	
-	/** annotation type for marking a third level section (sub sub section) in a document */
-	public static final String SUB_SUB_SECTION_TYPE = "subSubSection";
-	
-	/** annotation type for marking a paragraph in a document */
-	public static final String PARAGRAPH_TYPE = "paragraph";
-	
-	/** annotation type for marking a sentence in a document */
-	public static final String SENTENCE_TYPE = "sentence";
+public interface MutableAnnotation extends EditableAnnotation, MutableTokenSequence {
+//	
+//	/** annotation type for marking a first level section in a document */
+//	public static final String SECTION_TYPE = "section";
+//	
+//	/** annotation type for marking a second level section (sub section) in a document */
+//	public static final String SUB_SECTION_TYPE = "subSection";
+//	
+//	/** annotation type for marking a third level section (sub sub section) in a document */
+//	public static final String SUB_SUB_SECTION_TYPE = "subSubSection";
+//	
+//	/** annotation type for marking a paragraph in a document */
+//	public static final String PARAGRAPH_TYPE = "paragraph";
+//	
+//	/** annotation type for marking a sentence in a document */
+//	public static final String SENTENCE_TYPE = "sentence";
 	
 	/**
 	 * Add an Annotation to this mutable Annotation. Note: If this mutable
@@ -92,14 +92,14 @@ public interface MutableAnnotation extends QueriableAnnotation, MutableTokenSequ
 	 * @return the new Annotation
 	 */
 	public abstract MutableAnnotation addAnnotation(int startIndex, int endIndex, String type);
-	
-	/**
-	 * Remove an Annotation from this mutable Annotation.
-	 * @param annotation the Annotation to be removed
-	 * @return an Annotation equal to the one just removed (though references
-	 *         are not guaranteed to be equal in the sense of '==')
-	 */
-	public abstract Annotation removeAnnotation(Annotation annotation);
+//	
+//	/**
+//	 * Remove an Annotation from this mutable Annotation.
+//	 * @param annotation the Annotation to be removed
+//	 * @return an Annotation equal to the one just removed (though references
+//	 *         are not guaranteed to be equal in the sense of '==')
+//	 */
+//	public abstract Annotation removeAnnotation(Annotation annotation);
 	
 	/**
 	 * Remove an Annotation and all Tokens it spans from this mutable
@@ -193,16 +193,16 @@ public interface MutableAnnotation extends QueriableAnnotation, MutableTokenSequ
 //	public abstract MutableAnnotation[] getMutableAnnotationsOverlapping(Annotation annotation);
 //	
 //	public abstract MutableAnnotation[] getMutableAnnotationsOverlapping(String type, Annotation annotation);
-	
-	/**
-	 * Add a listener listening for changes to the annotation.
-	 * @param al the listener to be added
-	 */
-	public abstract void addAnnotationListener(AnnotationListener al);
-	
-	/**
-	 * Remove a listener from the annotation.
-	 * @param al the listener to be removed
-	 */
-	public abstract void removeAnnotationListener(AnnotationListener al);
+//	
+//	/**
+//	 * Add a listener listening for changes to the annotation.
+//	 * @param al the listener to be added
+//	 */
+//	public abstract void addAnnotationListener(AnnotationListener al);
+//	
+//	/**
+//	 * Remove a listener from the annotation.
+//	 * @param al the listener to be removed
+//	 */
+//	public abstract void removeAnnotationListener(AnnotationListener al);
 }

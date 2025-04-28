@@ -52,6 +52,7 @@ import javax.xml.transform.stream.StreamSource;
 import de.uka.ipd.idaho.htmlXmlUtil.accessories.XmlValidationUtils.DtdValidator;
 import de.uka.ipd.idaho.htmlXmlUtil.accessories.XmlValidationUtils.ValidationReport;
 import de.uka.ipd.idaho.htmlXmlUtil.accessories.XmlValidationUtils.ValidationReport.Line;
+import de.uka.ipd.idaho.htmlXmlUtil.accessories.XmlValidationUtils.XhtmlValidator;
 import de.uka.ipd.idaho.htmlXmlUtil.accessories.XmlValidationUtils.XsdValidator;
 import de.uka.ipd.idaho.htmlXmlUtil.accessories.XsltUtils.TransformerPool;
 
@@ -160,7 +161,11 @@ public class XmlTools {
 			}
 			else if (args[a].startsWith("DTD=")) {
 				String dtdAddress = args[a].substring("DTD=".length());
-				if (dtdAddress.startsWith("http://") || dtdAddress.startsWith("https://")) {
+				if ("XHTML".equalsIgnoreCase(dtdAddress)) {
+					if (dtd == null)
+						dtd = new XhtmlValidator();
+				}
+				else if (dtdAddress.startsWith("http://") || dtdAddress.startsWith("https://")) {
 					if (dtd == null)
 						dtd = new DtdValidator();
 					dtd.setDataBaseUrl(dtdAddress.substring(0, dtdAddress.lastIndexOf("/")));

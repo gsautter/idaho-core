@@ -43,7 +43,6 @@ import de.uka.ipd.idaho.gamta.QueriableAnnotation;
  * TODO document this class
  */
 public class GPathAnnotationSet extends GPathObject {
-	
 	private ArrayList annotationList = null;
 	private TreeSet annotationSet = null;
 	

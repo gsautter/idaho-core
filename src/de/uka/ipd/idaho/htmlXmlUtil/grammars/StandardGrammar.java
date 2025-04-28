@@ -248,7 +248,7 @@ public class StandardGrammar extends Grammar {
 					c+=6;
 				}
 				else if ((escapedString.startsWith("#", (c+1)) || escapedString.startsWith("x", (c+1))) && (escapedString.indexOf(';', (c+1)) != -1)) {
-					String cc = escapedString.substring(c, (escapedString.indexOf(';', (c+1))+1));
+					String cc = escapedString.substring(c, (escapedString.indexOf(';', (c+1)) + ";".length()));
 					char dch = this.getPlainChar(cc);
 					if (dch == 0) {
 						string.append(ch);

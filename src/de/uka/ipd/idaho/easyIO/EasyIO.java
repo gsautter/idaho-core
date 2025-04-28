@@ -242,6 +242,7 @@ public class EasyIO {
 	private static class StandardIoProvider implements IoProvider {
 		private Settings configuration;
 		private ClassLoader classLoader;
+		private boolean closed = false;
 		
 		private boolean wwwValid = false;
 		private boolean smtpValid = false;
@@ -255,14 +256,14 @@ public class EasyIO {
 		private String wwwProxyUser;
 		private String wwwProxyPassword;
 		
-		//	settings for smtp io
+		//	settings for SMTP IO
 		private String smtpServer;
 		private int smtpPort;
 		private String smtpLogin;
 		private String smtpPassword;
 		private String smtpFromAddress;
 		
-		//	settings for jdbc io
+		//	settings for JDBC IO
 		private String jdbcDriverClassName;
 		private String jdbcDriverClassPath = "";
 		private String jdbcDriver;
@@ -281,20 +282,16 @@ public class EasyIO {
 		
 		//	local objects for instant use
 		private Connection jdbcCon = null;
+		private int jdbcMaxReconnectAttempts = 10; // should be sensible default 
 		
 		//	jdbc syntax patterns
 		private Properties jdbcSyntax = null;
 		
-		/**
-		 * Constructor
-		 * @param configuration the parameters for the StandardIoProvider,
-		 *            contained in a Settings
-		 */
 		StandardIoProvider(Settings configuration, ClassLoader classLoader) {
 			this.configuration = configuration;
 			this.classLoader = classLoader;
 			
-			//	initialize www io
+			//	initialize WWW IO proxying
 			this.wwwProxyNeeded = "YES".equalsIgnoreCase(this.configuration.getSetting("WWW.UseProxy"));
 			this.wwwProxy = this.configuration.getSetting("WWW.Proxy");
 			this.wwwProxyPort = this.configuration.getSetting("WWW.ProxyPort");
@@ -302,13 +299,20 @@ public class EasyIO {
 			this.wwwProxyUser = this.configuration.getSetting("WWW.ProxyUser");
 			this.wwwProxyPassword = this.configuration.getSetting("WWW.ProxyPassword");
 			
-			//	check if www is valid
-			this.wwwValid = (!this.wwwProxyNeeded ||
-							  ((this.wwwProxy != null) &&
-							  (this.wwwProxyPort != null) &&
-								(!this.wwwProxyAuthNeeded ||
-								  ((this.wwwProxyUser != null) &&
-								  (this.wwwProxyPassword != null)))));
+			//	check if WWW access is valid
+			this.wwwValid = (!this.wwwProxyNeeded || (
+								(this.wwwProxy != null)
+								&&
+								(this.wwwProxyPort != null)
+								&& (
+									!this.wwwProxyAuthNeeded
+									|| (
+										(this.wwwProxyUser != null)
+										&&
+										(this.wwwProxyPassword != null)
+									)
+								)
+							));
 			
 			//	set proxy if needed
 			if (this.wwwValid && this.wwwProxyNeeded) {
@@ -320,14 +324,14 @@ public class EasyIO {
 				}
 			}
 			
-			//	initialize smtp io
+			//	initialize SMTP io
 			this.smtpServer = this.configuration.getSetting("SMTP.Server");
 			this.smtpPort = Integer.parseInt(this.configuration.getSetting("SMTP.Port", "-1"));
 			this.smtpLogin = this.configuration.getSetting("SMTP.Login");
 			this.smtpPassword = this.configuration.getSetting("SMTP.Password");
 			this.smtpFromAddress = this.configuration.getSetting("SMTP.FromAddress");
 			
-			//	check if smtp is valid
+			//	check if SMTP is valid
 //			this.smtpValid = ((this.smtpServer != null) &&
 //							 (this.smtpPort != -1l) &&
 //							 (this.smtpLogin != null) &&
@@ -338,7 +342,7 @@ public class EasyIO {
 					 (this.smtpPort != -1) &&
 					 (this.smtpFromAddress != null));
 			
-			//	initialize jdbc io
+			//	initialize JDBC IO
 			this.jdbcDriverClassName = this.configuration.getSetting("JDBC.DriverClassName");
 			this.jdbcDriverClassPath = this.configuration.getSetting("JDBC.DriverClassPath", "");
 			this.jdbcDriver = this.configuration.getSetting("JDBC.Driver");
@@ -352,20 +356,26 @@ public class EasyIO {
 			this.jdbcTerminalSemicolon = "YES".equalsIgnoreCase(this.configuration.getSetting("JDBC.TerminalSemicolon", "YES"));
 			this.jdbcKeyConstraints = "YES".equalsIgnoreCase(this.configuration.getSetting("JDBC.KeyConstraints", "YES"));
 			this.jdbcLogTime = "YES".equalsIgnoreCase(this.configuration.getSetting("JDBC.LogTime", "NO"));
-			this.jdbcCon = this.getJdbcConnection();
+			this.jdbcCon = this.getJdbcConnection(0);
 			
 			//	check if jdbc is valid
 			this.jdbcValid = (this.jdbcCon != null);
 			
-			//	load product specific database features
-			if (this.jdbcValid)
+			//	load product specific database features and re-connect attempt maximum
+			if (this.jdbcValid) {
 				this.jdbcSyntax = SyntaxHelper.loadJdbcSyntax(this.jdbcDriverClassName);
+				String mra = this.configuration.getSetting("JDBC.MaxReconnectAttempts");
+				if (mra != null) try {
+					this.jdbcMaxReconnectAttempts = Integer.parseInt(mra);
+				} catch (NumberFormatException nfe) {}
+			}
 		}
 		
 		/* (non-Javadoc)
 		 * @see de.uka.ipd.idaho.easyIO.IoProvider#close()
 		 */
 		public void close() {
+			this.closed = true;
 			if (this.jdbcCon != null) try {
 				this.jdbcCon.close();
 				this.jdbcCon = null;
@@ -383,15 +393,18 @@ public class EasyIO {
 		}
 		
 		//	create a JDBC connection according to the settings
-		private Connection getJdbcConnection() {
+		private Connection getJdbcConnection(int attempt) {
+			if (this.closed)
+				throw new IllegalStateException("StandardIoProvider is closed");
+			
 			try {
 				
 				//	make sure JDBC driver loaded and registered
 				ensureJdbcDriverLoaded(this.jdbcDriverClassName, this.jdbcDriverClassPath, this.classLoader);
 				
 				//	using user/password authentication
-				String url;
 				if (this.jdbcUseHostUserPassword) {
+					String url;
 					
 					//	connection url not given --> assemble it
 					if (this.jdbcUrl == null) {
@@ -411,6 +424,7 @@ public class EasyIO {
 				
 				//	using URL authentication
 				else {
+					String url;
 					
 					//	connection url not given --> assemble it
 					if (this.jdbcUrl == null) {
@@ -431,26 +445,44 @@ public class EasyIO {
 					return DriverManager.getConnection(url);
 				}
 			}
-			
-			//	catch exception caused by invalid settings
-			catch (SQLException sql) {
-				System.out.println("StandardIoProvider: " + sql.getClass().getName() + " (" + sql.getMessage() + ") while creating JDBC connection.");
-				sql.printStackTrace(System.out);
-				return null;
-			}
-			
-			//	catch exception caused by missing settings
-			catch (NullPointerException npe) {
-				System.out.println("StandardIoProvider: " + npe.getClass().getName() + " (" + npe.getMessage() + ") while creating JDBC connection.");
-				npe.printStackTrace(System.out);
-				return null;
-			}
+//			
+//			//	catch exception caused by invalid settings
+//			catch (SQLException sql) {
+//				System.out.println("StandardIoProvider: " + sql.getClass().getName() + " (" + sql.getMessage() + ") while creating JDBC connection.");
+//				sql.printStackTrace(System.out);
+//				return null;
+//			}
+//			
+//			//	catch exception caused by missing settings
+//			catch (NullPointerException npe) {
+//				System.out.println("StandardIoProvider: " + npe.getClass().getName() + " (" + npe.getMessage() + ") while creating JDBC connection.");
+//				npe.printStackTrace(System.out);
+//				return null;
+//			}
+//			
+//			//	catch other possible exceptions
+//			catch (Exception e) {
+//				System.out.println("StandardIoProvider: " + e.getClass().getName() + " (" + e.getMessage() + ") while creating JDBC connection.");
+//				e.printStackTrace(System.out);
+///				return null;
+//			}
 			
 			//	catch other possible exceptions
 			catch (Exception e) {
 				System.out.println("StandardIoProvider: " + e.getClass().getName() + " (" + e.getMessage() + ") while creating JDBC connection.");
 				e.printStackTrace(System.out);
-				return null;
+				if (attempt < 1) // call from constructor
+					return null;
+				if (this.closed) // call from constructor, or shutting down
+					throw new IllegalStateException("StandardIoProvider is closed");
+				else if (this.jdbcMaxReconnectAttempts <= attempt)
+					throw new IllegalStateException("Failed to reconnect to database in " + attempt + " attempts, giving up for now");
+				else {
+					try {
+						Thread.sleep(1000 * attempt);
+					} catch (InterruptedException ie) {}
+					return this.getJdbcConnection(attempt + 1);
+				}
 			}
 		}
 		
@@ -497,10 +529,8 @@ public class EasyIO {
 		private void reGetJdbcConnection() {
 			Connection oldJdbcCon = this.jdbcCon; // need to hold on to this so we recognize whether or not some other thread beat us to re-connecting
 			synchronized (this) {
-				if (this.jdbcCon == oldJdbcCon) {
-					this.jdbcCon = this.getJdbcConnection(); // try and dynamically reconnect after database restart
-					this.jdbcValid = (this.jdbcCon != null); // check success
-				}
+				if (this.jdbcCon == oldJdbcCon)
+					this.jdbcCon = this.getJdbcConnection(1); // try and dynamically reconnect after database restart
 			}
 		}
 		
@@ -901,39 +931,43 @@ public class EasyIO {
 		}
 		
 		private SqlQueryResult executeSelectQuery(String query, boolean copy, boolean isOriginalRequest) throws SQLException {
-			if (this.jdbcValid && (query != null) && query.toLowerCase().startsWith("select")) try {
+			if (query == null)
+				return null;
+			if (this.closed)
+				throw new IllegalStateException("StandardIoProvider is closed");
+			if (!this.jdbcValid)
+				throw new SQLException("StandardIoProvider: JDBC connection unavailable, check configuration");
+			if (!"SELECT".equalsIgnoreCase(query.substring(0, "SELECT".length())))
+				throw new SQLException("StandardIoProvider: not a SELECT query");
+			try {
 				long time = (this.jdbcLogTime ? System.currentTimeMillis() : 0);
 				Statement st = null;
 				SqlQueryResult sqr = null;
 				try {
 					st = (copy ? this.jdbcCon.createStatement() : this.jdbcCon.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY));
 					if (this.jdbcLogTime)
-						System.out.println("IoProvider: got statement after " + (System.currentTimeMillis() - time) + "ms");
+						System.out.println("StandardIoProvider: got statement after " + (System.currentTimeMillis() - time) + "ms");
 					sqr = new SqlQueryResult(query, this.jdbcLogTime, st.executeQuery(this.prepareQuery(query)), copy);
 					if (this.jdbcLogTime)
-						System.out.println("IoProvider: statement wrapped" + (copy ? " and copied" : "") + " after " + (System.currentTimeMillis() - time) + "ms");
+						System.out.println("StandardIoProvider: statement wrapped" + (copy ? " and copied" : "") + " after " + (System.currentTimeMillis() - time) + "ms");
 					return sqr;
 				}
 				finally {
 					if ((copy || (sqr == null)) && (st != null))
 						st.close();
 					if (this.jdbcLogTime)
-						System.out.println("IoProvider: done after " + (System.currentTimeMillis() - time) + "ms");
+						System.out.println("StandardIoProvider: done after " + (System.currentTimeMillis() - time) + "ms");
 				}
 			}
 			catch (SQLException sqle) {
 				if (isOriginalRequest && this.isConnectionClosedErrorMessage(sqle.getMessage())) {
-					System.out.println("IoProvider: " + sqle.getClass().getName() + " (" + sqle.getMessage() + ") while ececuting query, attempting re-connect ...");
+					System.out.println("StandardIoProvider: " + sqle.getClass().getName() + " (" + sqle.getMessage() + ") while ececuting query, attempting re-connect ...");
 					this.reGetJdbcConnection(); // try and dynamically reconnect after database restart
-					if (this.jdbcValid) {
-						System.out.println(" ==> database connection re-established successfully");
-						return this.executeSelectQuery(query, copy, false); // try again to process query (no use trying to reconnect again, though)
-					}
-					else System.out.println(" ==> failed to re-establish database connection");
+					System.out.println(" ==> database connection re-established successfully");
+					return this.executeSelectQuery(query, copy, false); // try again to process query (no use trying to reconnect again, though)
 				}
-				throw sqle;
+				else throw sqle;
 			}
-			return null;
 		}
 		
 		/**	execute a select query over the default JDBC connection
@@ -955,7 +989,13 @@ public class EasyIO {
 		}
 		
 		private int executeUpdateQuery(String query, boolean isOriginalRequest) throws SQLException {
-			if (this.jdbcValid && (query != null)) try {
+			if (query == null)
+				return 0;
+			if (this.closed)
+				throw new IllegalStateException("StandardIoProvider is closed");
+			if (!this.jdbcValid)
+				throw new SQLException("StandardIoProvider: JDBC connection unavailable, check configuration");
+			try {
 				Statement st = null;
 				try {
 					st = this.jdbcCon.createStatement();
@@ -968,22 +1008,18 @@ public class EasyIO {
 			}
 			catch (SQLException sqle) {
 				if (isOriginalRequest && this.isConnectionClosedErrorMessage(sqle.getMessage())) {
-					System.out.println("IoProvider: " + sqle.getClass().getName() + " (" + sqle.getMessage() + ") while ececuting query, attempting re-connect ...");
+					System.out.println("StandardIoProvider: " + sqle.getClass().getName() + " (" + sqle.getMessage() + ") while ececuting query, attempting re-connect ...");
 					this.reGetJdbcConnection(); // try and dynamically reconnect after database restart
-					if (this.jdbcValid) {
-						System.out.println(" ==> database connection re-established successfully");
-						return this.executeUpdateQuery(query, false); // try again to process query (no use trying to reconnect again, though)
-					}
-					else System.out.println(" ==> failed to re-establish database connection");
+					System.out.println(" ==> database connection re-established successfully");
+					return this.executeUpdateQuery(query, false); // try again to process query (no use trying to reconnect again, though)
 				}
-				throw sqle;
+				else throw sqle;
 			}
-			return 0;
 		}
 		
 		private final String prepareQuery(String query) {
 			if (query.endsWith(";"))
-				return (this.jdbcTerminalSemicolon ? query : query.substring(0, (query.length() - 1)));
+				return (this.jdbcTerminalSemicolon ? query : query.substring(0, (query.length() - ";".length())));
 			else return (this.jdbcTerminalSemicolon ? (query + ";") : query);
 		}
 		
@@ -1038,6 +1074,8 @@ public class EasyIO {
 		/**	send msg as an eMail with subject sbj to toAddress
 		 */
 		public void smtpSend(String subject, String message, String[] toAddresses) throws Exception {
+			if (this.closed)
+				throw new IllegalStateException("StandardIoProvider is closed");
 			if (this.smtpValid)
 				EasyIO.smtpSend(subject, message, toAddresses, this.smtpFromAddress, this.smtpServer, this.smtpPort, this.smtpLogin, this.smtpPassword);
 		}
@@ -1232,34 +1270,47 @@ public class EasyIO {
 		int negativeBytes = 0;
 		for (int b = 0; b < sampleSize; b++) {
 			if (bytes[b] == 0) {
-				if ((b & 1) == 0)
+				if ((b & 0x00000001) == 0)
 					evenZeros++;
 				else oddZeros++;
 			}
+			
 			//	UTF-8: first byte 0xC2-0xDF ==> 2 bytes, second byte 0x80-0xBF ==> values 0x0080-0x07FF
 			else if ((-62 /* 0xC2-256 */ <= bytes[b]) && (bytes[b] <= -33 /* 0xDF-256 */) && ((b+1) < sampleSize) && (bytes[b+1] <= -65 /* 0xBF-256 */)) {
 				negativeGroups++;
-				b++;
+				b++; // loop increment takes care of second byte
 			}
+			
 			//	UTF-8: first byte 0xE0 ==> 3 bytes, second byte 0xA0-0xBF, third byte 0x80-0xBF ==> values 0x0800-0x0FFF
 			else if ((-32 /* 0xE0-256 */ == bytes[b]) && ((b+2) < sampleSize) && (-96 /* 0xA0-256 */ <= bytes[b+1]) && (bytes[b+1] <= -65 /* 0xBF-256 */) && (bytes[b+2] <= -65 /* 0xBF-256 */)) {
 				negativeGroups++;
-				b+=2;
+				b+=2; // loop increment takes care of third byte
 			}
+			
 			//	UTF-8: first byte 0xE1-0xEF ==> 3 bytes, second byte 0x80-0xBF, third byte 0x80-0xBF ==> values 0x1000-0xFFFF
 			else if ((-31 /* 0xE1-256 */ <= bytes[b]) && (bytes[b] <= -17 /* 0xEF-256 */) && ((b+2) < sampleSize) && (bytes[b+1] <= -65 /* 0xBF-256 */) && (bytes[b+2] <= -65 /* 0xBF-256 */)) {
 				negativeGroups++;
-				b+=2;
+				b+=2; // loop increment takes care of third byte
 			}
+			
+			//	plain negative byte
 			else if (bytes[b] < 0)
 				negativeBytes++;
 		}
+		
+		//	lots of odd zeros ==> characteristic for BasicLatin encoded in UTF-16LE
 		if ((oddZeros * 3) > sampleSize)
 			return "UTF-16LE";
+		
+		//	lots of event zeros ==> characteristic for BasicLatin encoded in UTF-16BE
 		if ((evenZeros * 3) > sampleSize)
 			return "UTF-16BE";
-		if (negativeGroups > negativeBytes)
+		
+		//	more sequences of bytes below zero (0x80 or higher) than individual bytes ==> characteristic for UTF-8 (opposite would point to ANSI)
+		if (negativeBytes < negativeGroups)
 			return "UTF-8";
+		
+		//	hard to tell what this might be ...
 		return null;
 	}
 	

@@ -71,8 +71,6 @@ import org.xml.sax.ErrorHandler;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
 import org.xml.sax.SAXParseException;
-
-import de.uka.ipd.idaho.easyIO.utilities.ApplicationHttpsEnabler;
 //import de.uka.ipd.idaho.htmlXmlUtil.accessories.XsltUtils.ByteOrderMarkFilterInputStream;
 
 /**
@@ -102,22 +100,22 @@ public class XmlValidationUtils {
 //		if (vr != null)
 //			vr.printReport(new PrintWriter(System.out));
 //	}
-	public static void main(String[] args) throws Exception {
-		ApplicationHttpsEnabler.enableHttps();
-		File dataPath = new File("E:/Projektdaten/EJT/TaxPub");
-		File data = new File(dataPath, "ZooKeys-1029-139.xml");
-		ByteArrayOutputStream baos = new ByteArrayOutputStream();
-		BufferedInputStream bin = new BufferedInputStream(new FileInputStream(data));
-		byte[] buffer = new byte[1024];
-		for (int r; (r = bin.read(buffer, 0, buffer.length)) != -1;)
-			baos.write(buffer, 0, r);
-		bin.close();
-		DtdValidator validator = new DtdValidator(dataPath);
-		validator.setDataBaseUrl("https://zookeys.pensoft.net/nlm/");
-		ValidationReport vr = validator.validateXml(baos.toByteArray());
-		if (vr != null)
-			vr.printReport(new PrintWriter(System.out));
-	}
+//	public static void main(String[] args) throws Exception {
+//		ApplicationHttpsEnabler.enableHttps();
+//		File dataPath = new File("E:/Projektdaten/EJT/TaxPub");
+//		File data = new File(dataPath, "ZooKeys-1029-139.xml");
+//		ByteArrayOutputStream baos = new ByteArrayOutputStream();
+//		BufferedInputStream bin = new BufferedInputStream(new FileInputStream(data));
+//		byte[] buffer = new byte[1024];
+//		for (int r; (r = bin.read(buffer, 0, buffer.length)) != -1;)
+//			baos.write(buffer, 0, r);
+//		bin.close();
+//		DtdValidator validator = new DtdValidator(dataPath);
+//		validator.setDataBaseUrl("https://zookeys.pensoft.net/nlm/");
+//		ValidationReport vr = validator.validateXml(baos.toByteArray());
+//		if (vr != null)
+//			vr.printReport(new PrintWriter(System.out));
+//	}
 	
 	/**
 	 * Produce an XSD validator from an XML schema located at a URL.
@@ -313,10 +311,8 @@ public class XmlValidationUtils {
 	 * @throws IOException
 	 */
 	public static synchronized XsdValidator getXsdValidator(String name, InputStream xsdIn, boolean allowCache) throws IOException {
-		if (allowCache && (name != null) && xsdValidatorCache.containsKey(name)) {
-//			System.out.println("XsltUtils: XSL Transformer Pool cache hit for '" + name + "'");
+		if (allowCache && (name != null) && xsdValidatorCache.containsKey(name))
 			return ((XsdValidator) xsdValidatorCache.get(name));
-		}
 		BufferedReader xsdBr = new BufferedReader(new InputStreamReader(new ByteOrderMarkFilterInputStream(xsdIn), "UTF-8"));
 		StringBuffer xsdChars = new StringBuffer();
 		char[] charBuffer = new char[1024];
@@ -400,7 +396,7 @@ public class XmlValidationUtils {
 			return xv;
 		}
 		catch (Exception e) {
-			throw new IOException(e.getClass().getName() + " (" + e.getMessage() + ") while creating XSL Transformer Pool from '" + name + "'.");
+			throw new IOException(e.getClass().getName() + " (" + e.getMessage() + ") while creating XSD Validator Pool from '" + name + "'.");
 		}
 	}
 	private static HashMap xsdValidatorCache = new HashMap();
@@ -428,6 +424,14 @@ public class XmlValidationUtils {
 		public XsdValidator(String schemaData, File dataPath) {
 			super(dataPath);
 			this.schemaData = schemaData;
+		}
+		
+		/**
+		 * Provide a custom resolver for XSD resources.
+		 * @param rr the resource resolver to use
+		 */
+		public void setResourceResolver(LSResourceResolver rr) {
+			this.resourceResolver = rr;
 		}
 		
 		/* (non-Javadoc)
@@ -596,9 +600,8 @@ TODO Maybe facilitate statically registering centralized resource resolvers
 	
 	/**
 	 * Abstract parent class of both DTD and XSD validators, bundling caching
-	 * of entity/resource data, handling of the various possible, and verbosity
-	 * control.
-	 * input sources.
+	 * of entity/resource data, handling of the various possible input sources,
+	 * and verbosity control.
 	 * 
 	 * @author sautter
 	 */
@@ -650,6 +653,14 @@ TODO Maybe facilitate statically registering centralized resource resolvers
 		 */
 		public void setVerbose(boolean verbose) {
 			this.verbose = verbose;
+		}
+		
+		/**
+		 * Clear the in-memory cache holding the bytes of previously-resolved
+		 * DTD entities or XSD resources.
+		 */
+		public synchronized void clearResolveCache() {
+			this.resolveCache.clear();
 		}
 		
 		synchronized byte[] resolveToData(String publicId, String systemId) {
@@ -716,26 +727,6 @@ TODO Maybe facilitate statically registering centralized resource resolvers
 			}
 			return null;
 		}
-//		private byte[] resolveEntityToResource(String systemId) throws IOException {
-//			System.out.println(" - resolving entity to resource: " + systemId);
-//			if (systemId.lastIndexOf("/") != -1)
-//				systemId = systemId.substring(systemId.lastIndexOf("/") + "/".length());
-//			System.out.println(" - truncated to: " + systemId);
-//			String resName = TreatmentHtmlUtils.class.getName().replaceAll("\\.", "/");
-//			resName = resName.substring(0, (resName.lastIndexOf("/") + "/".length()));
-//			resName = (resName + "xmlDtds/" + systemId);
-//			System.out.println(" - seeking resource name: " + resName);
-//			InputStream in = TreatmentHtmlUtils.class.getClassLoader().getResourceAsStream(resName);
-//			if (in == null)
-//				return null;
-//			System.out.println("   ==> found");
-//			ByteArrayOutputStream baos = new ByteArrayOutputStream();
-//			byte[] buffer = new byte[1024];
-//			for (int r; (r = in.read(buffer, 0, buffer.length)) != -1;)
-//				baos.write(buffer, 0, r);
-//			in.close();
-//			return baos.toByteArray();
-//		}
 		private byte[] resolveToDataFile(String systemId) throws IOException {
 			if (this.dataPath == null)
 				return null;
@@ -1286,6 +1277,14 @@ TODO Maybe facilitate statically registering centralized resource resolvers
 			super(dataPath);
 		}
 		
+		/**
+		 * Provide a custom resolver for DTD entities.
+		 * @param er the entity resolver to use
+		 */
+		public void setEntityResolver(EntityResolver er) {
+			this.entityResolver = er;
+		}
+		
 		/*
 TODOne For DTD validator, figure out how to use fixed DTD
 ==> should be more flexible
@@ -1305,7 +1304,7 @@ TODOne For DTD validator, figure out how to use fixed DTD
 			byte[] bytes = this.resolveToData(publicId, systemId);
 			return ((bytes == null) ? null : new InputSource(new ByteArrayInputStream(bytes)));
 		}
-		
+
 		/* (non-Javadoc)
 		 * @see de.uka.ipd.idaho.htmlXmlUtil.accessories.XmlValidationUtils.AbstractValidator#doValidateXml(de.uka.ipd.idaho.htmlXmlUtil.accessories.XmlValidationUtils.AbstractValidator.ValidationData)
 		 */
@@ -1313,7 +1312,6 @@ TODOne For DTD validator, figure out how to use fixed DTD
 			long start = System.currentTimeMillis();
 			DtdValidatorInstance xmlValidator;
 			try {
-//				xmlValidator = this.getXmlValidator();
 				xmlValidator = getXmlValidator();
 			}
 			catch (ParserConfigurationException pce) {
@@ -1330,7 +1328,6 @@ TODOne For DTD validator, figure out how to use fixed DTD
 				return xmlValidator.validate(data, this);
 			}
 			finally {
-//				this.returnXmlValidator(xmlValidator);
 				returnXmlValidator(xmlValidator);
 				if (this.verbose) System.out.println("XML validated in " + (System.currentTimeMillis() - start) + "ms");
 			}
@@ -1365,22 +1362,7 @@ TODOne For DTD validator, figure out how to use fixed DTD
 				this.clearErrors();
 			}
 		}
-//		private DocumentBuilderFactory docBuilderFactory = null;
-//		private LinkedList xmlValidators = new LinkedList();
-//		private synchronized DtdValidatorInstance getXmlValidator() throws ParserConfigurationException {
-//			if (this.xmlValidators.size() != 0)
-//				return ((DtdValidatorInstance) this.xmlValidators.removeFirst());
-//			if (this.docBuilderFactory == null) {
-//				this.docBuilderFactory = DocumentBuilderFactory.newInstance();
-//				this.docBuilderFactory.setValidating(true);
-//			}
-//			return new DtdValidatorInstance(this.docBuilderFactory.newDocumentBuilder());
-//		}
-//		private synchronized void returnXmlValidator(DtdValidatorInstance xmlValidator) {
-//			xmlValidator.reset();
-//			this.xmlValidators.addLast(xmlValidator);
-//		}
-		//	TODOne even make this static ???
+		
 		private static DocumentBuilderFactory docBuilderFactory = null;
 		private static LinkedList xmlValidators = new LinkedList();
 		private static synchronized DtdValidatorInstance getXmlValidator() throws ParserConfigurationException {
@@ -1395,6 +1377,79 @@ TODOne For DTD validator, figure out how to use fixed DTD
 		private static synchronized void returnXmlValidator(DtdValidatorInstance xmlValidator) {
 			xmlValidator.reset();
 			xmlValidators.addLast(xmlValidator);
+		}
+	}
+	
+	/**
+	 * Validate an XHTML document.
+	 * @param xhtml the XHTML document to validate
+	 * @return the validation report
+	 */
+	public static ValidationReport validateXhtml(String xhtml) {
+		try {
+			return validateXhtml(xhtml.getBytes("UTF-8"));
+		}
+		catch (UnsupportedEncodingException uee) {
+			return null; // never gonna happen, but Java don't know
+		}
+	}
+	
+	/**
+	 * Validate an XHTML document. The bytes are expected in UTF-8 encoding.
+	 * @param xhtmlBytes the XHTML document to validate
+	 * @return the validation report
+	 */
+	public static ValidationReport validateXhtml(byte[] xhtmlBytes) {
+		long start = System.currentTimeMillis();
+		XhtmlValidator xhtmlValidator;
+		try {
+			xhtmlValidator = getXhtmlValidator();
+		}
+		catch (ParserConfigurationException pce) {
+			System.out.println("Error validating XHTML document: " + pce.getMessage());
+			System.out.println(pce);
+			return null;
+		}
+		System.out.println("XHTML validator ensured in " + (System.currentTimeMillis() - start) + "ms");
+		
+		start = System.currentTimeMillis();
+		try {
+			return xhtmlValidator.validateXml(xhtmlBytes);
+		}
+		finally {
+			System.out.println("XHTML validated in " + (System.currentTimeMillis() - start) + "ms");
+		}
+	}
+	
+	private static XhtmlValidator xhtmlValidator; // this thing has internal instance pool, no need add another one
+	private static synchronized XhtmlValidator getXhtmlValidator() throws ParserConfigurationException {
+		if (xhtmlValidator == null)
+			xhtmlValidator = new XhtmlValidator();
+		return xhtmlValidator;
+	}
+	
+	//	need this class accessible for command line utility
+	static class XhtmlValidator extends DtdValidator {
+		XhtmlValidator() {}
+		protected byte[] resolveSystemId(String systemId) throws IOException {
+			System.out.println(" - resolving entity to resource: " + systemId);
+			if (systemId.lastIndexOf("/") != -1)
+				systemId = systemId.substring(systemId.lastIndexOf("/") + "/".length());
+			System.out.println(" - truncated to: " + systemId);
+			String resName = XmlValidationUtils.class.getName().replaceAll("\\.", "/");
+			resName = resName.substring(0, (resName.lastIndexOf("/") + "/".length()));
+			resName = (resName + "htmlDtds/" + systemId);
+			System.out.println(" - seeking resource name: " + resName);
+			InputStream in = XmlValidationUtils.class.getClassLoader().getResourceAsStream(resName);
+			if (in == null)
+				return null;
+			System.out.println("   ==> found");
+			ByteArrayOutputStream baos = new ByteArrayOutputStream();
+			byte[] buffer = new byte[1024];
+			for (int r; (r = in.read(buffer, 0, buffer.length)) != -1;)
+				baos.write(buffer, 0, r);
+			in.close();
+			return baos.toByteArray();
 		}
 	}
 }

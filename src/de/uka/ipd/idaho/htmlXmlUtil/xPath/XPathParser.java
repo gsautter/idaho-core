@@ -29,6 +29,8 @@ package de.uka.ipd.idaho.htmlXmlUtil.xPath;
 
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Stack;
 
 import de.uka.ipd.idaho.htmlXmlUtil.xPath.exceptions.XPathSyntaxException;
@@ -54,10 +56,12 @@ public class XPathParser {
 	public static XPath parsePath(String path) {
 		
 		//	check parameter
-		if ((path == null) || (path.length() == 0)) return new XPath();
+		if ((path == null) || (path.length() == 0))
+			return new XPath();
 		String[] pathTokens = tokenize(path);
 		String error = validatePath(pathTokens);
-		if (error != null) throw new XPathSyntaxException("Invalid XPath expression: " + error);
+		if (error != null)
+			throw new XPathSyntaxException("Invalid XPath expression: " + error);
 		return parsePath(pathTokens);
 	}
 	
@@ -279,6 +283,43 @@ public class XPathParser {
 		
 		return xps;
 	}
+	
+	/**
+	 * Parse an XPath expression.
+	 * @param expression the String representation of the XPath expression to
+	 *            parse
+	 * @return a XPathExpression object representing the parsed GPath
+	 */
+	public static XPathExpression parseExpression(String expression) {
+		
+		//	check parameter
+		if (expression == null)
+			return null;
+		
+		//	do cache lookup
+		XPathExpression gpe = ((XPathExpression) expressionCache.get(expression));
+		
+		//	cache miss, parse expression string
+		if (gpe == null) {
+			
+			//	tokenize expression & validate expression
+			String[] expressionTokens = tokenize(expression);
+			if (DEBUG) System.out.println("Got expression tokens: " + Arrays.toString(expressionTokens));
+			String error = validatePath(expressionTokens);
+			if (error != null)
+				throw new XPathSyntaxException("Invalid GPath expression: " + error + "\n  " + expression);
+			
+			//	parse expression
+			gpe = parseOrExpression(expressionTokens);
+			
+			//	cache expression
+			expressionCache.put(expression, gpe);
+		}
+		
+		//	parse expression & return result
+		return gpe;
+	}
+	private static HashMap expressionCache = new HashMap();
 	
 	private static XPathExpression parseOrExpression(String[] expressionTokens) {
 		if ((expressionTokens == null) || (expressionTokens.length == 0)) return null;

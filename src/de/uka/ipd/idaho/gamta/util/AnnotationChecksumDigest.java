@@ -203,7 +203,7 @@ public class AnnotationChecksumDigest {
 	 * @return the MD5 checksum as a hex string
 	 * @throws IOException
 	 */
-	public String computeChecksum(QueriableAnnotation annotation, final TypeFilter typeFilter, final AttributeFilter attributeFilter) throws IOException {
+	public String computeChecksum(QueriableAnnotation annotation, TypeFilter typeFilter, AttributeFilter attributeFilter) throws IOException {
 		Set aisTypeFilter = (((this.typeFilters == null) && (typeFilter == null)) ? null : new TypeFilterSet(typeFilter, this.typeFilters));
 		Set aisAttributeFilter = (((this.attributeFilters == null) && (attributeFilter == null)) ? null : new AttributeFilterSet(attributeFilter, this.attributeFilters));
 		AnnotationInputStream ais = new AnnotationInputStream(annotation, "UTF-8", aisTypeFilter, aisAttributeFilter);

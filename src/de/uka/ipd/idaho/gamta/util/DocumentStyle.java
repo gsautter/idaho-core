@@ -40,6 +40,7 @@ import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.regex.Pattern;
@@ -127,7 +128,8 @@ public class DocumentStyle implements Attributed {
 		public abstract void documentStyleAssigned(DocumentStyle docStyle, Attributed doc);
 	}
 	
-	private static LinkedHashSet providers = new LinkedHashSet(2);
+//	private static LinkedHashSet providers = new LinkedHashSet(2);
+	private static Set providers = Collections.synchronizedSet(new LinkedHashSet());
 	
 	/**
 	 * Add a document style provider.
@@ -167,11 +169,22 @@ public class DocumentStyle implements Attributed {
 		if (dsObj instanceof DocumentStyle)
 			return ((DocumentStyle) dsObj);
 		DocumentStyle ds = null;
-		for (Iterator pit = providers.iterator(); pit.hasNext();) {
-			Provider dsp = ((Provider) pit.next());
-			ds = dsp.getStyleFor(doc);
+//		for (Iterator pit = providers.iterator(); pit.hasNext();) {
+//			Provider dsp = ((Provider) pit.next());
+//			ds = dsp.getStyleFor(doc);
+//			if (ds != null) {
+//				ds.getData().setProvider(dsp);
+//				break;
+//			}
+//		}
+		Provider[] dsps;
+		synchronized (providers) {
+			dsps = ((Provider[]) providers.toArray(new Provider[providers.size()]));
+		}
+		for (int p = 0; p < dsps.length; p++) {
+			ds = dsps[p].getStyleFor(doc);
 			if (ds != null) {
-				ds.getData().setProvider(dsp);
+				ds.getData().setProvider(dsps[p]);
 				break;
 			}
 		}
@@ -1322,7 +1335,7 @@ public class DocumentStyle implements Attributed {
 	
 	/**
 	 * Interface to be implemented by descriptions of parameters or parameter
-	 * groups that can provide some for of testing functionality, e.g. some
+	 * groups that can provide some form of testing functionality, e.g. some
 	 * output that informs a user about how the current value of a parameter
 	 * or value combination in a parameter group behaves.
 	 * 

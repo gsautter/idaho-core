@@ -93,7 +93,7 @@ public class Gamta extends StringUtils {
 		
 		/**
 		 * Obtain a new MutableTokenSequence from a char sequence object.
-		 * @param charData the mutbale char sequence to wrap in the token
+		 * @param charData the mutable char sequence to wrap in the token
 		 *            sequence (specifying null results in an empty token
 		 *            sequence)
 		 * @param tokenizer the Tokenizer to use (specifying null will result in
@@ -133,7 +133,16 @@ public class Gamta extends StringUtils {
 		public abstract DocumentRoot newDocument(Tokenizer tokenizer);
 		
 		/**
-		 * Produce a new DocumentRoot from a MutableTokenSequence.
+		 * Produce a new DocumentRoot from a TokenSequence.
+		 * @param tokens the tokens to wrap (if null, a new MutableTokenSequence
+		 *            is created and used)
+		 * @return a new document instance wrapped around the specified token
+		 *         sequence, using this factories implementation
+		 */
+		public abstract DocumentRoot newDocument(TokenSequence tokens);
+		
+		/**
+		 * Produce a new MutableDocumentRoot from a MutableTokenSequence.
 		 * @param tokens the tokens to wrap (if null, a new MutableTokenSequence
 		 *            is created and used)
 		 * @return a new document instance wrapped around the specified token
@@ -243,14 +252,15 @@ public class Gamta extends StringUtils {
 	 * @param	provider	the provider to remove
 	 */
 	public static void removeTestDocumentProvider(TestDocumentProvider provider) {
-		if (provider != null) {
-			testDocProviders.remove(provider.getClass().getName());
-			if (testDocProvider == provider) {
-				if (testDocProviders.size() == 0) testDocProvider = null;
-				else {
-					ArrayList list = new ArrayList(testDocProviders.values());
-					testDocProvider = ((TestDocumentProvider) list.get(list.size() - 1));
-				}
+		if (provider == null)
+			return;
+		testDocProviders.remove(provider.getClass().getName());
+		if (testDocProvider == provider) {
+			if (testDocProviders.size() == 0)
+				testDocProvider = null;
+			else {
+				ArrayList tdps = new ArrayList(testDocProviders.values());
+				testDocProvider = ((TestDocumentProvider) tdps.get(tdps.size() - 1));
 			}
 		}
 	}
@@ -267,9 +277,22 @@ public class Gamta extends StringUtils {
 	 * @return a test document from the provider with the specified name
 	 */
 	public static QueriableAnnotation getTestDocument(String providerName) {
-		if (testDocProviders.isEmpty()) return null;
-		else if (providerName == null) return testDocProvider.getTestDocument();
-		else if (testDocProviders.containsKey(providerName)) return ((TestDocumentProvider) testDocProviders.get(providerName)).getTestDocument();
+		if (testDocProviders.isEmpty())
+			return null;
+		else if (providerName == null) {
+			QueriableAnnotation testDoc = testDocProvider.getTestDocument();
+			if (testDoc != null)
+				return testDoc;
+			ArrayList tdps = new ArrayList(testDocProviders.values());
+			for (int p = tdps.size(); p != 0; p--) {
+				testDoc = ((TestDocumentProvider) tdps.get(p-1)).getTestDocument();
+				if (testDoc != null)
+					return testDoc;
+			}
+			return testDoc;
+		}
+		else if (testDocProviders.containsKey(providerName))
+			return ((TestDocumentProvider) testDocProviders.get(providerName)).getTestDocument();
 		else return testDocProvider.getTestDocument();
 	}
 	
@@ -315,8 +338,10 @@ public class Gamta extends StringUtils {
 	public static MutableTokenSequence newTokenSequence(CharSequence charData, Tokenizer tokenizer) {
 		if (dataFactory == null) {
 			if (charData == null)
-				return new TokenizedMutableCharSequence((tokenizer == null) ? INNER_PUNCTUATION_TOKENIZER : tokenizer);
-			else return new TokenizedMutableCharSequence(((tokenizer == null) ? INNER_PUNCTUATION_TOKENIZER : tokenizer), charData);
+//				return new TokenizedMutableCharSequence((tokenizer == null) ? INNER_PUNCTUATION_TOKENIZER : tokenizer);
+				return new TokenizedMutableCharSequence((tokenizer == null) ? getDefaultTokenizer() : tokenizer);
+//			else return new TokenizedMutableCharSequence(((tokenizer == null) ? INNER_PUNCTUATION_TOKENIZER : tokenizer), charData);
+			else return new TokenizedMutableCharSequence(((tokenizer == null) ? getDefaultTokenizer() : tokenizer), charData);
 		}
 		else return dataFactory.newTokenSequence(charData, tokenizer);
 	}
@@ -334,8 +359,10 @@ public class Gamta extends StringUtils {
 	public static MutableTokenSequence newTokenSequence(MutableCharSequence charData, Tokenizer tokenizer) {
 		if (dataFactory == null) {
 			if (charData == null)
-				return new TokenizedMutableCharSequence((tokenizer == null) ? INNER_PUNCTUATION_TOKENIZER : tokenizer); 
-			else return new GamtaTokenSequence(charData, ((tokenizer == null) ? INNER_PUNCTUATION_TOKENIZER : tokenizer));
+//				return new TokenizedMutableCharSequence((tokenizer == null) ? INNER_PUNCTUATION_TOKENIZER : tokenizer); 
+				return new TokenizedMutableCharSequence((tokenizer == null) ? getDefaultTokenizer() : tokenizer); 
+//			else return new GamtaTokenSequence(charData, ((tokenizer == null) ? INNER_PUNCTUATION_TOKENIZER : tokenizer));
+			else return new GamtaTokenSequence(charData, ((tokenizer == null) ? getDefaultTokenizer() : tokenizer));
 		}
 		else return dataFactory.newTokenSequence(charData, tokenizer);
 	}
@@ -350,7 +377,8 @@ public class Gamta extends StringUtils {
 	public static MutableTokenSequence copyTokenSequence(TokenSequence data) {
 		if (dataFactory == null) {
 			if (data == null)
-				return new TokenizedMutableCharSequence(INNER_PUNCTUATION_TOKENIZER);
+//				return new TokenizedMutableCharSequence(INNER_PUNCTUATION_TOKENIZER);
+				return new TokenizedMutableCharSequence(getDefaultTokenizer());
 			else return new TokenizedMutableCharSequence(data);
 		}
 		else return dataFactory.copyTokenSequence(data);
@@ -369,6 +397,23 @@ public class Gamta extends StringUtils {
 			return doc;
 		}
 		else return dataFactory.newDocument(tokenizer);
+	}
+	
+	/**
+	 * Produce a new DocumentRoot from a MutableTokenSequence.
+	 * @param tokens the tokens to wrap (if null, a new MutableTokenSequence is
+	 *            created and used)
+	 * @return a new document instance wrapped around the specified token
+	 *         sequence, using the implementation currently installed
+	 */
+	public static DocumentRoot newDocument(TokenSequence tokens) {
+		if (dataFactory == null) {
+			MutableTokenSequence mutableTokens = ((tokens instanceof MutableTokenSequence) ? ((MutableTokenSequence) tokens) : copyTokenSequence(tokens));
+			DocumentRoot doc = new GamtaDocument((mutableTokens == null) ? newTokenSequence(null, null) : mutableTokens);
+			doc.setAnnotationNestingOrder(annotationNestingOrder);
+			return doc;
+		}
+		else return dataFactory.newDocument(tokens);
 	}
 	
 	/**
@@ -2647,7 +2692,7 @@ public class Gamta extends StringUtils {
 	public static final String INNER_PUNCTUATION_TOKENIZER_REGEX;
 	
 	/**
-	 * The Tokenizer allowing in-word (''' and dashes) and in-number (',' and '.')
+	 * The Tokenizer allowing in-word (ASCII high comma and dashes) and in-number (ASCII comma and period/dot)
 	 * punctuation. This Tokenizer is GAMTA's default Tokenizer.
 	 */
 	public static final Tokenizer INNER_PUNCTUATION_TOKENIZER = new RegExTokenizer(INNER_PUNCTUATION_TOKENIZER_REGEX);
@@ -2665,6 +2710,34 @@ public class Gamta extends StringUtils {
 	 * strictly of digits
 	 */
 	public static final Tokenizer NO_INNER_PUNCTUATION_TOKENIZER = new RegExTokenizer(NO_INNER_PUNCTUATION_TOKENIZER_REGEX);
+	
+	private static Tokenizer defaultTokenizer = null;
+	
+	/**
+	 * Retrieve the tokenizer to default to for new token sequences, i.e., the
+	 * tokenizer to use if the argument one is null.
+	 * @return the default tokenizer
+	 */
+	public static Tokenizer getDefaultTokenizer() {
+		return ((defaultTokenizer == null) ? INNER_PUNCTUATION_TOKENIZER : defaultTokenizer);
+	}
+	
+	/**
+	 * Set the tokenizer to default to for new token sequences, i.e., the
+	 * tokenizer to use if the argument one is null. This method should only
+	 * ever be called at the very beginning of program execution, as otherwise
+	 * the behavior of token sequences might become inconsistent. Further, any
+	 * default tokenizer can only ever be reset to null, but not be replaced
+	 * directly. An attempt at the latter will incur an ilegal state exception.
+	 * @param dt the default tokenizer to set
+	 */
+	public static void setDefaultTokenizer(Tokenizer dt) {
+		if (defaultTokenizer == null)
+			defaultTokenizer = dt;
+		else if (dt == null)
+			defaultTokenizer = null;
+		else throw new IllegalStateException("The default tokenizer cannot be replaced");
+	}
 	
 	/**
 	 * Unify a portion of whitespace (in particular, convert '\n\r' and '\r\n'
@@ -2690,11 +2763,8 @@ public class Gamta extends StringUtils {
 		
 		//	generate 128 random bits, packed in a char array
 		char[] bits = new char[8];
-		for (int i = 0; i < 8; i++) {
-//			double r = Math.random();
-//			bits[i] = (char) (r * 65536);
+		for (int i = 0; i < 8; i++)
 			bits[i] = ((char) random.nextInt(0x00010000));
-		}
 		
 		//	convert each 16 bit block (char) into it's four-char hex representation
 		char[] hex = new char[32];
@@ -2702,17 +2772,12 @@ public class Gamta extends StringUtils {
 			char c = bits[i];
 			for (int j = 0; j < 4; j++) {
 				byte b = ((byte) (c & 15));
-//				hex[((4*i) + (3-j))] = ((b < 10) ? ((char) (b + '0')) : ((char) (b + '7'))); //	'7' = 'A' - 10
 				hex[((4*i) + (3-j))] = ((b < 10) ? ((char) (b + '0')) : ((char) (b - 10 + 'A')));
 				c >>= 4;
 			}
 		}
 		
 		//	compose ID String and return it
-//		StringBuffer id = new StringBuffer();
-//		for (int i = 0; i < hex.length; i++)
-//			id.append(hex[i]);
-//		return (id.toString());
 		return new String(hex);
 	}
 	private static final Random random = new Random();

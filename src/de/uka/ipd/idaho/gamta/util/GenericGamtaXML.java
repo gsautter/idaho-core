@@ -48,7 +48,6 @@ import java.io.PipedReader;
 import java.io.PipedWriter;
 import java.io.Reader;
 import java.io.StringReader;
-import java.io.StringWriter;
 import java.io.Writer;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -294,7 +293,8 @@ public class GenericGamtaXML extends TokenReceiver {
 	 * @throws IOException
 	 */
 	public static DocumentRoot readDocument(Reader source) throws IOException {
-		DocumentRoot document = Gamta.newDocument(Gamta.INNER_PUNCTUATION_TOKENIZER);
+//		DocumentRoot document = Gamta.newDocument(Gamta.INNER_PUNCTUATION_TOKENIZER);
+		DocumentRoot document = Gamta.newDocument(Gamta.getDefaultTokenizer());
 		GenericGamtaXML reader = new GenericGamtaXML(document);
 		PARSER.stream(source, reader);
 		reader.close();
@@ -524,6 +524,7 @@ public class GenericGamtaXML extends TokenReceiver {
 					value.append('\r');
 					c += (R_ATTRIBUTE_LINE_BREAK_MARKER.length() - 1);
 				}
+				else value.append(ch);
 			}
 			else value.append(ch);
 		}
@@ -904,25 +905,42 @@ public class GenericGamtaXML extends TokenReceiver {
 		public DocumentReader(Reader in, int docLength) throws IOException {
 			this.in = ((in instanceof BufferedReader) ? ((BufferedReader) in) : new BufferedReader(in));
 			this.docLength = docLength;
+//			
+//			//	read start tag and parse attributes
+//			StringWriter sw = new StringWriter();
+//			int lastChar = 0;
+//			int currentChar = 0;
+//			while (currentChar != -1) {
+//				lastChar = currentChar;
+//				currentChar = this.in.read();
+//				sw.write((char) currentChar);
+//				if ((currentChar == '>') && (lastChar == '/'))
+//					currentChar = -1;
+//			}
+//			
+//			//	check success
+//			if (lastChar != '/')
+//				throw new IOException("Document tag broken");
+//			
+//			//	instantiate start tag and get annotation number
+//			String startTag = sw.toString();
 			
-			//	read start tag and parse attributes
-			StringWriter sw = new StringWriter();
-			int lastChar = 0;
-			int currentChar = 0;
-			while (currentChar != -1) {
-				lastChar = currentChar;
-				currentChar = this.in.read();
-				sw.write((char) currentChar);
-				if ((currentChar == '>') && (lastChar == '/'))
-					currentChar = -1;
+			//	read start tag
+			StringBuffer stb = new StringBuffer();
+			char lCh = ((char) 0);
+			for (int ch; (ch = this.in.read()) != -1;) {
+				stb.append((char) ch);
+				if ((ch == '>') && (lCh == '/'))
+					break;
+				lCh = ((char) ch);
 			}
 			
 			//	check success
-			if (lastChar != '/')
+			if (lCh != '/')
 				throw new IOException("Document tag broken");
 			
 			//	instantiate start tag and get annotation number
-			String startTag = sw.toString();
+			String startTag = stb.toString();
 			this.ostLength = startTag.length();
 			String type = GRAMMAR.getType(startTag);
 			this.annotationNumber = (type.endsWith("0") ? 0 : -1);
@@ -970,7 +988,8 @@ public class GenericGamtaXML extends TokenReceiver {
 		 * @see java.io.Reader#read(char[], int, int)
 		 */
 		public int read(char[] cbuf, int off, int len) throws IOException {
-			if (this.closed) return -1;
+			if (this.closed)
+				return -1;
 			
 			if (this.startTagBuffer == null)
 				this.produceStartTagBuffer();

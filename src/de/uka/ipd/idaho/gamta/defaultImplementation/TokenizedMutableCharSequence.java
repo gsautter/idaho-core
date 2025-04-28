@@ -49,7 +49,6 @@ import de.uka.ipd.idaho.stringUtils.StringUtils;
  * @author sautter
  */
 public class TokenizedMutableCharSequence extends TokenizedCharSequence implements MutableTokenSequence {
-	
 	private static final boolean DEBUG = false;
 	
 	/**	Constructor
@@ -332,12 +331,18 @@ public class TokenizedMutableCharSequence extends TokenizedCharSequence implemen
 		return tmcs;
 	}
 
-	private ArrayList charListeners = new ArrayList();
+	private ArrayList charListeners = null;
 	
 	/* (non-Javadoc)
 	 * @see de.gamta.MutableCharSequence#addCharSequenceListener(de.gamta.CharSequenceListener)
 	 */
 	public void addCharSequenceListener(CharSequenceListener csl) {
+		if (csl == null)
+			return;
+		if (this.charListeners == null)
+			this.charListeners = new ArrayList(2);
+		else if (this.charListeners.contains(csl))
+			return;
 		this.charListeners.add(csl);
 	}
 	
@@ -345,7 +350,8 @@ public class TokenizedMutableCharSequence extends TokenizedCharSequence implemen
 	 * @see de.gamta.MutableCharSequence#removeCharSequenceListener(de.gamta.CharSequenceListener)
 	 */
 	public void removeCharSequenceListener(CharSequenceListener csl) {
-		this.charListeners.remove(csl);
+		if (this.charListeners != null)
+			this.charListeners.remove(csl);
 	}
 	
 	/**	notify this listener that a portion of this MutableCharSequence has been changed
@@ -361,31 +367,42 @@ public class TokenizedMutableCharSequence extends TokenizedCharSequence implemen
 	 * @param	cse		the CharSequenceEvent holding the details of the cange
 	 */
 	private void notifyCharSequenceChanged(CharSequenceEvent cse) {
+		if (this.charListeners == null)
+			return;
 		for (int l = 0; l < this.charListeners.size(); l++)
 			((CharSequenceListener) this.charListeners.get(l)).charSequenceChanged(cse);
 	}
 	
 	
-	private ArrayList tokenListeners = new ArrayList();
+	private ArrayList tokenListeners = null;
 	
 	/* (non-Javadoc)
 	 * @see de.gamta.MutableTokenSequence#addTokenSequenceListener(de.gamta.TokenSequenceListener)
 	 */
 	public void addTokenSequenceListener(TokenSequenceListener tsl) {
+		if (tsl == null)
+			return;
+		if (this.tokenListeners == null)
+			this.tokenListeners = new ArrayList(2);
+		else if (this.tokenListeners.contains(tsl))
+			return;
 		this.tokenListeners.add(tsl);
 	}
-
+	
 	/* (non-Javadoc)
 	 * @see de.gamta.MutableTokenSequence#removeTokenSequenceListener(de.gamta.TokenSequenceListener)
 	 */
 	public void removeTokenSequenceListener(TokenSequenceListener tsl) {
-		this.tokenListeners.remove(tsl);
+		if (this.tokenListeners != null)
+			this.tokenListeners.remove(tsl);
 	}
 	
 	/**	notify this listener that a portion of this MutableTokenSequence has been changed
-	 * @param	tse		the TokenSequenceEvent holding the details of the cange
+	 * @param	tse		the TokenSequenceEvent holding the details of the change
 	 */
 	private void notifyTokenSequenceChanged(TokenSequenceEvent tse) {
+		if (this.tokenListeners == null)
+			return;
 		for (int l = 0; l < this.tokenListeners.size(); l++)
 			((TokenSequenceListener) this.tokenListeners.get(l)).tokenSequenceChanged(tse);
 	}
@@ -564,8 +581,8 @@ public class TokenizedMutableCharSequence extends TokenizedCharSequence implemen
 			
 			TokenSequence ots = this.getSubsequence(fti, (lti - fti + 1));
 			TokenizedCharSequence nts = new TokenizedCharSequence(this.tokenizer, newValue);
-			if (DEBUG) System.out.println("- original token sequence is '" + ots + this.getWhitespaceAfter(lti) /* also included in new token sequence */ + "'");
-			if (DEBUG) System.out.println("- new token sequence is '" + nts + "'");
+			if (DEBUG) System.out.println("- original token sequence is '" + ots + this.getWhitespaceAfter(lti) /* also included in new token sequence */ + "', sized " + ots.size());
+			if (DEBUG) System.out.println("- new token sequence is '" + nts + "', sized " + nts.size());
 			
 			if (nts.leadingWhitespace.length() != 0) {
 				if (fti == 0)

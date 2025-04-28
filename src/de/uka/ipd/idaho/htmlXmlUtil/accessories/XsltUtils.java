@@ -86,46 +86,6 @@ import de.uka.ipd.idaho.htmlXmlUtil.grammars.StandardGrammar;
  * @author sautter
  */
 public class XsltUtils {
-//	
-//	//	!!! for test purposes only !!!
-//	public static void main(String[] args) throws Exception {
-//		ApplicationHttpsEnabler.enableHttps();
-//		URL xsltUrl = new URL("https://raw.githubusercontent.com/plazi/ggxml2taxpub-treatments/main/xslt/gg2tp_l1.xsl");
-////		URL xsltUrl = new URL("http://tb.plazi.org/GgServer/gg2tp_l1.xsl");
-//		File xsltCache = new File("E:/Temp/XsltCache");
-//		getTransformer(xsltUrl, xsltCache);
-//		
-////		File xsltFile = new File("E:/Projektdaten/TaxPubOutput/gg2tp_l1.xsl");
-////		getTransformer(xsltFile);
-//		
-////		File cXsltFile1 = new File("./Components/GgServerPlaziWCSData/gg2wiki.xslt");
-////		getTransformer(cXsltFile1);
-////		getTransformer(cXsltFile1, false);
-////		if (true)
-////			return;
-//		
-////		File xsltFile1 = new File("E:/Projektdaten/XSLT Round Trip/gg2taxonx.xsl");
-////		File xsltFile2 = new File("E:/Projektdaten/XSLT Round Trip/taxonx2gg.xsl");
-////		Transformer trf1 = getTransformer(xsltFile1);
-////		Transformer trf2 = getTransformer(xsltFile2);
-////		
-//////		MutableAnnotation doc = SgmlDocumentReader.readDocument(new File("E:/Projektdaten/TaxonxTest/21211_gg1.xml"));
-//////		Reader reader = new AnnotationReader(doc);
-//////		reader = chain(reader, trf1);
-//////		reader = chain(reader, trf2);
-//////		reader = chain(reader, trf1);
-//////		
-//////		char[] buffer = new char[1024];
-//////		int read;
-//////		while ((read = reader.read(buffer, 0, buffer.length)) != -1)
-//////			System.out.print(new String(buffer, 0, read));
-////		MutableAnnotation doc = SgmlDocumentReader.readDocument(new File("E:/Projektdaten/TaxonxTest/21211_gg1.xml"));
-////		Writer writer = new OutputStreamWriter(System.out);
-////		writer = wrap(writer, trf2);
-////		writer = wrap(writer, trf1);
-////		AnnotationUtils.writeXML(doc, writer, null, null, true);
-////		writer.close();
-//	}
 	
 	/**
 	 * Produce an InputStream that provides the output of a given XSLT
@@ -694,7 +654,10 @@ public class XsltUtils {
 			return null;
 		InputStream xsltIn = new XsltInputStream(xsltUrl, cacheFolder);
 		try {
-			return getTransformer(xsltUrl.toString(), xsltIn, allowCache);
+			TransformerPool tp = getTransformer(xsltUrl.toString(), xsltIn, allowCache);
+			if (cacheFolder != null)
+				tp.setUriResolverCachePath(cacheFolder);
+			return tp;
 		}
 		finally {
 			xsltIn.close();
@@ -1037,21 +1000,23 @@ public class XsltUtils {
 	 * code might have a reference to, but do not need to copy byte arrays we've
 	 * read from some stream to achieve this.
 	 */
-	private static synchronized TransformerPool doGetTransformer(String name, byte[] xsltBytes, boolean allowCache) throws IOException {
-		if (allowCache && (name != null) && transformerCache.containsKey(name)) {
-//			System.out.println("XsltUtils: XSL Transformer Pool cache hit for '" + name + "'");
-			return ((TransformerPool) transformerCache.get(name));
+	private static synchronized TransformerPool doGetTransformer(String nameOrPath, byte[] xsltBytes, boolean allowCache) throws IOException {
+		if (nameOrPath != null)
+			nameOrPath = nameOrPath.replace('\\', '/');
+		if (allowCache && (nameOrPath != null) && transformerCache.containsKey(nameOrPath)) {
+//			System.out.println("XsltUtils: XSL Transformer Pool cache hit for '" + nameOrPath + "'");
+			return ((TransformerPool) transformerCache.get(nameOrPath));
 		}
 		try {
-			TransformerPool tp = new TransformerPool(xsltBytes);
+			TransformerPool tp = new TransformerPool(nameOrPath, xsltBytes);
 			tp.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "yes");
 //			System.out.println("XsltUtils: loaded XSL Transformer Pool from '" + name + "'");
-			if (name != null)
-				transformerCache.put(name, tp);
+			if (nameOrPath != null)
+				transformerCache.put(nameOrPath, tp);
 			return tp;
 		}
 		catch (Exception e) {
-			throw new IOException(e.getClass().getName() + " (" + e.getMessage() + ") while creating XSL Transformer Pool from '" + name + "'.");
+			throw new IOException(e.getClass().getName() + " (" + e.getMessage() + ") while creating XSL Transformer Pool from '" + nameOrPath + "'.");
 		}
 	}
 	
@@ -1061,37 +1026,38 @@ public class XsltUtils {
 		}
 	}; // no need for synchronized map, accessed only from synchronized code
 	
-	private static boolean transformerFactoryTestedForCaching = false;
-	private static TransformerFactory transformerFactory = null;
-	
-	private static synchronized Transformer produceTransformer(byte[] stylesheet) throws TransformerConfigurationException {
-		
-		//	we have tested the installed factory for caching behavior and not made it available, so it is caching 
-		if (transformerFactoryTestedForCaching)
-			return null;
-		
-		//	caching behavior yet to be tested, do it right now
-		try {
-			System.out.println("XsltUtils: testing XSL Transformer Factory for internal caching behavior ...");
-			TransformerFactory tf = TransformerFactory.newInstance();
-			System.out.println(" - got XSL Transformer Factory instance");
-			Transformer t1 = tf.newTransformer(new StreamSource(new InputStreamReader(new ByteArrayInputStream(stylesheet), "UTF-8")));
-			System.out.println(" - got XSL Transformer instance 1");
-			Transformer t2 = tf.newTransformer(new StreamSource(new InputStreamReader(new ByteArrayInputStream(stylesheet), "UTF-8")));
-			System.out.println(" - got XSL Transformer instance 2");
-			if (t1 != t2) {
-				System.out.println(" - found factory to not be caching internally, can use centralized instance");
-				transformerFactory = tf;
-			}
-			else System.out.println(" - found factory to be caching internally, cannot use centralized instance");
-			transformerFactoryTestedForCaching = true;
-			return t1;
-		}
-		catch (UnsupportedEncodingException uee) {
-			return null; // not going to happen with UTF-8, but Java don't know ...
-		}
-	}
-	
+//	private static boolean transformerFactoryTestedForCaching = false;
+//	private static TransformerFactory transformerFactory = null;
+//	
+//	private static synchronized Transformer produceTransformer(byte[] stylesheet, URIResolver stylesheetUriResolver) throws TransformerConfigurationException {
+//		
+//		//	we have tested the installed factory for caching behavior and not made it available, so it is caching 
+//		if (transformerFactoryTestedForCaching)
+//			return null;
+//		
+//		//	caching behavior yet to be tested, do it right now
+//		try {
+//			System.out.println("XsltUtils: testing XSL Transformer Factory for internal caching behavior ...");
+//			TransformerFactory tf = TransformerFactory.newInstance();
+//			tf.setURIResolver(stylesheetUriResolver);
+//			System.out.println(" - got XSL Transformer Factory instance");
+//			Transformer t1 = tf.newTransformer(new StreamSource(new InputStreamReader(new ByteArrayInputStream(stylesheet), "UTF-8")));
+//			System.out.println(" - got XSL Transformer instance 1");
+//			Transformer t2 = tf.newTransformer(new StreamSource(new InputStreamReader(new ByteArrayInputStream(stylesheet), "UTF-8")));
+//			System.out.println(" - got XSL Transformer instance 2");
+//			if (t1 != t2) {
+//				System.out.println(" - found factory to not be caching internally, can use centralized instance");
+//				transformerFactory = tf;
+//			}
+//			else System.out.println(" - found factory to be caching internally, cannot use centralized instance");
+//			transformerFactoryTestedForCaching = true;
+//			return t1;
+//		}
+//		catch (UnsupportedEncodingException uee) {
+//			return null; // not going to happen with UTF-8, but Java don't know ...
+//		}
+//	}
+//	
 	/**
 	 * This class mimics the interface of javax.xml.transform.Transformer. As
 	 * opposed to the latter transformers, however, instances of this class
@@ -1117,7 +1083,13 @@ public class XsltUtils {
 	 * @author sautter
 	 */
 	public static class TransformerPool extends Transformer {
+		private String stylesheetPath;
 		private byte[] stylesheet;
+		
+		private TransformerFactory transformerFactory;
+		private URIResolver stylesheetUriResolver;
+		private HashMap uriResolverCache;
+		private File uriResolverCachePath;
 		private Transformer model;
 		private HashSet usedElementNames = null;
 		
@@ -1129,21 +1101,158 @@ public class XsltUtils {
 		private LinkedList transformerPool = new LinkedList();
 		private int transformerPoolSize = 3;
 		
-		TransformerPool(byte[] stylesheet) throws TransformerConfigurationException {
+		TransformerPool(String stylesheetPath, byte[] stylesheet) throws TransformerConfigurationException {
+			this.stylesheetPath = stylesheetPath;
 			this.stylesheet = stylesheet;
-			this.model = this.produceTransformer();
+			if ((this.stylesheetPath != null) && (this.stylesheetPath.indexOf("/") != -1)) {
+				final String stylesheetBasePath = this.stylesheetPath.substring(0, (this.stylesheetPath.lastIndexOf("/") + "/".length()));
+				this.stylesheetUriResolver = new URIResolver() {
+					public Source resolve(String href, String base) throws TransformerException {
+						System.out.println("Resolving " + href);
+						System.out.println("  base is " + base);
+						String absoluteHref;
+						if (href.startsWith("/"))
+							absoluteHref = href;
+						else if ((href.indexOf(":/") != -1) || (href.indexOf(":\\") != -1))
+							absoluteHref = href;
+						else if (href.indexOf("://") != -1)
+							absoluteHref = href;
+						else absoluteHref = (stylesheetBasePath + href);
+						System.out.println("  resolved to " + absoluteHref);
+						try {
+							if (absoluteHref.indexOf("://") == -1)
+//								return new StreamSource(new InputStreamReader(new FileInputStream(new File(absoluteHref)), "UTF-8"));
+								return new StreamSource(new InputStreamReader(resolveFile(absoluteHref), "UTF-8"));
+//							else return new StreamSource((new InputStreamReader(new URL(absoluteHref)).openStream(), "UTF-8"));
+							else return new StreamSource(new InputStreamReader(resolveUrl(absoluteHref), "UTF-8"));
+						}
+						catch (IOException ioe) {
+							throw new TransformerException(ioe);
+						}
+					}
+				};
+			}
+			this.model = this.produceTransformer(true);
 			this.properties = new Properties(this.model.getOutputProperties());
 		}
-
-		private Transformer produceTransformer() throws TransformerConfigurationException {
+		
+		InputStream resolveFile(String pathStr) throws IOException {
+			if (this.uriResolverCache == null)
+				this.uriResolverCache = new HashMap();
+			else if (this.uriResolverCache.containsKey(pathStr))
+				return new ByteArrayInputStream((byte[]) this.uriResolverCache.get(pathStr));
+			
+			ByteArrayOutputStream fileByteBuffer = new ByteArrayOutputStream();
+			byte[] buffer = new byte[2048];
+			BufferedInputStream fileIn = new BufferedInputStream(new FileInputStream(new File(pathStr)));
+			for (int r; (r = fileIn.read(buffer, 0, buffer.length)) != -1;)
+				fileByteBuffer.write(buffer, 0, r);
+			fileIn.close();
+			byte[] fileBytes = fileByteBuffer.toByteArray();
+			this.uriResolverCache.put(pathStr, fileBytes);
+			return new ByteArrayInputStream(fileBytes);
+		}
+		
+		InputStream resolveUrl(String urlStr) throws IOException {
+			if (this.uriResolverCache == null)
+				this.uriResolverCache = new HashMap();
+			else if (this.uriResolverCache.containsKey(urlStr))
+				return new ByteArrayInputStream((byte[]) this.uriResolverCache.get(urlStr));
+			
+			String cacheFileStr = urlStr;
+			while (cacheFileStr.endsWith("/"))
+				cacheFileStr = cacheFileStr.substring(0, (cacheFileStr.length() - "/".length()));
+			cacheFileStr = cacheFileStr.replaceAll("[^A-Za-z0-9\\_\\-\\.]+", "_");
+			if (this.uriResolverCachePath != null) {
+				File urlCacheFile = new File(this.uriResolverCachePath, cacheFileStr);
+				ByteArrayOutputStream cacheFileByteBuffer = new ByteArrayOutputStream();
+				byte[] buffer = new byte[2048];
+				BufferedInputStream cacheFileIn = new BufferedInputStream(new FileInputStream(urlCacheFile));
+				for (int r; (r = cacheFileIn.read(buffer, 0, buffer.length)) != -1;)
+					cacheFileByteBuffer.write(buffer, 0, r);
+				cacheFileIn.close();
+				byte[] cacheFileBytes = cacheFileByteBuffer.toByteArray();
+				this.uriResolverCache.put(urlStr, cacheFileBytes);
+				return new ByteArrayInputStream(cacheFileBytes);
+			}
+			
+			ByteArrayOutputStream urlByteBuffer = new ByteArrayOutputStream();
+			byte[] buffer = new byte[2048];
+			BufferedInputStream urlIn = new BufferedInputStream((new URL(urlStr)).openStream());
+			for (int r; (r = urlIn.read(buffer, 0, buffer.length)) != -1;)
+				urlByteBuffer.write(buffer, 0, r);
+			urlIn.close();
+			byte[] urlBytes = urlByteBuffer.toByteArray();
+			this.uriResolverCache.put(urlStr, urlBytes);
+			
+			if (this.uriResolverCachePath != null) {
+				File urlCacheFile = new File(this.uriResolverCachePath, cacheFileStr);
+				BufferedOutputStream cacheFileOut = new BufferedOutputStream(new FileOutputStream(urlCacheFile));
+				cacheFileOut.write(urlBytes);
+				cacheFileOut.flush();
+				cacheFileOut.close();
+			}
+			return new ByteArrayInputStream(urlBytes);
+		}
+		
+		void setUriResolverCachePath(File cachePath) {
+			this.uriResolverCachePath = cachePath;
+			if (this.uriResolverCache == null)
+				return; // nothing cached just yet
+			for (Iterator ckit = this.uriResolverCache.keySet().iterator(); ckit.hasNext();) try {
+				String urlStr = ((String) ckit.next());
+				if (urlStr.indexOf("://") == -1)
+					continue; // no need to disk cache local file
+				String cacheFileStr = urlStr;
+				while (cacheFileStr.endsWith("/"))
+					cacheFileStr = cacheFileStr.substring(0, (cacheFileStr.length() - "/".length()));
+				cacheFileStr = cacheFileStr.replaceAll("[^A-Za-z0-9\\_\\-\\.]+", "_");
+				byte[] urlBytes = ((byte[]) this.uriResolverCache.get(urlStr));
+				File urlCacheFile = new File(this.uriResolverCachePath, cacheFileStr);
+				BufferedOutputStream cacheFileOut = new BufferedOutputStream(new FileOutputStream(urlCacheFile));
+				cacheFileOut.write(urlBytes);
+				cacheFileOut.flush();
+				cacheFileOut.close();
+			}
+			catch (IOException ioe) {
+				System.out.println("Failed to disk cache resolved URL content: " + ioe.getMessage());;
+				ioe.printStackTrace(System.out);
+			}
+		}
+		
+		private Transformer produceTransformer(boolean initFactory) throws TransformerConfigurationException {
 			try {
-				//	we have a centralized transformer factory, so we know it does not cache
-				if (transformerFactory != null)
-					return transformerFactory.newTransformer(new StreamSource(new InputStreamReader(new ByteArrayInputStream(stylesheet), "UTF-8")));
+//				//	we have a centralized transformer factory, so we know it does not cache
+//				if (transformerFactory != null) {
+//					transformerFactory.setURIResolver(this.stylesheetUriResolver);
+//					return transformerFactory.newTransformer(new StreamSource(new InputStreamReader(new ByteArrayInputStream(stylesheet), "UTF-8")));
+//				}
+//				
+//				//	caching behavior yet to be tested, do it right now
+//				if (!transformerFactoryTestedForCaching)
+//					return XsltUtils.produceTransformer(this.stylesheet, this.stylesheetUriResolver);
 				
 				//	caching behavior yet to be tested, do it right now
-				if (!transformerFactoryTestedForCaching)
-					return XsltUtils.produceTransformer(this.stylesheet);
+				if (initFactory) {
+					System.out.println("XsltUtils: testing XSL Transformer Factory for internal caching behavior ...");
+					this.transformerFactory = TransformerFactory.newInstance();
+					this.transformerFactory.setURIResolver(this.stylesheetUriResolver);
+					System.out.println(" - got XSL Transformer Factory instance");
+					Transformer t1 = this.transformerFactory.newTransformer(new StreamSource(new InputStreamReader(new ByteArrayInputStream(stylesheet), "UTF-8")));
+					System.out.println(" - got XSL Transformer instance 1");
+					Transformer t2 = this.transformerFactory.newTransformer(new StreamSource(new InputStreamReader(new ByteArrayInputStream(stylesheet), "UTF-8")));
+					System.out.println(" - got XSL Transformer instance 2");
+					if (t1 == t2) {
+						System.out.println(" - found factory to be caching internally, cannot use pool level instance");
+						this.transformerFactory = null;
+					}
+					else System.out.println(" - found factory to not be caching internally, can use pool level instance");
+					return t1;
+				}
+				
+				//	we have a centralized transformer factory, so we know it does not cache
+				else if (this.transformerFactory != null)
+					return this.transformerFactory.newTransformer(new StreamSource(new InputStreamReader(new ByteArrayInputStream(stylesheet), "UTF-8")));
 				
 				/*
 				 * we have to create a new transformer factory for every
@@ -1151,7 +1260,11 @@ public class XsltUtils {
 				 * transformer instances internally, which effectively prevents
 				 * the parallel existence of multiple transformers in the pool
 				 */
-				return TransformerFactory.newInstance().newTransformer(new StreamSource(new InputStreamReader(new ByteArrayInputStream(this.stylesheet), "UTF-8")));
+				else {
+					TransformerFactory tf = TransformerFactory.newInstance();
+					tf.setURIResolver(this.stylesheetUriResolver);
+					return tf.newTransformer(new StreamSource(new InputStreamReader(new ByteArrayInputStream(this.stylesheet), "UTF-8")));
+				}
 			}
 			catch (UnsupportedEncodingException uee) {
 				return null; // not going to happen with UTF-8, but Java don't know ...
@@ -1175,7 +1288,7 @@ public class XsltUtils {
 			PooledTransformer pt;
 			try {
 				if (this.transformerPool.isEmpty()) {
-					pt = new PooledTransformer(this, this.produceTransformer());
+					pt = new PooledTransformer(this, this.produceTransformer(false));
 //					System.out.println(" - transformer created, pool was empty");
 				}
 				else {
@@ -1556,18 +1669,27 @@ public class XsltUtils {
 							String expression = tnas.getAttribute(attributeName);
 							if (expression == null)
 								return;
+//							System.out.println("Checking expression " + expression + " from " + type + "/@" + attributeName);
 							Matcher qNameMatcher = qNamePattern.matcher(expression);
 							while (qNameMatcher.find()) {
-								String qName = qNameMatcher.group(0);
-								if (qNameMatcher.start(0) == 0) {}
-								else if ("@'\"".indexOf(expression.charAt(qNameMatcher.start(0)-1)) != -1)
+								String qName = qNameMatcher.group();
+//								System.out.println(" - matched qName '" + qName + "'");
+								if (qNameMatcher.start() == 0) {}
+								else if ("@'\"".indexOf(expression.charAt(qNameMatcher.start()-1)) != -1) {
+//									System.out.println(" ==> found preceding '" + expression.charAt(qNameMatcher.start()-1) + "', ignored");
 									continue; // skip attribute names and string literals
-								else if (qNameMatcher.end(0) == expression.length()) {}
-								else if ("('\"".indexOf(expression.charAt(qNameMatcher.end(0))) != -1)
+								}
+								if (qNameMatcher.end() == expression.length()) {}
+								else if ("('\"".indexOf(expression.charAt(qNameMatcher.end())) != -1) {
+//									System.out.println(" ==> found subsequent '" + expression.charAt(qNameMatcher.end()) + "', ignored");
 									continue; // skip function names and more string literals
-								else if (expression.startsWith("::", qNameMatcher.end(0)))
+								}
+								else if (expression.startsWith("::", qNameMatcher.end())) {
+//									System.out.println(" ==> found subsequent '::', ignored");
 									continue; // skip axis names
+								}
 								usedElementNames.add(qName);
+//								System.out.println(" ==> added to used element names");
 								if (qName.indexOf('*') != -1)
 									usedElementNames.add("*");
 							}
@@ -1582,4 +1704,52 @@ public class XsltUtils {
 		}
 		return usedElementNames;
 	}
+//	
+//	//	!!! for test purposes only !!!
+//	public static void main(String[] args) throws Exception {
+//		ApplicationHttpsEnabler.enableHttps();
+//		URL xsltUrl = new URL("https://raw.githubusercontent.com/plazi/ggxml2taxpub-treatments/main/xslt/gg2tp_l1.xsl");
+////		URL xsltUrl = new URL("http://tb.plazi.org/GgServer/gg2tp_l1.xsl");
+//		File xsltCache = new File("E:/Temp/XsltCache");
+//		getTransformer(xsltUrl, xsltCache);
+//		
+////		File xsltFile = new File("E:/Projektdaten/TaxPubOutput/gg2tp_l1.xsl");
+////		getTransformer(xsltFile);
+//		
+////		File cXsltFile1 = new File("./Components/GgServerPlaziWCSData/gg2wiki.xslt");
+////		getTransformer(cXsltFile1);
+////		getTransformer(cXsltFile1, false);
+////		if (true)
+////			return;
+//		
+////		File xsltFile1 = new File("E:/Projektdaten/XSLT Round Trip/gg2taxonx.xsl");
+////		File xsltFile2 = new File("E:/Projektdaten/XSLT Round Trip/taxonx2gg.xsl");
+////		Transformer trf1 = getTransformer(xsltFile1);
+////		Transformer trf2 = getTransformer(xsltFile2);
+////		
+//////		MutableAnnotation doc = SgmlDocumentReader.readDocument(new File("E:/Projektdaten/TaxonxTest/21211_gg1.xml"));
+//////		Reader reader = new AnnotationReader(doc);
+//////		reader = chain(reader, trf1);
+//////		reader = chain(reader, trf2);
+//////		reader = chain(reader, trf1);
+//////		
+//////		char[] buffer = new char[1024];
+//////		int read;
+//////		while ((read = reader.read(buffer, 0, buffer.length)) != -1)
+//////			System.out.print(new String(buffer, 0, read));
+////		MutableAnnotation doc = SgmlDocumentReader.readDocument(new File("E:/Projektdaten/TaxonxTest/21211_gg1.xml"));
+////		Writer writer = new OutputStreamWriter(System.out);
+////		writer = wrap(writer, trf2);
+////		writer = wrap(writer, trf1);
+////		AnnotationUtils.writeXML(doc, writer, null, null, true);
+////		writer.close();
+//	}
+//	
+//	//	!!! for test purposes only !!!
+//	public static void main(String[] args) throws Exception {
+////		URL xsltUrl = new URL("https://raw.githubusercontent.com/plazi/ggxml2taxpub-treatments/main/xslt/gg2tp_l1.xsl");
+////		URL xsltUrl = new URL("http://tb.plazi.org/GgServer/gg2tp_l1.xsl");
+//		File xsltFile = new File("E:/Projektdaten/TaxPubOutput/gg2jats-article_l1.xsl");
+//		getTransformer(xsltFile);
+//	}
 }

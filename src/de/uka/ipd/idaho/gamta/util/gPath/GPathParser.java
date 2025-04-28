@@ -230,20 +230,18 @@ public class GPathParser {
 			gps.annotationTest = stepTokens[index];
 			index++;
 		}
-		if (index < stepTokens.length) {
-			if ("(".equals(stepTokens[index])) {
-				gps.annotationTest += "(";
+		if ((index < stepTokens.length) && "(".equals(stepTokens[index])) {
+			gps.annotationTest += "(";
+			index ++;
+			if (")".equals(stepTokens[index])) {
+				gps.annotationTest += ")";
 				index ++;
-				if (")".equals(stepTokens[index])) {
-					gps.annotationTest += ")";
-					index ++;
-				}
-				else {
-					gps.annotationTest += stepTokens[index];
-					index ++;
-					gps.annotationTest += ")";
-					index ++;
-				}
+			}
+			else {
+				gps.annotationTest += stepTokens[index];
+				index ++;
+				gps.annotationTest += ")";
+				index ++;
 			}
 		}
 		

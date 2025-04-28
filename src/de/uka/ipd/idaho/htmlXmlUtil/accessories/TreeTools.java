@@ -45,12 +45,13 @@ import de.uka.ipd.idaho.htmlXmlUtil.TreeNode;
 public class TreeTools {
 	//	TODO Add XML namespace cleansing facility akin to GANTA AnnotationUtils
 	
-  /**
-	 * get all nodes of the the specified type
+	/**
+	 * Get all nodes of the a given type (case insensitive). The returned array
+	 * contains the matching nodes in depth first order, i.e., document order.
 	 * @param root the root node of the tree to search in
 	 * @param searchTag the node type to search
-	 * @return the nodes that's types matche the specified one (packed in an
-	 *         array in depth first order)
+	 * @return an array holding the nodes whose types match the specified one
+	 *         (in depth first order)
 	 */
 	public static TreeNode[] getAllNodesOfType(TreeNode root, String searchTag) {
 		TreeNode[] tree = treeToDepthFirstOrder(root);

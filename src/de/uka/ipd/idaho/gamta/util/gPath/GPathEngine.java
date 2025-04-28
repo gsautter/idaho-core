@@ -53,6 +53,7 @@ import de.uka.ipd.idaho.gamta.QueriableAnnotation;
 import de.uka.ipd.idaho.gamta.Token;
 import de.uka.ipd.idaho.gamta.TokenSequence;
 import de.uka.ipd.idaho.gamta.TokenSequenceListener;
+import de.uka.ipd.idaho.gamta.TokenSequenceUtils;
 import de.uka.ipd.idaho.gamta.Tokenizer;
 import de.uka.ipd.idaho.gamta.defaultImplementation.PlainTokenSequence;
 import de.uka.ipd.idaho.gamta.util.gPath.exceptions.GPathException;
@@ -227,16 +228,16 @@ public class GPathEngine implements GPathConstants {
 			filterType = null;
 		else filterType = step.annotationTest;
 		
-		for (int a = 0; a < startAnnotations.size(); a++) {
+		for (int sa = 0; sa < startAnnotations.size(); sa++) {
 			GPathAnnotationSet annotationResult = new GPathAnnotationSet();
-			QueriableAnnotation annotation = startAnnotations.get(a);
+			QueriableAnnotation annotation = startAnnotations.get(sa);
 			
 			//	evaluate axis and annotation test
 			if (step.axis.startsWith("descendant")) {
 				QueriableAnnotation[] annotations = annotation.getAnnotations(filterType);
-				for (int an = 0; an < annotations.length; an++)
-					if (!annotation.getAnnotationID().equals(annotations[an].getAnnotationID()))
-						annotationResult.add(annotations[an]);
+				for (int da = 0; da < annotations.length; da++)
+					if (!annotation.getAnnotationID().equals(annotations[da].getAnnotationID()))
+						annotationResult.add(annotations[da]);
 			}
 			
 			else if (step.axis.startsWith("preceding-sibling"))
@@ -250,9 +251,9 @@ public class GPathEngine implements GPathConstants {
 			
 			else if ("child".equals(step.axis)) {
 				QueriableAnnotation[] annotations = annotation.getAnnotations(filterType);
-				for (int an = 0; an < annotations.length; an++)
-					if (!annotation.getAnnotationID().equals(annotations[an].getAnnotationID()))
-						annotationResult.add(annotations[an]);
+				for (int ca = 0; ca < annotations.length; ca++)
+					if (!annotation.getAnnotationID().equals(annotations[ca].getAnnotationID()))
+						annotationResult.add(annotations[ca]);
 			}
 			
 			else if ("attribute".equals(step.axis)) {
@@ -340,17 +341,22 @@ public class GPathEngine implements GPathConstants {
 					GPathDocument parentDocument = ((document.source.getDocument() == document.source) ? document : new GPathDocument(document.source.getDocument()));
 					if (filterType.equals(parentDocument.getType()))
 						annotationResult.add(parentDocument);
-					QueriableAnnotation[] parentTypeAnnotations = parentDocument.getAnnotations(filterType);
+//					QueriableAnnotation[] parentTypeAnnotations = parentDocument.getAnnotations(filterType);
+//					int annotationStart = (((annotation instanceof GPathAnnotation) && (document.source.getDocument() != document.source)) ? ((GPathAnnotation) annotation).source.getAbsoluteStartIndex() : annotation.getAbsoluteStartIndex());
+//					int annotationEnd = (annotationStart + annotation.size());
+//					for (int pa = 0; pa < parentTypeAnnotations.length; pa++) {
+//						if (parentTypeAnnotations[pa].getEndIndex() <= annotationStart)
+//							continue;
+//						if (annotationEnd <= parentTypeAnnotations[pa].getStartIndex())
+//							break;
+//						if ((parentTypeAnnotations[pa].getStartIndex() <= annotationStart) && (annotationEnd <= parentTypeAnnotations[pa].getEndIndex()))
+//							annotationResult.add(parentTypeAnnotations[pa]);
+//					}
 					int annotationStart = (((annotation instanceof GPathAnnotation) && (document.source.getDocument() != document.source)) ? ((GPathAnnotation) annotation).source.getAbsoluteStartIndex() : annotation.getAbsoluteStartIndex());
 					int annotationEnd = (annotationStart + annotation.size());
-					for (int an = 0; an < parentTypeAnnotations.length; an++) {
-						if (parentTypeAnnotations[an].getEndIndex() <= annotationStart)
-							continue;
-						if (annotationEnd <= parentTypeAnnotations[an].getStartIndex())
-							break;
-						if ((parentTypeAnnotations[an].getStartIndex() <= annotationStart) && (annotationEnd <= parentTypeAnnotations[an].getEndIndex()))
-							annotationResult.add(parentTypeAnnotations[an]);
-					}
+					QueriableAnnotation[] parentTypeAnnotations = parentDocument.getAnnotationsSpanning(filterType, annotationStart, annotationEnd);
+					for (int pa = 0; pa < parentTypeAnnotations.length; pa++)
+						annotationResult.add(parentTypeAnnotations[pa]);
 				}
 			}
 			
@@ -377,7 +383,7 @@ public class GPathEngine implements GPathConstants {
 			QueriableAnnotation parent = ((GPathAnnotation) startAnnotation).getParent();
 			if (parent == null)
 				return result;
-			QueriableAnnotation[] annotations = parent.getAnnotations(filterType);
+			QueriableAnnotation[] annotations = parent.getAnnotationsOverlapping(filterType, 0, startAnnotation.getStartIndex());
 			for (int a = 0; a < annotations.length; a++) {
 				if (annotations[a].getEndIndex() <= startAnnotation.getStartIndex())
 					result.add(annotations[a]);
@@ -394,7 +400,7 @@ public class GPathEngine implements GPathConstants {
 			QueriableAnnotation parent = ((GPathAnnotation) startAnnotation).getParent();
 			if (parent == null)
 				return result;
-			QueriableAnnotation[] annotations = parent.getAnnotations(filterType);
+			QueriableAnnotation[] annotations = parent.getAnnotationsOverlapping(filterType, startAnnotation.getEndIndex(), parent.size());
 			for (int a = 0; a < annotations.length; a++) {
 				if (startAnnotation.getEndIndex() <= annotations[a].getStartIndex())
 					result.add(annotations[a]);
@@ -409,7 +415,7 @@ public class GPathEngine implements GPathConstants {
 			QueriableAnnotation parent = ((GPathAnnotation) startAnnotation).getParent();
 			if (parent == null)
 				return result;
-			QueriableAnnotation[] annotations = parent.getAnnotations(filterType);
+			QueriableAnnotation[] annotations = parent.getAnnotationsOverlapping(filterType, startAnnotation.getStartIndex(), startAnnotation.getEndIndex());
 			for (int a = 0; a < annotations.length; a++) {
 				if (annotations[a].getEndIndex() <= startAnnotation.getStartIndex())
 					continue;
@@ -1251,7 +1257,11 @@ public class GPathEngine implements GPathConstants {
 			StringBuffer assembler = new StringBuffer();
 			for (int c = 0; c < toNormalize.length(); c++) {
 				char ch = toNormalize.charAt(c);
-				if (ch > 32) {
+				if (Gamta.SPACES.indexOf(ch) != -1)
+					ch = ' ';
+				else if (Gamta.INVISIBLE_CHARACRES.indexOf(ch) != -1)
+					continue;
+				if (0x20 < ch) {
 					assembler.append(ch);
 					lastWasWhitespace = false;
 				}
@@ -1262,6 +1272,38 @@ public class GPathEngine implements GPathConstants {
 			}
 			
 			return new GPathString(assembler.toString().trim());
+		}
+		else if ("normalize-token-spacing".equalsIgnoreCase(functionName)) {
+			String toNormalize;
+			if (args.length == 0) {
+				GPathAnnotationSet annotationSet = new GPathAnnotationSet();
+				annotationSet.add(contextAnnotation);
+				toNormalize = annotationSet.asString().value;
+			}
+			else if (args.length == 1)
+				toNormalize = args[0].asString().value;
+			else throw new InvalidArgumentsException("The function 'normalize-token-spacing' requires 0 argument(s) or 1 argument(s) of type(s) GPathString.");
+			
+			boolean lastWasWhitespace = false;
+			StringBuffer assembler = new StringBuffer();
+			for (int c = 0; c < toNormalize.length(); c++) {
+				char ch = toNormalize.charAt(c);
+				if (Gamta.SPACES.indexOf(ch) != -1)
+					ch = ' ';
+				else if (Gamta.INVISIBLE_CHARACRES.indexOf(ch) != -1)
+					continue;
+				if (0x20 < ch) {
+					assembler.append(ch);
+					lastWasWhitespace = false;
+				}
+				else if (!lastWasWhitespace) {
+					assembler.append(' ');
+					lastWasWhitespace = true;
+				}
+			}
+			
+			TokenSequence normal = Gamta.newTokenSequence(assembler.toString().trim(), contextAnnotation.getTokenizer());
+			return new GPathString(TokenSequenceUtils.concatTokens(normal, true, true));
 		}
 		else if ("normalize-chars".equalsIgnoreCase(functionName)) {
 			String toNormalize;
@@ -1278,7 +1320,11 @@ public class GPathEngine implements GPathConstants {
 			StringBuffer assembler = new StringBuffer();
 			for (int s = 0; s < toNormalize.length(); s++) {
 				char ch = toNormalize.charAt(s);
-				if (ch > 32) {
+				if (Gamta.SPACES.indexOf(ch) != -1)
+					ch = ' ';
+				else if (Gamta.INVISIBLE_CHARACRES.indexOf(ch) != -1)
+					continue;
+				if (0x20 < ch) {
 					assembler.append(StringUtils.getNormalForm(ch));
 					lastWasWhitespace = false;
 				}
@@ -1300,6 +1346,11 @@ public class GPathEngine implements GPathConstants {
 				throw new InvalidArgumentsException("The function 'lower-case' requires 1 argument(s) of type(s) GPathString.");
 			return new GPathString(args[0].asString().value.toLowerCase());
 		}
+		else if ("title-case".equals(functionName)) {
+			if (args.length != 1)
+				throw new InvalidArgumentsException("The function 'title-case' requires 1 argument(s) of type(s) GPathString.");
+			return new GPathString(Gamta.capitalize(args[0].asString().value));
+		}
 		else if ("substring".equalsIgnoreCase(functionName)) {
 			if ((args.length != 2) && (args.length != 3))
 				throw new InvalidArgumentsException("The function 'substring' requires 2 or 3 argument(s) of type(s) GPathString, GPathNumber" + ((args.length > 3) ? ", GPathNumber" : "") + ".");
@@ -1312,14 +1363,18 @@ public class GPathEngine implements GPathConstants {
 			int l = args[0].asString().value.length();
 			try {
 				s = ((int) args[1].asNumber().value);
-				if (s < 0) s = 0;
-				if (s > l) return new GPathString("");
+				if (s < 0)
+					s = 0;
+				if (s > l)
+					return new GPathString("");
 			} catch (Exception e) {}
 			if (args.length == 3) try {
 				l = ((int) args[2].asNumber().value);
-				if (l < 1) return new GPathString("");
+				if (l < 1)
+					return new GPathString("");
 			} catch (Exception e) {}
-			if ((s + l) > args[0].asString().value.length()) l = args[0].asString().value.length() - s;
+			if ((s + l) > args[0].asString().value.length())
+				l = (args[0].asString().value.length() - s);
 			return new GPathString(args[0].asString().value.substring(s, (s + l)));
 		}
 		else if ("substring-after".equalsIgnoreCase(functionName)) {
@@ -1838,7 +1893,7 @@ public class GPathEngine implements GPathConstants {
 			return this.wrapAnnotations(this.source.getAnnotations(type));
 		}
 		public QueriableAnnotation[] getAnnotationsSpanning(int startIndex, int endIndex) {
-			return this.getAnnotationsOverlapping(null, startIndex, endIndex);
+			return this.getAnnotationsSpanning(null, startIndex, endIndex);
 		}
 		public QueriableAnnotation[] getAnnotationsSpanning(String type, int startIndex, int endIndex) {
 			return this.wrapAnnotations(this.source.getAnnotationsSpanning(type, startIndex, endIndex));

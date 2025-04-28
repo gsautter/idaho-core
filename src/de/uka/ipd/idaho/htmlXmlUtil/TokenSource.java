@@ -145,7 +145,7 @@ public class TokenSource {
 		//	refill buffer
 		while ((this.charSource.peek() != -1) && ((this.tokenBuffer.size() < this.tokenLookahead) || (awaitedEndTag != null))) {
 			Token token = this.produceToken((awaitedEndTag == null) ? null : ("" + this.tagStart + "" + this.endTagMarker + "" + awaitedEndTag + "" + this.tagEnd));
-			if (DEBUG) System.out.println("TokenSource got token: " + token);
+			if (DEBUG) System.out.println("TokenSource got token: " + token.value);
 			if (token.value.length() == 0)
 				continue;
 			

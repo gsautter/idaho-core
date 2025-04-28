@@ -31,47 +31,47 @@ package de.uka.ipd.idaho.gamta;
 
 
 /**
- * the root element of an Annotation hierarchy, forming a standalone document.
+ * The root element of an Annotation hierarchy, forming a standalone document.
  * In general, any implementation of MutableAnnotation that is capable of
- * standalone existence base on a mutable char sequence can be such a root. But
- * a DocumentRoot can also define a document-wide nesting order for Annotations
- * based on their type, and can have properties that are inherited to all
- * Annotations belonging to this DocumentRoot
+ * standalone existence based on a mutable char sequence can be such a root.
+ * But a MutableDocumentRoot can also define a document-wide nesting order for
+ * Annotations based on their type, and can have properties that are inherited
+ * to all Annotations belonging to the MutableDocumentRoot.
  */
-public interface DocumentRoot extends MutableAnnotation {
-	
-	/**	the type of a DocumentRoot, to enable distinction from other Annotations */
-	public static final String DOCUMENT_TYPE = "document";
-	
-	/**	the ID attribute of a DocumentRoot */
-	public static final String DOCUMENT_ID_ATTRIBUTE = "docId";
-	
-	/**	the attribute holding a String representation of the annotation nesting order for this DocumentRoot */
-	public static final String ANNOTATION_NESTING_ORDER_ATTRIBUTE = "annotationNestingOrder";
-	
-	/** default annotation nesting order, as a space-separated string concatenation of annotation types, outmost type first */
-	public static final String DEFAULT_ANNOTATION_NESTING_ORDER = DOCUMENT_TYPE + " " + SECTION_TYPE + " " + SUB_SECTION_TYPE + " " + SUB_SUB_SECTION_TYPE + " " + PARAGRAPH_TYPE + " " + SENTENCE_TYPE;
-	
-	/** set the type-based Annotation nesting order for this document, replacing the current one
-	 * @param	ano		the new type-based Annotation nesting order for this document, as a space-separated string concatenation of annotation types, outmost type first
-	 * @return the old annotation nesting order
-	 */
-	public abstract String setAnnotationNestingOrder(String ano);
-	
-	/** set a property for this document. The value will then be retrievable from all Annotations that belong to the hierarch built on this DocumentRoot
-	 * @param	propertyName	the name for the property
-	 * @param	value			the value for the property
-	 * @return the old value of the property, or null, if there was no such value
-	 */
-	public abstract String setDocumentProperty(String propertyName, String value);
-	
-	/** remove a property from this document 
-	 * @param	propertyName	the name of the property to remove
-	 * @return the value of the property that was just removed, or null, if there was no value
-	 */
-	public abstract String removeDocumentProperty(String propertyName);
-	
-	/** remove all properties from this document 
-	 */
-	public abstract void clearDocumentProperties();
+public interface DocumentRoot extends AnnotationRoot, MutableAnnotation {
+//	
+//	/**	the type of a DocumentRoot, to enable distinction from other Annotations */
+//	public static final String DOCUMENT_TYPE = "document";
+//	
+//	/**	the ID attribute of a DocumentRoot */
+//	public static final String DOCUMENT_ID_ATTRIBUTE = "docId";
+//	
+//	/**	the attribute holding a String representation of the annotation nesting order for this DocumentRoot */
+//	public static final String ANNOTATION_NESTING_ORDER_ATTRIBUTE = "annotationNestingOrder";
+//	
+//	/** default annotation nesting order, as a space-separated string concatenation of annotation types, outmost type first */
+//	public static final String DEFAULT_ANNOTATION_NESTING_ORDER = DOCUMENT_TYPE + " " + SECTION_TYPE + " " + SUB_SECTION_TYPE + " " + SUB_SUB_SECTION_TYPE + " " + PARAGRAPH_TYPE + " " + SENTENCE_TYPE;
+//	
+//	/** set the type-based Annotation nesting order for this document, replacing the current one
+//	 * @param	ano		the new type-based Annotation nesting order for this document, as a space-separated string concatenation of annotation types, outmost type first
+//	 * @return the old annotation nesting order
+//	 */
+//	public abstract String setAnnotationNestingOrder(String ano);
+//	
+//	/** set a property for this document. The value will then be retrievable from all Annotations that belong to the hierarchy built on this DocumentRoot
+//	 * @param	propertyName	the name for the property
+//	 * @param	value			the value for the property
+//	 * @return the old value of the property, or null, if there was no such value
+//	 */
+//	public abstract String setDocumentProperty(String propertyName, String value);
+//	
+//	/** remove a property from this document 
+//	 * @param	propertyName	the name of the property to remove
+//	 * @return the value of the property that was just removed, or null, if there was no value
+//	 */
+//	public abstract String removeDocumentProperty(String propertyName);
+//	
+//	/** remove all properties from this document 
+//	 */
+//	public abstract void clearDocumentProperties();
 }

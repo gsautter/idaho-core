@@ -60,15 +60,15 @@ public class AbstractAttributed implements Attributed {
 	/** @see de.uka.ipd.idaho.gamta.Attributed#copyAttributes(de.uka.ipd.idaho.gamta.Attributed)
 	 */
 	public void copyAttributes(Attributed source) {
-		if (source != null) {
-			String[] attributeNames = source.getAttributeNames();
-			if (attributeNames.length == 0)
-				return; // no need for initializing map if no attributes to copy
-			if (this.attributes == null) //	initialize with appropriate capacity so resizing won't occur here
-				this.attributes = new HashMap(Math.max(((3 * attributeNames.length) / 2), 2)) ;
-			for (int a = 0; a < attributeNames.length; a++)
-				this.setAttribute(attributeNames[a], source.getAttribute(attributeNames[a]));
-		}
+		if (source == null)
+			return;
+		String[] attributeNames = source.getAttributeNames();
+		if (attributeNames.length == 0)
+			return; // no need for initializing map if no attributes to copy
+		if (this.attributes == null) //	initialize with appropriate capacity so resizing won't occur here
+			this.attributes = new HashMap(Math.max(((3 * attributeNames.length) / 2), 2)) ;
+		for (int a = 0; a < attributeNames.length; a++)
+			this.setAttribute(attributeNames[a], source.getAttribute(attributeNames[a]));
 	}
 	
 	/** @see de.uka.ipd.idaho.gamta.Attributed#getAttribute(java.lang.String, java.lang.Object)

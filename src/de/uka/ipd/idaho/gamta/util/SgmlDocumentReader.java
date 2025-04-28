@@ -101,7 +101,8 @@ public class SgmlDocumentReader extends TokenReceiver {
 	 * @throws IOException
 	 */
 	public SgmlDocumentReader(MutableAnnotation document, Grammar grammar, Properties tagMapping, StringVector ignoreTags, StringVector paragraphTags, int maxTokens) throws IOException {
-		this.document = ((document == null) ? Gamta.newDocument(Gamta.INNER_PUNCTUATION_TOKENIZER) : document);
+//		this.document = ((document == null) ? Gamta.newDocument(Gamta.INNER_PUNCTUATION_TOKENIZER) : document);
+		this.document = ((document == null) ? Gamta.newDocument(Gamta.getDefaultTokenizer()) : document);
 		this.grammar = ((grammar == null) ? new StandardGrammar() : grammar);
 		this.tagMapping = ((tagMapping == null) ? new Properties() : tagMapping);
 		this.ignoreTags = ((ignoreTags == null) ? new StringVector() : ignoreTags);
@@ -278,7 +279,7 @@ public class SgmlDocumentReader extends TokenReceiver {
 				plain = this.grammar.unescape(token).trim();
 			else plain = IoTools.prepareForPlainText(token).trim();
 			
-			if (plain.length() != 0) {// ignore whitespace between tags and text
+			if (plain.length() != 0) /* ignore whitespace between tags and text */ {
 				TokenSequence ts = this.document.getTokenizer().tokenize(plain);
 				
 				//	make sure tokens before and after tags do not cling together

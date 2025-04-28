@@ -95,9 +95,9 @@ public class StringTupel {
 		return keys;
 	}
 	void getKeys(String[] keys) {
-		int i = 0;
+		int k = 0;
 		for (Iterator kit = this.data.keySet().iterator(); kit.hasNext();)
-			keys[i++] = ((String) kit.next());
+			keys[k++] = ((String) kit.next());
 	}
 	
 	/**	retrieve the value assigned to a given key
@@ -224,7 +224,7 @@ public class StringTupel {
 		}
 		return string.toString();
 	}
-
+	
 	/**
 	 * Convert the data in this StringTupel to a line for a CSV file, using the
 	 * default separator and value delimiter.
@@ -232,9 +232,9 @@ public class StringTupel {
 	 *         the order of the keys
 	 */
 	public String toCsvString() {
-		return this.toCsvString(StringRelation.DEFAULT_SEPARATOR, StringRelation.DEFAULT_VALUE_DELIMITER, this.getKeys());
+		return this.toCsvString(StringRelation.DEFAULT_SEPARATOR, StringRelation.DEFAULT_VALUE_DELIMITER, this.getKeyArray());
 	}
-
+	
 	/**
 	 * Convert the data in this StringTupel to a line for a CSV file, using the
 	 * default separator.
@@ -244,7 +244,7 @@ public class StringTupel {
 	 *         the order of the keys
 	 */
 	public String toCsvString(char valueDelimiter) {
-		return this.toCsvString(StringRelation.DEFAULT_SEPARATOR, valueDelimiter, this.getKeys());
+		return this.toCsvString(StringRelation.DEFAULT_SEPARATOR, valueDelimiter, this.getKeyArray());
 	}
 	
 	/**
@@ -304,7 +304,7 @@ public class StringTupel {
 	 *         the order of the keys
 	 */
 	public String toCsvString(char separator, char valueDelimiter) {
-		return this.toCsvString(separator, valueDelimiter, this.getKeys());
+		return this.toCsvString(separator, valueDelimiter, this.getKeyArray());
 	}
 	
 	/**
@@ -325,7 +325,10 @@ public class StringTupel {
 	}
 	
 	/**
-	 * Convert the data in this StringTupel to a line for a CSV file.
+	 * Convert the data in this StringTupel to a line for a CSV or TSV file.
+	 * If the argument separator is the <code>tab</code> character, the value
+	 * delimiter is ignored, and tabs and line breaks in values are replaced
+	 * with spaces.
 	 * @param separator the value separator character
 	 * @param valueDelimiter the character to use as the value delimiter (will
 	 *            be escaped with itself if occurring in value)
@@ -334,25 +337,58 @@ public class StringTupel {
 	 *         the order of the keys
 	 */
 	public String toCsvString(char separator, char valueDelimiter, String[] keys) {
-		String delimiter = ("" + valueDelimiter);
-		String escapedDelimiter = (valueDelimiter + "" + valueDelimiter);
 		StringBuffer csv = new StringBuffer();
 		for (int k = 0; k < keys.length; k++) {
 			if (k != 0)
 				csv.append(separator);
 			String value = this.getValue(keys[k]);
-			if (value == null)
-				value = "";
 			if (separator == '\t')
-				csv.append(value.replace('\t', ' ').replace('\r', ' ').replace('\n', ' '));
-			else {
-				csv.append(valueDelimiter);
-				csv.append(StringUtils.replaceAll(value, delimiter, escapedDelimiter));
-				csv.append(valueDelimiter);
-			}
+				appendValueTsv(value, csv);
+			else appendValueCsv(value, valueDelimiter, csv);
 		}
 		return csv.toString();
 	}
+	private static void appendValueCsv(String value, char valueDelimiter, StringBuffer csv) {
+		csv.append(valueDelimiter);
+		if (value != null)
+			for (int c = 0; c < value.length(); c++) {
+				char ch = value.charAt(c);
+				if (ch == valueDelimiter)
+					csv.append(valueDelimiter);
+				csv.append(ch);
+			}
+		csv.append(valueDelimiter);
+	}
+	private static void appendValueTsv(String value, StringBuffer tsv) {
+		if (value == null)
+			return;
+		for (int c = 0; c < value.length(); c++) {
+			char ch = value.charAt(c);
+			if ((ch == '\t') || (ch == '\r') || (ch == '\n'))
+				tsv.append(' ');
+			else tsv.append(ch);
+		}
+	}
+//	public String toCsvString(char separator, char valueDelimiter, String[] keys) {
+//		String delimiter = ("" + valueDelimiter);
+//		String escapedDelimiter = (valueDelimiter + "" + valueDelimiter);
+//		StringBuffer csv = new StringBuffer();
+//		for (int k = 0; k < keys.length; k++) {
+//			if (k != 0)
+//				csv.append(separator);
+//			String value = this.getValue(keys[k]);
+//			if (value == null)
+//				value = "";
+//			if (separator == '\t')
+//				csv.append(value.replace('\t', ' ').replace('\r', ' ').replace('\n', ' '));
+//			else {
+//				csv.append(valueDelimiter);
+//				csv.append(StringUtils.replaceAll(value, delimiter, escapedDelimiter));
+//				csv.append(valueDelimiter);
+//			}
+//		}
+//		return csv.toString();
+//	}
 	
 	/** @see java.lang.Object#equals(java.lang.Object)
 	 */

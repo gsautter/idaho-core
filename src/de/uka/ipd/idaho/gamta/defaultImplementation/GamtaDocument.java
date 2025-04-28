@@ -46,6 +46,7 @@ import de.uka.ipd.idaho.gamta.AnnotationUtils;
 import de.uka.ipd.idaho.gamta.Attributed;
 import de.uka.ipd.idaho.gamta.CharSequenceListener;
 import de.uka.ipd.idaho.gamta.DocumentRoot;
+import de.uka.ipd.idaho.gamta.EditableAnnotation;
 import de.uka.ipd.idaho.gamta.Gamta;
 import de.uka.ipd.idaho.gamta.MutableAnnotation;
 import de.uka.ipd.idaho.gamta.MutableCharSequence;
@@ -243,7 +244,9 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 			Annotation annot = this.addAnnotation(annotations[a]);
 			if (annot == null) {
 				System.out.println("GamtaDocument: could not copy annotation " + annotations[a].getType() + " at " + annotations[a].getStartIndex() + "-" + annotations[a].getEndIndex());
-				System.out.println("  " + annotations[a].toXML());
+				if ((0 <= annotations[a].getStartIndex()) && (annotations[a].getEndIndex() <= this.size()))
+					System.out.println("  " + annotations[a].toXML());
+				else System.out.println("  " + AnnotationUtils.produceStartTag(annotations[a], true) + " ... " + AnnotationUtils.produceEndTag(annotations[a]));
 			}
 			else annot.setAttribute(ANNOTATION_ID_ATTRIBUTE, annotations[a].getAnnotationID());
 		}
@@ -310,13 +313,22 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 	 */
 	public Object setAttribute(String name, Object value) {
 		if (ANNOTATION_ID_ATTRIBUTE.equals(name)) {
-			if ((value != null) && (value instanceof String) && (value.toString().trim().length() == this.annotationId.length())) {
-				String oldId = this.annotationId;
-				this.annotationId = value.toString();
-				this.notifyAnnotationAttributeChanged(null, name, oldId);
-				return oldId;
-			}
-			else return value;
+//			if ((value != null) && (value instanceof String) && (value.toString().trim().length() == this.annotationId.length())) {
+//				String oldId = this.annotationId;
+//				this.annotationId = value.toString();
+//				this.notifyAnnotationAttributeChanged(null, name, oldId);
+//				return oldId;
+//			}
+//			else return value;
+			if (value == null)
+				return value;
+			String newId = ((value instanceof String) ? ((String) value) : value.toString()).trim();
+			if (newId.length() != this.annotationId.length())
+				return value;
+			String oldId = this.annotationId;
+			this.annotationId = newId;
+			this.notifyAnnotationAttributeChanged(null, name, oldId);
+			return oldId;
 		}
 		else {
 			Object oldValue = super.setAttribute(name, value);
@@ -692,21 +704,21 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 	public int size() {
 		return this.tokenData.size();
 	}
-
+	
 	/* (non-Javadoc)
 	 * @see de.gamta.defaultImplementation.GamtaTokenSequence#subSequence(int, int)
 	 */
 	public CharSequence subSequence(int start, int end) {
 		return this.tokenData.subSequence(start, end);
 	}
-
+	
 	/* (non-Javadoc)
 	 * @see de.gamta.defaultImplementation.GamtaTokenSequence#tokenAt(int)
 	 */
 	public Token tokenAt(int index) {
 		return this.tokenData.tokenAt(index);
 	}
-
+	
 	/* (non-Javadoc)
 	 * @see de.gamta.defaultImplementation.GamtaTokenSequence#toString()
 	 */
@@ -720,7 +732,7 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 	public String valueAt(int index) {
 		return this.tokenData.valueAt(index);
 	}
-
+	
 	/* (non-Javadoc)
 	 * @see de.gamta.MutableCharSequence#mutableSubSequence(int, int)
 	 */
@@ -867,6 +879,56 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 	}
 	
 	/* (non-Javadoc)
+	 * @see de.uka.ipd.idaho.gamta.EditableAnnotation#getEditableAnnotation(java.lang.String)
+	 */
+	public EditableAnnotation getEditableAnnotation(String id) {
+		AnnotationBase ab = this.annotations.getAnnotation(id);
+		return ((ab == null) ? null : new EditableAnnotationView(ab, this));
+	}
+	
+	/* (non-Javadoc)
+	 * @see de.uka.ipd.idaho.gamta.EditableAnnotation#getEditableAnnotations()
+	 */
+	public EditableAnnotation[] getEditableAnnotations() {
+		return this.getEditableAnnotations(null);
+	}
+	
+	/* (non-Javadoc)
+	 * @see de.uka.ipd.idaho.gamta.EditableAnnotation#getEditableAnnotations(java.lang.String)
+	 */
+	public EditableAnnotation[] getEditableAnnotations(String type) {
+		return this.wrapAnnotationBasesEditable(this.annotations.getAnnotations(type), this);
+	}
+	
+	/* (non-Javadoc)
+	 * @see de.uka.ipd.idaho.gamta.EditableAnnotation#getEditableAnnotationsSpanning(int, int)
+	 */
+	public EditableAnnotation[] getEditableAnnotationsSpanning(int startIndex, int endIndex) {
+		return this.getEditableAnnotationsSpanning(null, startIndex, endIndex);
+	}
+	
+	/* (non-Javadoc)
+	 * @see de.uka.ipd.idaho.gamta.EditableAnnotation#getEditableAnnotationsSpanning(java.lang.String, int, int)
+	 */
+	public EditableAnnotation[] getEditableAnnotationsSpanning(String type, int startIndex, int endIndex) {
+		return this.wrapAnnotationBasesEditable(this.annotations.getAnnotationsSpanning(type, startIndex, endIndex), this);
+	}
+	
+	/* (non-Javadoc)
+	 * @see de.uka.ipd.idaho.gamta.EditableAnnotation#getEditableAnnotationsOverlapping(int, int)
+	 */
+	public EditableAnnotation[] getEditableAnnotationsOverlapping(int startIndex, int endIndex) {
+		return this.getEditableAnnotationsOverlapping(null, startIndex, endIndex);
+	}
+	
+	/* (non-Javadoc)
+	 * @see de.uka.ipd.idaho.gamta.EditableAnnotation#getEditableAnnotationsOverlapping(java.lang.String, int, int)
+	 */
+	public EditableAnnotation[] getEditableAnnotationsOverlapping(String type, int startIndex, int endIndex) {
+		return this.wrapAnnotationBasesEditable(this.annotations.getAnnotationsOverlapping(type, startIndex, endIndex), this);
+	}
+	
+	/* (non-Javadoc)
 	 * @see de.uka.ipd.idaho.gamta.MutableAnnotation#getMutableAnnotation(java.lang.String)
 	 */
 	public MutableAnnotation getMutableAnnotation(String id) {
@@ -880,7 +942,7 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 	public MutableAnnotation[] getMutableAnnotations() {
 		return this.getMutableAnnotations(null);
 	}
-
+	
 	/* (non-Javadoc)
 	 * @see de.gamta.MutableAnnotation#getMutableAnnotations(java.lang.String)
 	 */
@@ -934,7 +996,7 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 		//	return Annotation
 		return ra;
 	}
-
+	
 	/* (non-Javadoc)
 	 * @see de.gamta.MutableAnnotation#removeTokens(de.gamta.Annotation)
 	 */
@@ -946,13 +1008,15 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 	 * @see de.gamta.MutableAnnotation#addAnnotationListener(de.gamta.AnnotationListener)
 	 */
 	public void addAnnotationListener(AnnotationListener al) {
-		if (al != null) {
-			if (this.annotationListeners == null)
-				this.annotationListeners = new ArrayList(2);
-			this.annotationListeners.add(al);
-		}
+		if (al == null)
+			return;
+		if (this.annotationListeners == null)
+			this.annotationListeners = new ArrayList(2);
+		else if (this.annotationListeners.contains(al))
+			return;
+		this.annotationListeners.add(al);
 	}
-
+	
 	/* (non-Javadoc)
 	 * @see de.gamta.MutableAnnotation#removeAnnotationListener(de.gamta.AnnotationListener)
 	 */
@@ -1020,10 +1084,7 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 	}
 	
 	private class AnnotationAdjuster implements TokenSequenceListener {
-		/* (non-Javadoc)
-		 * @see de.gamta.TokenSequenceListener#tokenSequenceChanged(de.gamta.MutableTokenSequence.TokenSequenceEvent)
-		 */
-		public synchronized void tokenSequenceChanged(TokenSequenceEvent change) {
+		public void tokenSequenceChanged(TokenSequenceEvent change) {
 			annotations.tokenSequenceChanged(change);
 		}
 	}
@@ -1044,8 +1105,8 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 			//	notify listeners
 			QueriableAnnotation base = this.base;
 			while (base != GamtaDocument.this) {
-				if (base instanceof MutableAnnotationView) {
-					((MutableAnnotationView) base).notifyAnnotationTypeChanged(this.data, oldType);
+				if (base instanceof EditableAnnotationView) {
+					((EditableAnnotationView) base).notifyAnnotationTypeChanged(this.data, oldType);
 					return oldType;
 				}
 				else if (base instanceof QueriableAnnotationView)
@@ -1188,49 +1249,63 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 			return this.data.valueAt(index);
 		}
 		public void clearAttributes() {
-			this.data.clearAttributes();
-			
-			//	notify listeners
-			QueriableAnnotation base = this.base;
-			while (base != GamtaDocument.this) {
-				if (base instanceof MutableAnnotationView) {
-					((MutableAnnotationView) base).notifyAnnotationAttributeChanged(this.data, null, null);
-					return;
-				}
-				else if (base instanceof QueriableAnnotationView)
-					base = ((QueriableAnnotationView) base).base;
-				
-				else base = GamtaDocument.this;
-			}
-			if (base == GamtaDocument.this)
-				GamtaDocument.this.notifyAnnotationAttributeChanged(this.data, null, null);
+//			this.data.clearAttributes();
+//			
+//			//	notify listeners
+//			//	TODO cannot do it this way, need to announce attributes individually for undo/redo to work
+//			QueriableAnnotation base = this.base;
+//			while (base != GamtaDocument.this) {
+//				if (base instanceof EditableAnnotationView) {
+//					((EditableAnnotationView) base).notifyAnnotationAttributeChanged(this.data, null, null);
+//					return; // base will propagate notification further
+//				}
+//				else if (base instanceof QueriableAnnotationView)
+//					base = ((QueriableAnnotationView) base).base;
+//				
+//				else base = GamtaDocument.this;
+//			}
+//			if (base == GamtaDocument.this)
+//				GamtaDocument.this.notifyAnnotationAttributeChanged(this.data, null, null);
+			String[] attributeNames = this.data.getAttributeNames();
+			for (int n = 0; n < attributeNames.length; n++)
+				this.removeAttribute(attributeNames[n]);
 		}
 		public void copyAttributes(Attributed source) {
-			this.data.copyAttributes(source);
-			
-			//	notify listeners
-			QueriableAnnotation base = this.base;
-			while (base != GamtaDocument.this) {
-				if (base instanceof MutableAnnotationView) {
-					((MutableAnnotationView) base).notifyAnnotationAttributeChanged(this.data, null, null);
-					return;
-				}
-				else if (base instanceof QueriableAnnotationView)
-					base = ((QueriableAnnotationView) base).base;
-				
-				else base = GamtaDocument.this;
-			}
-			if (base == GamtaDocument.this)
-				GamtaDocument.this.notifyAnnotationAttributeChanged(this.data, null, null);
+//			this.data.copyAttributes(source);
+//			
+//			//	notify listeners
+//			//	TODO cannot do it this way, need to announce attributes individually for undo/redo to work
+//			QueriableAnnotation base = this.base;
+//			while (base != GamtaDocument.this) {
+//				if (base instanceof EditableAnnotationView) {
+//					((EditableAnnotationView) base).notifyAnnotationAttributeChanged(this.data, null, null);
+//					return; // base will propagate notification further
+//				}
+//				else if (base instanceof QueriableAnnotationView)
+//					base = ((QueriableAnnotationView) base).base;
+//				
+//				else base = GamtaDocument.this;
+//			}
+//			if (base == GamtaDocument.this)
+//				GamtaDocument.this.notifyAnnotationAttributeChanged(this.data, null, null);
+			if (source == null)
+				return;
+			String[] attributeNames = source.getAttributeNames();
+			for (int n = 0; n < attributeNames.length; n++)
+				this.setAttribute(attributeNames[n], source.getAttribute(attributeNames[n]));
 		}
 		public Object getAttribute(String name, Object def) {
-			if (START_INDEX_ATTRIBUTE.equals(name)) return new Integer(this.getStartIndex());
-			else if (END_INDEX_ATTRIBUTE.equals(name)) return new Integer(this.getEndIndex());
+			if (START_INDEX_ATTRIBUTE.equals(name))
+				return new Integer(this.getStartIndex());
+			else if (END_INDEX_ATTRIBUTE.equals(name))
+				return new Integer(this.getEndIndex());
 			else return this.data.getAttribute(name, def);
 		}
 		public Object getAttribute(String name) {
-			if (START_INDEX_ATTRIBUTE.equals(name)) return new Integer(this.getStartIndex());
-			else if (END_INDEX_ATTRIBUTE.equals(name)) return new Integer(this.getEndIndex());
+			if (START_INDEX_ATTRIBUTE.equals(name))
+				return new Integer(this.getStartIndex());
+			else if (END_INDEX_ATTRIBUTE.equals(name))
+				return new Integer(this.getEndIndex());
 			else return this.data.getAttribute(name);
 		}
 		public String[] getAttributeNames() {
@@ -1243,11 +1318,12 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 			Object oldValue = this.data.removeAttribute(name);
 			
 			//	notify listeners
-			QueriableAnnotation base = this.base;
+//			QueriableAnnotation base = this.base;
+			QueriableAnnotation base = this; // in case we're editable, we need to notify own listeners as well
 			while (base != GamtaDocument.this) {
-				if (base instanceof MutableAnnotationView) {
-					((MutableAnnotationView) base).notifyAnnotationAttributeChanged(this.data, name, oldValue);
-					return oldValue;
+				if (base instanceof EditableAnnotationView) {
+					((EditableAnnotationView) base).notifyAnnotationAttributeChanged(this.data, name, oldValue);
+					return oldValue; // base will propagate notification further
 				}
 				else if (base instanceof QueriableAnnotationView)
 					base = ((QueriableAnnotationView) base).base;
@@ -1265,11 +1341,12 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 			this.data.setAttribute(name);
 			
 			//	notify listeners
-			QueriableAnnotation base = this.base;
+//			QueriableAnnotation base = this.base;
+			QueriableAnnotation base = this; // in case we're editable, we need to notify own listeners as well
 			while (base != GamtaDocument.this) {
-				if (base instanceof MutableAnnotationView) {
-					((MutableAnnotationView) base).notifyAnnotationAttributeChanged(this.data, name, oldValue);
-					return;
+				if (base instanceof EditableAnnotationView) {
+					((EditableAnnotationView) base).notifyAnnotationAttributeChanged(this.data, name, oldValue);
+					return; // base will propagate notification further
 				}
 				else if (base instanceof QueriableAnnotationView)
 					base = ((QueriableAnnotationView) base).base;
@@ -1282,11 +1359,12 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 			Object oldValue = this.data.setAttribute(name, value);
 			
 			//	notify listeners
-			QueriableAnnotation base = this.base;
+//			QueriableAnnotation base = this.base;
+			QueriableAnnotation base = this; // in case we're editable, we need to notify own listeners as well
 			while (base != GamtaDocument.this) {
-				if (base instanceof MutableAnnotationView) {
-					((MutableAnnotationView) base).notifyAnnotationAttributeChanged(this.data, name, oldValue);
-					return oldValue;
+				if (base instanceof EditableAnnotationView) {
+					((EditableAnnotationView) base).notifyAnnotationAttributeChanged(this.data, name, oldValue);
+					return oldValue; // base will propagate notification further
 				}
 				else if (base instanceof QueriableAnnotationView)
 					base = ((QueriableAnnotationView) base).base;
@@ -1299,12 +1377,195 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 		}
 	}
 	
+	/**	an editable view of an annotation, behaving relative to the annotation its was retrieved from
+	 */
+	private class EditableAnnotationView extends QueriableAnnotationView implements EditableAnnotation {
+		private ArrayList annotationListeners = null;
+		EditableAnnotationView(AnnotationBase data, QueriableAnnotation base) {
+			super(data, base);
+		}
+		public EditableAnnotation addAnnotation(Annotation annotation) {
+			AnnotationBase ab = this.data.addAnnotation(annotation);
+			
+			//	check success
+			if (ab == null)
+				return null;
+			
+			//	notify own listeners
+			this.notifyAnnotationAdded(ab);
+			
+			//	return new Annotation
+			return new EditableAnnotationView(ab, this);
+		}
+		public EditableAnnotation addAnnotation(String type, int startIndex, int size) {
+			AnnotationBase ab = this.data.addAnnotation(type, startIndex, size);
+			
+			//	check success
+			if (ab == null)
+				return null;
+			
+			//	notify own listeners
+			this.notifyAnnotationAdded(ab);
+			
+			//	return new Annotation
+			return new EditableAnnotationView(ab, this);
+		}
+		public EditableAnnotation addAnnotation(int startIndex, int endIndex, String type) {
+			return this.addAnnotation(type, startIndex, (endIndex - startIndex));
+		}
+		public Annotation removeAnnotation(Annotation annotation) {
+			AnnotationBase ab = this.data.removeAnnotation(annotation);
+			
+			Annotation ra = new TemporaryAnnotation(this, annotation.getType(), annotation.getStartIndex(), annotation.size());
+			ra.copyAttributes(ab);
+			
+			//	annotation did not belong to this document
+			if (ab == null) return annotation;
+			
+			//	notify own listeners
+			this.notifyAnnotationRemoved(ab);
+			
+			//	return standalone annotation otherwise
+			return ra;
+		}
+		public EditableAnnotation getEditableAnnotation(String id) {
+			AnnotationBase ab = this.data.getAnnotation(id);
+			return ((ab == null) ? null : new EditableAnnotationView(ab, this));
+		}
+		public EditableAnnotation[] getEditableAnnotations() {
+			return this.getEditableAnnotations(null);
+		}
+		public EditableAnnotation[] getEditableAnnotations(String type) {
+			AnnotationBase[] abs = this.data.getAnnotations(type);
+			EditableAnnotation mas[] = new EditableAnnotation[abs.length];
+			for (int a = 0; a < abs.length; a++)
+				mas[a] = new EditableAnnotationView(abs[a], this);
+			Arrays.sort(mas, nestingOrder);
+			return mas;
+		}
+		public EditableAnnotation[] getEditableAnnotationsSpanning(int startIndex, int endIndex) {
+			return this.getEditableAnnotationsSpanning(null, startIndex, endIndex);
+		}
+		public EditableAnnotation[] getEditableAnnotationsSpanning(String type, int startIndex, int endIndex) {
+			return wrapAnnotationBasesEditable(this.data.getAnnotationsSpanning(type, startIndex, endIndex), this);
+		}
+		public EditableAnnotation[] getEditableAnnotationsOverlapping(int startIndex, int endIndex) {
+			return this.getEditableAnnotationsOverlapping(null, startIndex, endIndex);
+		}
+		public EditableAnnotation[] getEditableAnnotationsOverlapping(String type, int startIndex, int endIndex) {
+			return wrapAnnotationBasesEditable(this.data.getAnnotationsOverlapping(type, startIndex, endIndex), this);
+		}
+		
+		public void addAnnotationListener(AnnotationListener al) {
+			if (al == null)
+				return;
+			if (this.annotationListeners == null)
+				this.annotationListeners = new ArrayList(2);
+			else if (this.annotationListeners.contains(al))
+				return;
+			this.annotationListeners.add(al);
+		}
+		public void removeAnnotationListener(AnnotationListener al) {
+			if (this.annotationListeners != null)
+				this.annotationListeners.remove(al);
+		}
+		void notifyAnnotationAdded(AnnotationBase added) {
+			if (this.annotationListeners != null) {
+				QueriableAnnotation doc = new ImmutableAnnotation(this);
+				Annotation addedAnnotation = new ImmutableAnnotation(new QueriableAnnotationView(added, this));
+				for (int l = 0; l < this.annotationListeners.size(); l++)
+					((AnnotationListener) this.annotationListeners.get(l)).annotationAdded(doc, addedAnnotation);
+			}
+			
+			QueriableAnnotation base = this.base;
+			while (base != GamtaDocument.this) {
+				if (base instanceof EditableAnnotationView) {
+					((EditableAnnotationView) base).notifyAnnotationAdded(added);
+					return; // base will propagate notification further
+				}
+				else if (base instanceof QueriableAnnotationView)
+					base = ((QueriableAnnotationView) base).base;
+				
+				else base = GamtaDocument.this;
+			}
+			if (base == GamtaDocument.this)
+				GamtaDocument.this.notifyAnnotationAdded(added);
+		}
+		void notifyAnnotationRemoved(AnnotationBase removed) {
+			if (this.annotationListeners != null) {
+				QueriableAnnotation doc = new ImmutableAnnotation(this);
+				Annotation removedAnnotation = new TemporaryAnnotation(doc, removed.getType(), (removed.absoluteStartIndex - this.getAbsoluteStartIndex()), removed.size);
+				removedAnnotation.copyAttributes(removed);
+				for (int l = 0; l < this.annotationListeners.size(); l++)
+					((AnnotationListener) this.annotationListeners.get(l)).annotationRemoved(doc, removedAnnotation);
+			}
+			
+			QueriableAnnotation base = this.base;
+			while (base != GamtaDocument.this) {
+				if (base instanceof EditableAnnotationView) {
+					((EditableAnnotationView) base).notifyAnnotationRemoved(removed);
+					return; // base will propagate notification further
+				}
+				else if (base instanceof QueriableAnnotationView)
+					base = ((QueriableAnnotationView) base).base;
+				
+				else base = GamtaDocument.this;
+			}
+			if (base == GamtaDocument.this)
+				GamtaDocument.this.notifyAnnotationRemoved(removed);
+		}
+		void notifyAnnotationTypeChanged(AnnotationBase reTyped, String oldType) {
+			if ((reTyped != this.data) && (this.annotationListeners != null)) {
+				QueriableAnnotation doc = new ImmutableAnnotation(this);
+				Annotation reTypedAnnotation = new ImmutableAnnotation(new QueriableAnnotationView(reTyped, this));
+				for (int l = 0; l < this.annotationListeners.size(); l++)
+					((AnnotationListener) this.annotationListeners.get(l)).annotationTypeChanged(doc, reTypedAnnotation, oldType);
+			}
+			
+			QueriableAnnotation base = this.base;
+			while (base != GamtaDocument.this) {
+				if (base instanceof EditableAnnotationView) {
+					((EditableAnnotationView) base).notifyAnnotationTypeChanged(reTyped, oldType);
+					return; // base will propagate notification further
+				}
+				else if (base instanceof QueriableAnnotationView)
+					base = ((QueriableAnnotationView) base).base;
+				
+				else base = GamtaDocument.this;
+			}
+			if (base == GamtaDocument.this)
+				GamtaDocument.this.notifyAnnotationTypeChanged(reTyped, oldType);
+		}
+		void notifyAnnotationAttributeChanged(AnnotationBase target, String attributeName, Object oldValue) {
+			if (this.annotationListeners != null) {
+				QueriableAnnotation doc = new ImmutableAnnotation(this);
+				Annotation targetAnnotation = new ImmutableAnnotation(new QueriableAnnotationView(target, this));
+				for (int l = 0; l < this.annotationListeners.size(); l++)
+					((AnnotationListener) this.annotationListeners.get(l)).annotationAttributeChanged(doc, targetAnnotation, attributeName, oldValue);
+			}
+			
+			QueriableAnnotation base = this.base;
+			while (base != GamtaDocument.this) {
+				if (base instanceof EditableAnnotationView) {
+					((EditableAnnotationView) base).notifyAnnotationAttributeChanged(target, attributeName, oldValue);
+					return; // base will propagate notification further
+				}
+				else if (base instanceof QueriableAnnotationView)
+					base = ((QueriableAnnotationView) base).base;
+				
+				else base = GamtaDocument.this;
+			}
+			if (base == GamtaDocument.this)
+				GamtaDocument.this.notifyAnnotationAttributeChanged(target, attributeName, oldValue);
+		}
+	}
+	
 	/**	a mutable view of an annotation, behaving relative to the annotation its was retrieved from
 	 */
-	private class MutableAnnotationView extends QueriableAnnotationView implements MutableAnnotation {
+	private class MutableAnnotationView extends EditableAnnotationView implements MutableAnnotation {
 		private ArrayList charListeners = null;
 		private ArrayList tokenListeners = null;
-		private ArrayList annotationListeners = null;
+//		private ArrayList annotationListeners = null;
 		MutableAnnotationView(AnnotationBase data, QueriableAnnotation base) {
 			super(data, base);
 			if (this.data.views == null)
@@ -1399,21 +1660,21 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 		public MutableCharSequence mutableSubSequence(int start, int end) {
 			return this.data.mutableSubSequence(start, end);
 		}
-		public Annotation removeAnnotation(Annotation annotation) {
-			AnnotationBase ab = this.data.removeAnnotation(annotation);
-			
-			Annotation ra = new TemporaryAnnotation(this, annotation.getType(), annotation.getStartIndex(), annotation.size());
-			ra.copyAttributes(ab);
-			
-			//	annotation did not belong to this document
-			if (ab == null) return annotation;
-			
-			//	notify own listeners
-			this.notifyAnnotationRemoved(ab);
-			
-			//	return standalone annotation otherwise
-			return ra;
-		}
+//		public Annotation removeAnnotation(Annotation annotation) {
+//			AnnotationBase ab = this.data.removeAnnotation(annotation);
+//			
+//			Annotation ra = new TemporaryAnnotation(this, annotation.getType(), annotation.getStartIndex(), annotation.size());
+//			ra.copyAttributes(ab);
+//			
+//			//	annotation did not belong to this document
+//			if (ab == null) return annotation;
+//			
+//			//	notify own listeners
+//			this.notifyAnnotationRemoved(ab);
+//			
+//			//	return standalone annotation otherwise
+//			return ra;
+//		}
 		public char removeChar(int offset) {
 			return this.data.removeChar(offset);
 		}
@@ -1425,6 +1686,8 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 				return;
 			if (this.charListeners == null)
 				this.charListeners = new ArrayList(2);
+			else if (this.charListeners.contains(csl))
+				return;
 			this.charListeners.add(csl);
 		}
 		public void removeCharSequenceListener(CharSequenceListener csl) {
@@ -1440,8 +1703,10 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 		public void addTokenSequenceListener(TokenSequenceListener tsl) {
 			if (tsl == null)
 				return;
-			if (this.tokenListeners == null) 
+			if (this.tokenListeners == null)
 				this.tokenListeners = new ArrayList(2);
+			else if (this.tokenListeners.contains(tsl))
+				return;
 			this.tokenListeners.add(tsl);
 		}
 		public void removeTokenSequenceListener(TokenSequenceListener tsl) {
@@ -1450,23 +1715,23 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 		}
 		//	promote a change to the underlying token sequence to listeners listening to this view
 		void notifyTokenSequenceChanged(TokenSequenceEvent tse) {
-			if ((this.charListeners == null) && (this.tokenListeners == null)) return;
+			if ((this.charListeners == null) && (this.tokenListeners == null))
+				return;
 			
 			//	produce char sequence event refering to this view
 			CharSequenceEvent vCse = new CharSequenceEvent(this, tse.cause.offset, tse.cause.inserted, tse.cause.removed);
 			
-			if (this.charListeners != null)
+			if (this.charListeners != null) {
 				for (int l = 0; l < this.charListeners.size(); l++)
 					((CharSequenceListener) this.charListeners.get(l)).charSequenceChanged(vCse);
-			
-			if (this.tokenListeners == null) return;
+			}
 			
 			//	produce token sequence event refering to this view
-			TokenSequenceEvent vTse = new TokenSequenceEvent(this, tse.index, tse.inserted, tse.removed, vCse);
-			
-			if (this.tokenListeners != null)
+			if (this.tokenListeners != null) {
+				TokenSequenceEvent vTse = new TokenSequenceEvent(this, tse.index, tse.inserted, tse.removed, vCse);
 				for (int l = 0; l < this.tokenListeners.size(); l++)
 					((TokenSequenceListener) this.tokenListeners.get(l)).tokenSequenceChanged(vTse);
+			}
 		}
 		public char setChar(char ch, int offset) {
 			return this.data.setChar(ch, offset);
@@ -1483,110 +1748,110 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 		public CharSequence setWhitespaceAfter(CharSequence whitespace, int index) throws IllegalArgumentException {
 			return this.data.setWhitespaceAfter(whitespace, index);
 		}
-		public void addAnnotationListener(AnnotationListener al) {
-			if (al == null)
-				return;
-			if (this.annotationListeners == null)
-				this.annotationListeners = new ArrayList(2);
-			this.annotationListeners.add(al);
-		}
-		public void removeAnnotationListener(AnnotationListener al) {
-			if (this.annotationListeners != null)
-				this.annotationListeners.remove(al);
-		}
-		
-		void notifyAnnotationAdded(AnnotationBase added) {
-			if (this.annotationListeners != null) {
-				QueriableAnnotation doc = new ImmutableAnnotation(this);
-				Annotation addedAnnotation = new ImmutableAnnotation(new QueriableAnnotationView(added, this));
-				for (int l = 0; l < this.annotationListeners.size(); l++)
-					((AnnotationListener) this.annotationListeners.get(l)).annotationAdded(doc, addedAnnotation);
-			}
-			
-			QueriableAnnotation base = this.base;
-			while (base != GamtaDocument.this) {
-				if (base instanceof MutableAnnotationView) {
-					((MutableAnnotationView) base).notifyAnnotationAdded(added);
-					return;
-				}
-				else if (base instanceof QueriableAnnotationView)
-					base = ((QueriableAnnotationView) base).base;
-				
-				else base = GamtaDocument.this;
-			}
-			if (base == GamtaDocument.this)
-				GamtaDocument.this.notifyAnnotationAdded(added);
-		}
-		
-		void notifyAnnotationRemoved(AnnotationBase removed) {
-			if (this.annotationListeners != null) {
-				QueriableAnnotation doc = new ImmutableAnnotation(this);
-				Annotation removedAnnotation = new TemporaryAnnotation(doc, removed.getType(), (removed.absoluteStartIndex - this.getAbsoluteStartIndex()), removed.size);
-				removedAnnotation.copyAttributes(removed);
-				for (int l = 0; l < this.annotationListeners.size(); l++)
-					((AnnotationListener) this.annotationListeners.get(l)).annotationRemoved(doc, removedAnnotation);
-			}
-			
-			QueriableAnnotation base = this.base;
-			while (base != GamtaDocument.this) {
-				if (base instanceof MutableAnnotationView) {
-					((MutableAnnotationView) base).notifyAnnotationRemoved(removed);
-					return;
-				}
-				else if (base instanceof QueriableAnnotationView)
-					base = ((QueriableAnnotationView) base).base;
-				
-				else base = GamtaDocument.this;
-			}
-			if (base == GamtaDocument.this)
-				GamtaDocument.this.notifyAnnotationRemoved(removed);
-		}
-		
-		void notifyAnnotationTypeChanged(AnnotationBase reTyped, String oldType) {
-			if ((reTyped != this.data) && (this.annotationListeners != null)) {
-				QueriableAnnotation doc = new ImmutableAnnotation(this);
-				Annotation reTypedAnnotation = new ImmutableAnnotation(new QueriableAnnotationView(reTyped, this));
-				for (int l = 0; l < this.annotationListeners.size(); l++)
-					((AnnotationListener) this.annotationListeners.get(l)).annotationTypeChanged(doc, reTypedAnnotation, oldType);
-			}
-			
-			QueriableAnnotation base = this.base;
-			while (base != GamtaDocument.this) {
-				if (base instanceof MutableAnnotationView) {
-					((MutableAnnotationView) base).notifyAnnotationTypeChanged(reTyped, oldType);
-					return;
-				}
-				else if (base instanceof QueriableAnnotationView)
-					base = ((QueriableAnnotationView) base).base;
-				
-				else base = GamtaDocument.this;
-			}
-			if (base == GamtaDocument.this)
-				GamtaDocument.this.notifyAnnotationTypeChanged(reTyped, oldType);
-		}
-		
-		void notifyAnnotationAttributeChanged(AnnotationBase target, String attributeName, Object oldValue) {
-			if (this.annotationListeners != null) {
-				QueriableAnnotation doc = new ImmutableAnnotation(this);
-				Annotation targetAnnotation = new ImmutableAnnotation(new QueriableAnnotationView(target, this));
-				for (int l = 0; l < this.annotationListeners.size(); l++)
-					((AnnotationListener) this.annotationListeners.get(l)).annotationAttributeChanged(doc, targetAnnotation, attributeName, oldValue);
-			}
-			
-			QueriableAnnotation base = this.base;
-			while (base != GamtaDocument.this) {
-				if (base instanceof MutableAnnotationView) {
-					((MutableAnnotationView) base).notifyAnnotationAttributeChanged(target, attributeName, oldValue);
-					return;
-				}
-				else if (base instanceof QueriableAnnotationView)
-					base = ((QueriableAnnotationView) base).base;
-				
-				else base = GamtaDocument.this;
-			}
-			if (base == GamtaDocument.this)
-				GamtaDocument.this.notifyAnnotationAttributeChanged(target, attributeName, oldValue);
-		}
+//		public void addAnnotationListener(AnnotationListener al) {
+//			if (al == null)
+//				return;
+//			if (this.annotationListeners == null)
+//				this.annotationListeners = new ArrayList(2);
+//			this.annotationListeners.add(al);
+//		}
+//		public void removeAnnotationListener(AnnotationListener al) {
+//			if (this.annotationListeners != null)
+//				this.annotationListeners.remove(al);
+//		}
+//		
+//		void notifyAnnotationAdded(AnnotationBase added) {
+//			if (this.annotationListeners != null) {
+//				QueriableAnnotation doc = new ImmutableAnnotation(this);
+//				Annotation addedAnnotation = new ImmutableAnnotation(new QueriableAnnotationView(added, this));
+//				for (int l = 0; l < this.annotationListeners.size(); l++)
+//					((AnnotationListener) this.annotationListeners.get(l)).annotationAdded(doc, addedAnnotation);
+//			}
+//			
+//			QueriableAnnotation base = this.base;
+//			while (base != GamtaDocument.this) {
+//				if (base instanceof MutableAnnotationView) {
+//					((MutableAnnotationView) base).notifyAnnotationAdded(added);
+//					return;
+//				}
+//				else if (base instanceof QueriableAnnotationView)
+//					base = ((QueriableAnnotationView) base).base;
+//				
+//				else base = GamtaDocument.this;
+//			}
+//			if (base == GamtaDocument.this)
+//				GamtaDocument.this.notifyAnnotationAdded(added);
+//		}
+//		
+//		void notifyAnnotationRemoved(AnnotationBase removed) {
+//			if (this.annotationListeners != null) {
+//				QueriableAnnotation doc = new ImmutableAnnotation(this);
+//				Annotation removedAnnotation = new TemporaryAnnotation(doc, removed.getType(), (removed.absoluteStartIndex - this.getAbsoluteStartIndex()), removed.size);
+//				removedAnnotation.copyAttributes(removed);
+//				for (int l = 0; l < this.annotationListeners.size(); l++)
+//					((AnnotationListener) this.annotationListeners.get(l)).annotationRemoved(doc, removedAnnotation);
+//			}
+//			
+//			QueriableAnnotation base = this.base;
+//			while (base != GamtaDocument.this) {
+//				if (base instanceof MutableAnnotationView) {
+//					((MutableAnnotationView) base).notifyAnnotationRemoved(removed);
+//					return;
+//				}
+//				else if (base instanceof QueriableAnnotationView)
+//					base = ((QueriableAnnotationView) base).base;
+//				
+//				else base = GamtaDocument.this;
+//			}
+//			if (base == GamtaDocument.this)
+//				GamtaDocument.this.notifyAnnotationRemoved(removed);
+//		}
+//		
+//		void notifyAnnotationTypeChanged(AnnotationBase reTyped, String oldType) {
+//			if ((reTyped != this.data) && (this.annotationListeners != null)) {
+//				QueriableAnnotation doc = new ImmutableAnnotation(this);
+//				Annotation reTypedAnnotation = new ImmutableAnnotation(new QueriableAnnotationView(reTyped, this));
+//				for (int l = 0; l < this.annotationListeners.size(); l++)
+//					((AnnotationListener) this.annotationListeners.get(l)).annotationTypeChanged(doc, reTypedAnnotation, oldType);
+//			}
+//			
+//			QueriableAnnotation base = this.base;
+//			while (base != GamtaDocument.this) {
+//				if (base instanceof MutableAnnotationView) {
+//					((MutableAnnotationView) base).notifyAnnotationTypeChanged(reTyped, oldType);
+//					return;
+//				}
+//				else if (base instanceof QueriableAnnotationView)
+//					base = ((QueriableAnnotationView) base).base;
+//				
+//				else base = GamtaDocument.this;
+//			}
+//			if (base == GamtaDocument.this)
+//				GamtaDocument.this.notifyAnnotationTypeChanged(reTyped, oldType);
+//		}
+//		
+//		void notifyAnnotationAttributeChanged(AnnotationBase target, String attributeName, Object oldValue) {
+//			if (this.annotationListeners != null) {
+//				QueriableAnnotation doc = new ImmutableAnnotation(this);
+//				Annotation targetAnnotation = new ImmutableAnnotation(new QueriableAnnotationView(target, this));
+//				for (int l = 0; l < this.annotationListeners.size(); l++)
+//					((AnnotationListener) this.annotationListeners.get(l)).annotationAttributeChanged(doc, targetAnnotation, attributeName, oldValue);
+//			}
+//			
+//			QueriableAnnotation base = this.base;
+//			while (base != GamtaDocument.this) {
+//				if (base instanceof MutableAnnotationView) {
+//					((MutableAnnotationView) base).notifyAnnotationAttributeChanged(target, attributeName, oldValue);
+//					return;
+//				}
+//				else if (base instanceof QueriableAnnotationView)
+//					base = ((QueriableAnnotationView) base).base;
+//				
+//				else base = GamtaDocument.this;
+//			}
+//			if (base == GamtaDocument.this)
+//				GamtaDocument.this.notifyAnnotationAttributeChanged(target, attributeName, oldValue);
+//		}
 	}
 	
 	/**	a view on a token, behaving relative to the Annotation it was retrieved from
@@ -1734,7 +1999,7 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 		private static final boolean DEBUG_CHANGE = false;
 		final boolean printDebugInfo() {
 			return false;
-//			return ("page".equalsIgnoreCase(this.type) || (this == modificationSource));
+//			return ("treatment".equalsIgnoreCase(this.type) || (this == modificationSource));
 		}
 		synchronized void tokenSequeceChanged(TokenSequenceEvent tse) {
 			if (DEBUG_CHANGE || this.printDebugInfo()) {
@@ -2030,6 +2295,8 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 		String changeTypeTo(String newType) {
 			if ((newType == null) || !AnnotationUtils.isValidAnnotationType(newType))
 				throw new IllegalArgumentException("'" + newType + "' is not a valid Annotation type");
+			if (this.type.equals(newType))
+				return this.type;
 			String oldType = this.type;
 			this.type = newType;
 			annotations.annotationTypeChanged(this, oldType);
@@ -2348,6 +2615,14 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 		return qas;
 	}
 	
+	EditableAnnotation[] wrapAnnotationBasesEditable(AnnotationBase[] abs, EditableAnnotation base) {
+		EditableAnnotation mas[] = new EditableAnnotation[abs.length];
+		for (int a = 0; a < abs.length; a++)
+			mas[a] = new EditableAnnotationView(abs[a], base);
+		Arrays.sort(mas, nestingOrder);
+		return mas;
+	}
+	
 	MutableAnnotation[] wrapAnnotationBasesMutable(AnnotationBase[] abs, MutableAnnotation base) {
 		MutableAnnotation mas[] = new MutableAnnotation[abs.length];
 		for (int a = 0; a < abs.length; a++)
@@ -2365,6 +2640,7 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 		private AnnotationBase[] annots = new AnnotationBase[16];
 		private int annotCount = 0;
 		private HashSet removed = new HashSet();
+		private boolean annotReAdded = false;
 		int modCount = 0; // used by cache entries
 		private int addCount = 0;
 		private int cleanAddCount = 0;
@@ -2382,7 +2658,8 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 			if (TRACK_INSTANCES) accessHistory.accessed();
 			if (ab == null)
 				return;
-			this.removed.remove(ab);
+			if (this.removed.remove(ab))
+				this.annotReAdded = true;
 			if (this.annotCount == this.annots.length) {
 				AnnotationBase[] annots = new AnnotationBase[this.annots.length * 2];
 				System.arraycopy(this.annots, 0, annots, 0, this.annots.length);
@@ -2452,7 +2729,7 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 				if (maxAbsoluteStartIndex < allAnnots[a].absoluteStartIndex)
 					break;
 				if (minAbsoluteEndIndex <= allAnnots[a].getEndIndex())
-					annotList.add(this.annots[a]);
+					annotList.add(allAnnots[a]);
 			}
 			return ((AnnotationBase[]) annotList.toArray(new AnnotationBase[annotList.size()]));
 		}
@@ -2542,22 +2819,25 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 			if (TRACK_INSTANCES) accessHistory.accessed();
 			if (this.removed.isEmpty())
 				return;
+			HashSet retained = (this.annotReAdded ? new HashSet() : null); // check for duplicate array entries if we had a re-addition
 			int removed = 0;
 			int maxAnnotSize = 0;
 			for (int a = 0; a < this.annotCount; a++) {
 				if (this.removed.contains(this.annots[a]))
-					removed++;
-				else {
+					removed++; // flagged as removed, increase shifting gap
+				else if ((retained == null) || retained.add(this.annots[a])) {
 					if (maxAnnotSize < this.annots[a].size)
 						maxAnnotSize = this.annots[a].size;
 					if (removed != 0)
 						this.annots[a - removed] = this.annots[a];
 				}
+				else removed++; // seen this one before, increase shifting gap
 			}
 			Arrays.fill(this.annots, (this.annotCount - removed), this.annotCount, null); // free up references to help GC
 			this.annotCount -= removed;
 			this.maxAnnotSize = maxAnnotSize;
 			this.removed.clear();
+			this.annotReAdded = false;
 		}
 	}
 	
@@ -2601,10 +2881,16 @@ public class GamtaDocument extends AbstractAttributed implements DocumentRoot {
 		}
 		
 		synchronized AnnotationBase removeAnnotation(Annotation annot) {
-			AnnotationBase ab;
-			if (annot instanceof QueriableAnnotationView)
+//			AnnotationBase ab;
+//			if (annot instanceof QueriableAnnotationView)
+//				ab = ((QueriableAnnotationView) annot).data;
+//			else return null;
+			AnnotationBase ab = null;
+			if (annot instanceof QueriableAnnotationView) // base case
 				ab = ((QueriableAnnotationView) annot).data;
-			else return null;
+			else ab = this.getAnnotation(annot.getAnnotationID()); // argument annotation might be inside some wrapper, etc.
+			if (ab == null)
+				return null;
 			
 			this.annotations.removeAnnotation(ab);
 			AnnotationList typeAnnots = this.getAnnotationList(ab.type, false);

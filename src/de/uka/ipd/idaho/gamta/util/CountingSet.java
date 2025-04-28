@@ -57,8 +57,8 @@ public class CountingSet implements Set {
 		}
 	}
 	
-	private Map content;
-	private int size = 0;
+	Map content;
+	int size = 0;
 	
 	/** Constructor
 	 */
@@ -203,7 +203,20 @@ public class CountingSet implements Set {
 	 * @see java.util.Set#iterator()
 	 */
 	public Iterator iterator() {
-		return this.content.keySet().iterator();
+		return new Iterator() {
+			private Iterator it = CountingSet.this.content.keySet().iterator();
+			private Object current = null;
+			public boolean hasNext() {
+				return this.it.hasNext();
+			}
+			public Object next() {
+				return (this.current = this.it.next());
+			}
+			public void remove() {
+				CountingSet.this.size -= CountingSet.this.getCount(this.current);
+				this.it.remove();
+			}
+		};
 	}
 	
 	/* (non-Javadoc)

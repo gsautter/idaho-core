@@ -396,23 +396,38 @@ public class TokenSequenceUtils {
 	public static boolean containsIgnoreCase(TokenSequence ts, TokenSequence tokens) {
 		return (indexOf(ts, tokens, false) != -1);
 	}
-
+	
 	/**
-	 * get the values of a sequence of Tokens, concatenated to a String Note:
+	 * Get the values of a sequence of Tokens, concatenated to a String Note:
 	 * this method does not include the leading and tailing whitespaces of the
-	 * specified token sequence
+	 * specified token sequence.
 	 * @param tokens the TokenSequence to concatenate
 	 * @return the values of all Tokens in a TokenSequence, concatenated to a
 	 *         String
 	 */
 	public static String concatTokens(TokenSequence tokens) {
-		return concatTokens(tokens, 0, tokens.size());
+		return concatTokens(tokens, 0, tokens.size(), false, false, -1);
 	}
-
+	
 	/**
-	 * get the values of a sequence of Tokens, concatenated to a String Note:
+	 * Get the values of a sequence of Tokens, concatenated to a String Note:
 	 * this method does not include the leading and tailing whitespaces of the
-	 * specified token sequence
+	 * specified token sequence. The returned string is restricted to the
+	 * argument maximum length, with tokens omitted in the middle if the
+	 * argument token sequence as a whole exceeds the limit.
+	 * @param tokens the TokenSequence to concatenate
+	 * @param maxLength the maximum number of characters
+	 * @return the values of all Tokens in a TokenSequence, concatenated to a
+	 *         String
+	 */
+	public static String concatTokens(TokenSequence tokens, int maxLength) {
+		return concatTokens(tokens, 0, tokens.size(), false, false, maxLength);
+	}
+	
+	/**
+	 * Get the values of a sequence of Tokens, concatenated to a String Note:
+	 * this method does not include the leading and tailing whitespaces of the
+	 * specified token sequence.
 	 * @param tokens the TokenSequence to concatenate
 	 * @param normalizeWhitespace completely normalize whitespace between
 	 *            tokens? (see five argument version of this method for
@@ -422,9 +437,28 @@ public class TokenSequenceUtils {
 	 * @return the values of a sequence of Tokens, concatenated to a String
 	 */
 	public static String concatTokens(TokenSequence tokens, boolean normalizeWhitespace, boolean ignoreLineBreaks) {
-		return concatTokens(tokens, 0, tokens.size(), normalizeWhitespace, ignoreLineBreaks);
+		return concatTokens(tokens, 0, tokens.size(), normalizeWhitespace, ignoreLineBreaks, -1);
 	}
-
+	
+	/**
+	 * Get the values of a sequence of Tokens, concatenated to a String Note:
+	 * this method does not include the leading and tailing whitespaces of the
+	 * specified token sequence. The returned string is restricted to the
+	 * argument maximum length, with tokens omitted in the middle if the
+	 * argument token sequence as a whole exceeds the limit.
+	 * @param tokens the TokenSequence to concatenate
+	 * @param normalizeWhitespace completely normalize whitespace between
+	 *            tokens? (see five argument version of this method for
+	 *            explanation)
+	 * @param ignoreLineBreaks suppress including line breaks in result string?
+	 *            (see five argument version of this method for explanation)
+	 * @param maxLength the maximum number of characters
+	 * @return the values of a sequence of Tokens, concatenated to a String
+	 */
+	public static String concatTokens(TokenSequence tokens, boolean normalizeWhitespace, boolean ignoreLineBreaks, int maxLength) {
+		return concatTokens(tokens, 0, tokens.size(), normalizeWhitespace, ignoreLineBreaks, maxLength);
+	}
+	
 	/**
 	 * get the values of a sequence of Tokens, concatenated to a String Note:
 	 * this method does not include the leading and tailing whitespaces of the
@@ -437,7 +471,23 @@ public class TokenSequenceUtils {
 	public static String concatTokens(TokenSequence tokens, int start, int size) {
 		return concatTokens(tokens, start, size, false, false);
 	}
-
+	
+	/**
+	 * Get the values of a sequence of Tokens, concatenated to a String Note:
+	 * this method does not include the leading and tailing whitespaces of the
+	 * specified token sequence.  The returned string is restricted to the
+	 * argument maximum length, with tokens omitted in the middle if the
+	 * argument token sequence as a whole exceeds the limit.
+	 * @param tokens the TokenSequence to concatenate
+	 * @param start the index of the Token to start at
+	 * @param size the number of Tokens to concatenate
+	 * @param maxLength the maximum number of characters
+	 * @return the values of a sequence of Tokens, concatenated to a String
+	 */
+	public static String concatTokens(TokenSequence tokens, int start, int size, int maxLength) {
+		return concatTokens(tokens, start, size, false, false, maxLength);
+	}
+	
 	/**
 	 * Concatenate the individual token values of a token sequence to a String.
 	 * Depending on the parameters, the whitespace between the token values can
@@ -466,28 +516,128 @@ public class TokenSequenceUtils {
 	 * @return the values of a sequence of Tokens, concatenated to a String
 	 */
 	public static String concatTokens(TokenSequence tokens, int start, int size, boolean normalizeWhitespace, boolean ignoreLineBreaks) {
-		if ((size == 0) || (tokens.size() == 0)) return "";
+		return concatTokens(tokens, start, size, normalizeWhitespace, ignoreLineBreaks, -1);
+	}
+	
+	/**
+	 * Concatenate the individual token values of a token sequence to a String.
+	 * Depending on the parameters, the whitespace between the token values can
+	 * be normalized to different levels:<br>
+	 * If <code>normalizeWhitespace</code> is false, a single whitespace
+	 * character is inserted in the result String if there is one or more
+	 * whitespace characters in the specified token sequence, no whitespace if
+	 * there is none. If <code>normalizeWhitespace</code> is true, in turn,
+	 * whitespace is inserted between two tokens t and u if
+	 * <code>Gamta.insertSpace(t, u)</code> returns true, or if it is a line
+	 * break.<br>
+	 * If <code>ignoreLineBreaks</code> is true, every whitespace character
+	 * inserted in the result string is the plain space character. If
+	 * <code>ignoreLineBreaks</code> is false, in turn, the newline character
+	 * is inserted after tokens having the
+	 * <code>Token.PARAGRAPH_END_ATTRIBUTE</code> attribute set. <br>
+	 * Note: this method does not include the leading and tailing whitespaces of
+	 * the specified token sequence
+	 * @param tokens the TokenSequence to concatenate
+	 * @param start the index of the Token to start at
+	 * @param size the number of Tokens to concatenate
+	 * @param normalizeWhitespace completely normalize whitespace between
+	 *            tokens? (default is false, see above for explanation)
+	 * @param ignoreLineBreaks suppress including line breaks in result string?
+	 *            (default is false, see above for explanation)
+	 * @param maxLength the maximum number of characters
+	 * @return the values of a sequence of Tokens, concatenated to a String
+	 */
+	public static String concatTokens(TokenSequence tokens, int start, int size, boolean normalizeWhitespace, boolean ignoreLineBreaks, int maxLength) {
+		if ((size == 0) || (tokens.size() == 0))
+			return "";
 		
+		//	do we have to do all he hustle and dance?
+		if (maxLength < 0)
+			return doGetString(tokens, start, size, normalizeWhitespace, ignoreLineBreaks);
+		
+		//	this one's short enough
+		if ((tokens.tokenAt(start + size - 1).getEndOffset() - tokens.tokenAt(start).getStartOffset()) <= maxLength)
+			return doGetString(tokens, start, size, normalizeWhitespace, ignoreLineBreaks);
+		
+		//	get end of head
+		int headEnd = start;
+		int headChars = 0;
+		for (; headEnd < (start + size); headEnd++) {
+			headChars += tokens.tokenAt(headEnd).length();
+			if ((maxLength / 2) <= headChars)
+				break;
+			headChars += tokens.getWhitespaceAfter(headEnd).length();
+		}
+		
+		//	get start of tail
+		int tailStart = (start + size - 1);
+		int tailChars = 0;
+		for (; start < tailStart; tailStart--) {
+			tailChars += tokens.tokenAt(tailStart).length();
+			if ((maxLength / 2) <= tailChars)
+				break;
+			if (tailStart == headEnd)
+				break;
+			tailChars += tokens.getWhitespaceAfter(tailStart - 1).length();
+		}
+		
+		//	met in the middle, use whole string
+		if ((headEnd == tailStart) || ((headEnd + 1) == tailStart))
+			return doGetString(tokens, start, size, normalizeWhitespace, ignoreLineBreaks);
+		
+		//	give head and tail only if annotation too long
+		else {
+			StringBuffer string = new StringBuffer();
+			appendString(tokens, start, (headEnd - start), normalizeWhitespace, ignoreLineBreaks, string);
+			string.append(" ... ");
+			appendString(tokens, tailStart, (start + size - tailStart), normalizeWhitespace, ignoreLineBreaks, string);
+			return string.toString();
+		}
+//		String lastValue = tokens.valueAt(start);
+//		boolean insertLineBreak = false;
+//		StringBuffer result = new StringBuffer(lastValue);
+//		
+//		for (int t = (start + 1); t < (start + size); t++) {
+//			Token token = tokens.tokenAt(t);
+//			String value = token.getValue();
+//
+//			if (insertLineBreak)
+//				result.append("\r\n");
+//			else if (normalizeWhitespace ? Gamta.insertSpace(lastValue, value) : (tokens.getWhitespaceAfter(t - 1).length() != 0))
+//				result.append(" ");
+//
+//			result.append(value);
+//
+//			lastValue = value;
+//			insertLineBreak = (!ignoreLineBreaks && token.hasAttribute(Token.PARAGRAPH_END_ATTRIBUTE));
+//		}
+//
+//		return result.toString();
+	}
+	private static String doGetString(TokenSequence tokens, int start, int size, boolean normalizeWhitespace, boolean ignoreLineBreaks) {
+		StringBuffer string = new StringBuffer();
+		appendString(tokens, start, size, normalizeWhitespace, ignoreLineBreaks, string);
+		return string.toString();
+	}
+	private static void appendString(TokenSequence tokens, int start, int size, boolean normalizeWhitespace, boolean ignoreLineBreaks, StringBuffer string) {
 		String lastValue = tokens.valueAt(start);
+		string.append(lastValue);
 		boolean insertLineBreak = false;
-		StringBuffer result = new StringBuffer(lastValue);
 		
 		for (int t = (start + 1); t < (start + size); t++) {
 			Token token = tokens.tokenAt(t);
 			String value = token.getValue();
-
+			
 			if (insertLineBreak)
-				result.append("\n");
+				string.append("\r\n");
 			else if (normalizeWhitespace ? Gamta.insertSpace(lastValue, value) : (tokens.getWhitespaceAfter(t - 1).length() != 0))
-				result.append(" ");
-
-			result.append(value);
-
+				string.append(" ");
+			
+			string.append(value);
+			
 			lastValue = value;
 			insertLineBreak = (!ignoreLineBreaks && token.hasAttribute(Token.PARAGRAPH_END_ATTRIBUTE));
 		}
-
-		return result.toString();
 	}
 
 	/**

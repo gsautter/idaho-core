@@ -291,7 +291,8 @@ public class ArffConverter {
 	 * @throws IOException, if any occurs while reading from the specified Reader
 	 */
 	public static MutableAnnotation readArff(Reader input) throws IOException {
-		MutableAnnotation doc = Gamta.newDocument(Gamta.INNER_PUNCTUATION_TOKENIZER);
+//		MutableAnnotation doc = Gamta.newDocument(Gamta.INNER_PUNCTUATION_TOKENIZER);
+		MutableAnnotation doc = Gamta.newDocument(Gamta.getDefaultTokenizer());
 		readArff(input, doc);
 		return doc;
 	}

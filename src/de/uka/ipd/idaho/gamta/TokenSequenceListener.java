@@ -27,6 +27,10 @@
  */
 package de.uka.ipd.idaho.gamta;
 
+import java.lang.ref.WeakReference;
+
+import de.uka.ipd.idaho.gamta.MutableTokenSequence.TokenSequenceEvent;
+
 
 /**
  * @author sautter
@@ -39,4 +43,46 @@ public interface TokenSequenceListener {
 	 * @param	change	a TokenSequenceEvent object holding the details of the change
 	 */
 	public abstract void tokenSequenceChanged(MutableTokenSequence.TokenSequenceEvent change);
+	
+	/**
+	 * Weak reference wrapper for token sequence listeners. Client code that
+	 * needs to be eligible for reclaiming by GC despite a sole strong
+	 * reference to it still existing in a listener added to an token sequence
+	 * it wants to observe can use this class to add a weak reference link to
+	 * the actual listener.
+	 * 
+	 * @author sautter
+	 */
+	public static class WeakTokenSequenceListener implements TokenSequenceListener {
+		private WeakReference tslWeakRef;
+		private MutableTokenSequence tokens;
+		
+		/** Constructor
+		 * @param tsl the token sequence listener to wrap
+		 * @param tokens the token sequence observed by the argument listener
+		 */
+		public WeakTokenSequenceListener(TokenSequenceListener tsl, MutableTokenSequence tokens) {
+			this.tslWeakRef = new WeakReference(tsl);
+			this.tokens = tokens;
+		}
+		
+		private TokenSequenceListener getTokenSequenceListener() {
+			TokenSequenceListener tsl = ((TokenSequenceListener) this.tslWeakRef.get());
+			if (tsl == null) {
+				if (this.tokens != null)
+					this.tokens.removeTokenSequenceListener(this);
+				this.tokens = null;
+			}
+			return tsl;
+		}
+		
+		/* (non-Javadoc)
+		 * @see de.uka.ipd.idaho.gamta.TokenSequenceListener#tokenSequenceChanged(de.uka.ipd.idaho.gamta.MutableTokenSequence.TokenSequenceEvent)
+		 */
+		public void tokenSequenceChanged(TokenSequenceEvent change) {
+			TokenSequenceListener tsl = this.getTokenSequenceListener();
+			if (tsl != null)
+				tsl.tokenSequenceChanged(change);
+		}
+	}
 }

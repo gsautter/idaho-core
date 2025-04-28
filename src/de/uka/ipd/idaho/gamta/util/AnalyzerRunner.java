@@ -113,7 +113,8 @@ public class AnalyzerRunner {
 						char c;
 						while ((c = ((char) fr.read())) != -1)
 							mcs.addChar(c);
-						doc = Gamta.newDocument(Gamta.newTokenSequence(mcs, Gamta.INNER_PUNCTUATION_TOKENIZER));
+//						doc = Gamta.newDocument(Gamta.newTokenSequence(mcs, Gamta.INNER_PUNCTUATION_TOKENIZER));
+						doc = Gamta.newDocument(Gamta.newTokenSequence(mcs, Gamta.getDefaultTokenizer()));
 						fr.close();
 					} else doc = SgmlDocumentReader.readDocument(file);
 					analyzer.process(doc, analyzerParameters);

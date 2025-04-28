@@ -1360,7 +1360,7 @@ TODO MAYBE, create public static abstract class AlternativeErrorFilter ...
 			//	update tab label, and notify sub class
 			errorCategoryChanged(this);
 			errorTypeSelected(this.errorTypeFilter.getErrorType(), this.category, this.errorTypeFilter.getErrorCount());
-				errorSelected(this.getSelectedError());
+			errorSelected(this.getSelectedError());
 		}
 		
 		private class ErrorListModel extends AbstractListModel {

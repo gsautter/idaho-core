@@ -27,9 +27,9 @@
  */
 package de.uka.ipd.idaho.gamta;
 
+import java.lang.ref.WeakReference;
 
-import de.uka.ipd.idaho.gamta.Annotation;
-import de.uka.ipd.idaho.gamta.QueriableAnnotation;
+
 
 /**
  * An observer for Annotations being added, removed, and renamed in a document.
@@ -67,4 +67,73 @@ public interface AnnotationListener {
 	 * @param	oldValue		the value of the attribute before the change (the new value is available from the Annotation)
 	 */
 	public abstract void annotationAttributeChanged(QueriableAnnotation doc, Annotation annotation, String attributeName, Object oldValue);
+	
+	/**
+	 * Weak reference wrapper for annotation listeners. Client code that needs
+	 * to be eligible for reclaiming by GC despite a sole strong reference to
+	 * it still existing in a listener added to an editable annotation it wants
+	 * to observe can use this class to add a weak reference link to the actual
+	 * listener.
+	 * 
+	 * @author sautter
+	 */
+	public static class WeakAnnotationListener implements AnnotationListener {
+		private WeakReference alWeakRef;
+		private EditableAnnotation doc;
+		
+		/** Constructor
+		 * @param al the annotation listener to wrap
+		 * @param doc the document observed by the argument listener
+		 */
+		public WeakAnnotationListener(AnnotationListener al, EditableAnnotation doc) {
+			this.alWeakRef = new WeakReference(al);
+			this.doc = doc;
+		}
+		
+		private AnnotationListener getAnnotationListener() {
+			AnnotationListener al = ((AnnotationListener) this.alWeakRef.get());
+			if (al == null) {
+				if (this.doc != null)
+					this.doc.removeAnnotationListener(this);
+				this.doc = null;
+			}
+			return al;
+		}
+		
+		/* (non-Javadoc)
+		 * @see de.uka.ipd.idaho.gamta.AnnotationListener#annotationAdded(de.uka.ipd.idaho.gamta.QueriableAnnotation, de.uka.ipd.idaho.gamta.Annotation)
+		 */
+		public void annotationAdded(QueriableAnnotation doc, Annotation annotation) {
+			AnnotationListener al = this.getAnnotationListener();
+			if (al != null)
+				al.annotationAdded(doc, annotation);
+		}
+		
+		/* (non-Javadoc)
+		 * @see de.uka.ipd.idaho.gamta.AnnotationListener#annotationRemoved(de.uka.ipd.idaho.gamta.QueriableAnnotation, de.uka.ipd.idaho.gamta.Annotation)
+		 */
+		public void annotationRemoved(QueriableAnnotation doc, Annotation annotation) {
+			AnnotationListener al = this.getAnnotationListener();
+			if (al != null)
+				al.annotationRemoved(doc, annotation);
+		}
+		
+		/* (non-Javadoc)
+		 * @see de.uka.ipd.idaho.gamta.AnnotationListener#annotationTypeChanged(de.uka.ipd.idaho.gamta.QueriableAnnotation, de.uka.ipd.idaho.gamta.Annotation, java.lang.String)
+		 */
+		public void annotationTypeChanged(QueriableAnnotation doc, Annotation annotation, String oldType) {
+			AnnotationListener al = this.getAnnotationListener();
+			if (al != null)
+				al.annotationTypeChanged(doc, annotation, oldType);
+		}
+		
+		/* (non-Javadoc)
+		 * @see de.uka.ipd.idaho.gamta.AnnotationListener#annotationAttributeChanged(de.uka.ipd.idaho.gamta.QueriableAnnotation, de.uka.ipd.idaho.gamta.Annotation, java.lang.String, java.lang.Object)
+		 */
+		public void annotationAttributeChanged(QueriableAnnotation doc, Annotation annotation, String attributeName, Object oldValue) {
+			AnnotationListener al = this.getAnnotationListener();
+			if (al != null)
+				al.annotationAttributeChanged(doc, annotation, attributeName, oldValue);
+		}
+	}
 }

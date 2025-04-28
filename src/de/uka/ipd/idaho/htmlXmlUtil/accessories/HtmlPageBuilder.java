@@ -253,8 +253,8 @@ public class HtmlPageBuilder extends TokenReceiver {
 	
 	/**
 	 * Write a string and a subsequent line break to the page being built.
-	 * This method is equivalent to first invoking write() and then
-	 * newLine().
+	 * This method is equivalent to first calling <code>write()</code> and
+	 * then <code>newLine()</code>.
 	 * @param s the string to write
 	 * @throws IOException
 	 */
@@ -296,7 +296,7 @@ public class HtmlPageBuilder extends TokenReceiver {
 			else if ("title".equalsIgnoreCase(html.getType(token))) {
 				if (html.isEndTag(token)) {
 					this.write("<title>");
-					this.write(this.getPageTitle(this.title));
+					this.write(html.escape(this.getPageTitle(html.unescape(this.title))));
 					this.write("</title>");
 					this.newLine();
 					this.inTitle = false;

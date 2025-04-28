@@ -80,7 +80,7 @@ public class TreeNode {
 	
 	private final String nodeType;
 	private String nodeValue;
-	private TreeNodeAttributeSet attributest;
+	private TreeNodeAttributeSet attributes;
 	
 	private TreeNode parentNode;
 	private ArrayList childNodes = null;
@@ -118,7 +118,7 @@ TODO ALSO, add extended signature of storeToken() to TokenReceiver ...
 	public TreeNode(TreeNode parent, String type, TreeNodeAttributeSet attributes) {
 		this.nodeType = type;
 		this.parentNode = parent;
-		this.attributest = attributes;
+		this.attributes = attributes;
 	}
 	
 	/**	Constructor leaving the new node's attributes empty
@@ -389,7 +389,7 @@ TODO ALSO, add extended signature of storeToken() to TokenReceiver ...
 	/**	@return	true if and only if this TreeNode has the specified attribute
 	 */
 	public boolean hasAttribute(String attribute) {
-		return ((this.attributest != null) && this.attributest.containsAttribute(attribute));
+		return ((this.attributes != null) && this.attributes.containsAttribute(attribute));
 	}
 	
 	/**	read the value of an attribute
@@ -397,7 +397,7 @@ TODO ALSO, add extended signature of storeToken() to TokenReceiver ...
 	 * @return	the value of the specified attribute, or null, if the TreeNode has no attribute with the specified name
 	 */
 	public String getAttribute(String attribute) {
-		return ((this.attributest == null) ? null : this.attributest.getAttribute(attribute));
+		return ((this.attributes == null) ? null : this.attributes.getAttribute(attribute));
 	}
 	
 	/**	read the value of an attribute
@@ -426,7 +426,7 @@ TODO ALSO, add extended signature of storeToken() to TokenReceiver ...
 	 * @return	the value of the specified attribute, or def, if the TreeNode has no attribute with the specified name
 	 */
 	public String getAttribute(String attribute, String def) {
-		return ((this.attributest == null) ? def : this.attributest.getAttribute(attribute, def));
+		return ((this.attributes == null) ? def : this.attributes.getAttribute(attribute, def));
 	}
 	
 	/**	add a attribute & value pair to this node
@@ -437,22 +437,22 @@ TODO ALSO, add extended signature of storeToken() to TokenReceiver ...
 	public String setAttribute(String attribute, String value) {
 		if (value == null)
 			return this.removeAttribute(attribute);
-		if (this.attributest == null)
-			this.attributest = TreeNodeAttributeSet.getTagAttributes(null, null);
-		return this.attributest.setAttribute(attribute, value);
+		if (this.attributes == null)
+			this.attributes = TreeNodeAttributeSet.getTagAttributes(null, null);
+		return this.attributes.setAttribute(attribute, value);
 	}
 	
 	/**	remove the specified attribute from this node
 	 */
 	public String removeAttribute(String attribute) {
-		return ((this.attributest == null) ? null : this.attributest.removeAttribute(attribute));
+		return ((this.attributes == null) ? null : this.attributes.removeAttribute(attribute));
 	}
 	
 	/**	clear this node's attributes
 	 */
 	public void clearAttributes() {
-		if (this.attributest != null)
-			this.attributest.clear();
+		if (this.attributes != null)
+			this.attributes.clear();
 	}
 	
 	/**	convert this node and it's subtree to code, using a standard Grammar 
@@ -643,31 +643,31 @@ TODO ALSO, add extended signature of storeToken() to TokenReceiver ...
 	/**	@return	the names of this node's attributes in an array
 	 */
 	public String[] getAttributeNames() {
-		return ((this.attributest == null) ? new String[0] : this.attributest.getAttributeNames());
+		return ((this.attributes == null) ? new String[0] : this.attributes.getAttributeNames());
 	}
 	
 	/**	@return	this node's attribute / value pairs in an array
 	 */
 	public String[] getAttributeValuePairs(Grammar grammar) {
-		return ((this.attributest == null) ? new String[0] : this.attributest.getAttributeValuePairs(grammar));
+		return ((this.attributes == null) ? new String[0] : this.attributes.getAttributeValuePairs(grammar));
 	}
 	
 	/**	@return	this node's attribute / value pairs in an array
 	 */
 	public String[] getAttributeValuePairs(char attributeValueSeparator, char quoter) {
-		return ((this.attributest == null) ? new String[0] : this.attributest.getAttributeValuePairs(attributeValueSeparator, quoter));
+		return ((this.attributes == null) ? new String[0] : this.attributes.getAttributeValuePairs(attributeValueSeparator, quoter));
 	}
 	
 	/**	@return	this node's attribute / value pairs as a list
 	 */
 	public String getAttributesForTag(Grammar grammar) {
-		return ((this.attributest == null) ? "" : this.attributest.getAttributeValueString(grammar));
+		return ((this.attributes == null) ? "" : this.attributes.getAttributeValueString(grammar));
 	}
 	
 	/**	@return	this node's attribute / value pairs as a list
 	 */
 	public String getAttributesForTag(char attributeSeparator, char attributeValueSeparator, char quoter) {
-		return ((this.attributest == null) ? "" : this.attributest.getAttributeValueString(attributeSeparator, attributeValueSeparator, quoter));
+		return ((this.attributes == null) ? "" : this.attributes.getAttributeValueString(attributeSeparator, attributeValueSeparator, quoter));
 	}
 	
 	/**	@return	the number of nodes in this node's subtree
@@ -786,9 +786,9 @@ TODO ALSO, add extended signature of storeToken() to TokenReceiver ...
 	 */
 	public void deleteSubtree() {
 		this.parentNode = null;
-		if (this.attributest != null)
-			this.attributest.clear();
-		this.attributest = null;
+		if (this.attributes != null)
+			this.attributes.clear();
+		this.attributes = null;
 		if (this.childNodes == null)
 			return;
 		for (int c = 0; c < this.childNodes.size(); c++)

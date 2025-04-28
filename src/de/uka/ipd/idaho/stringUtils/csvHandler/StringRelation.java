@@ -37,6 +37,7 @@ import java.io.Reader;
 import java.io.Writer;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.Vector;
 
@@ -157,6 +158,15 @@ public class StringRelation {
 		return sv;
 	}
 	
+	/**	@return all the keys assigned to any value in any StringTupel in this StringRelation
+	 */
+	public String[] getKeyArray() {
+		StringVector sv = new StringVector();
+		for (int t = 0; t < this.size(); t++)
+			this.get(t).getKeys(sv);
+		return sv.toStringArray();
+	}
+	
 	/**	retrieve all values of a given key
 	 * @param	key		the key to retrieve the values for
 	 * @return all the values assigned to the specified key in any StringTupel in this StringRelation
@@ -198,14 +208,18 @@ public class StringRelation {
 	 */
 	public StringVector getCsvStrings(char valueDelimiter, boolean includeKeys) {
 		StringVector result = new StringVector();
-		StringVector keys = this.getKeys();
+//		StringVector keys = this.getKeys();
+		StringVector keyVector = this.getKeys();
+		String[] keys = keyVector.toStringArray();
 		
 		//	add keys if required
 		if (includeKeys) {
 			String delimiter = ("" + valueDelimiter);
 			StringVector keyValues = new StringVector();
-			for (int k = 0; k < keys.size(); k++)
-				keyValues.addElement(delimiter + StringUtils.replaceAll(keys.get(k), delimiter, (delimiter + delimiter)) + delimiter);
+//			for (int k = 0; k < keys.size(); k++)
+//				keyValues.addElement(delimiter + StringUtils.replaceAll(keys.get(k), delimiter, (delimiter + delimiter)) + delimiter);
+			for (int k = 0; k < keys.length; k++)
+				keyValues.addElement(delimiter + StringUtils.replaceAll(keys[k], delimiter, (delimiter + delimiter)) + delimiter);
 			result.addElement(keyValues.concatStrings(","));
 		}
 		
@@ -292,9 +306,12 @@ public class StringRelation {
 	 * @return the result of the join
 	 */
 	public StringRelation join(StringRelation toJoin, boolean leftOuter, boolean rightOuter, StringVector keys) {
-		if ((toJoin == null) || (toJoin == this)) return this;
-		if (toJoin.size() == 0) return (leftOuter ? this : new StringRelation());
-		if (this.size() == 0) return (rightOuter ? toJoin : new StringRelation());
+		if ((toJoin == null) || (toJoin == this))
+			return this;
+		if (toJoin.size() == 0)
+			return (leftOuter ? this : new StringRelation());
+		if (this.size() == 0)
+			return (rightOuter ? toJoin : new StringRelation());
 		
 		//	generate keys
 		StringTupel tupel;
@@ -371,8 +388,6 @@ public class StringRelation {
 		ownData.clear();
 		otherKeys.clear();
 		otherData.clear();
-		System.gc();
-		
 		return result;
 	}
 	
@@ -381,9 +396,12 @@ public class StringRelation {
 	 * @return a new StringRelation containing the StringTupels both from this and the argument StringRelation
 	 */
 	public StringRelation union(StringRelation stv) {
-		if ((stv == null) || (stv == this)) return this;
-		if (stv.size() == 0) return this;
-		if (this.size() == 0) return stv;
+		if ((stv == null) || (stv == this))
+			return this;
+		if (stv.size() == 0)
+			return this;
+		if (this.size() == 0)
+			return stv;
 		
 		StringRelation result = new StringRelation();
 		for (int t = 0; t < this.size(); t++)
@@ -460,50 +478,62 @@ public class StringRelation {
 	public void removeDuplicates() {
 		if (this.size() < 2)
 			return;
-		
-		//	generate & sort keys
-		StringVector keys = this.getKeys();
-		StringTupel tupel;
-		Integer hash;
-		ArrayList tupelKeys = new ArrayList(this.size());
-		IdentityHashMap tupelPositions = new IdentityHashMap(this.size());
+		String[] keys = this.getKeyArray();
+		HashSet tupelStrings = new HashSet(this.size());
 		for (int t = 0; t < this.size(); t++) {
-			tupel = this.get(t);
-			hash = new Integer(tupel.toCsvString(keys).hashCode());
-			tupelKeys.add(hash);
-			tupelPositions.put(hash, new Integer(t));
+			StringTupel tupel = this.get(t);
+			String csv = tupel.toCsvString(keys);
+			if (!tupelStrings.add(csv))
+				this.remove(t--);
 		}
-		Collections.sort(tupelKeys);
-		
-		//	collect duplicate indices
-		ArrayList removeIndices = new ArrayList();
-		Integer first = ((Integer) tupelKeys.get(0));
-		Integer second;
-		int index = 1;
-		while (index < tupelKeys.size()) {
-			second = ((Integer) tupelKeys.get(index));
-			if (first.equals(second)) {
-				tupelKeys.remove(index);
-				removeIndices.add(tupelPositions.remove(second));
-			}
-			else {
-				first = second;
-				index ++;
-			}
-		}
-		
-		//	remove duplicates
-		Collections.sort(removeIndices);
-		Collections.reverse(removeIndices);
-		for (int r = 0; r < removeIndices.size(); r++)
-			this.remove(((Integer) removeIndices.get(r)).intValue());
-		
-		//	tidy up
-		tupelKeys.clear();
-		tupelPositions.clear();
-		removeIndices.clear();
-		System.gc();
 	}
+//	public void removeDuplicates() {
+//		if (this.size() < 2)
+//			return;
+//		
+//		//	generate & sort keys
+//		StringVector keys = this.getKeys();
+//		StringTupel tupel;
+//		Integer hash;
+//		ArrayList tupelKeys = new ArrayList(this.size());
+//		IdentityHashMap tupelPositions = new IdentityHashMap(this.size());
+//		for (int t = 0; t < this.size(); t++) {
+//			tupel = this.get(t);
+//			hash = new Integer(tupel.toCsvString(keys).hashCode());
+//			tupelKeys.add(hash);
+//			tupelPositions.put(hash, new Integer(t));
+//		}
+//		Collections.sort(tupelKeys);
+//		
+//		//	collect duplicate indices
+//		ArrayList removeIndices = new ArrayList();
+//		Integer first = ((Integer) tupelKeys.get(0));
+//		Integer second;
+//		int index = 1;
+//		while (index < tupelKeys.size()) {
+//			second = ((Integer) tupelKeys.get(index));
+//			if (first.equals(second)) {
+//				tupelKeys.remove(index);
+//				removeIndices.add(tupelPositions.remove(second));
+//			}
+//			else {
+//				first = second;
+//				index ++;
+//			}
+//		}
+//		
+//		//	remove duplicates
+//		Collections.sort(removeIndices);
+//		Collections.reverse(removeIndices);
+//		for (int r = 0; r < removeIndices.size(); r++)
+//			this.remove(((Integer) removeIndices.get(r)).intValue());
+//		
+//		//	tidy up
+//		tupelKeys.clear();
+//		tupelPositions.clear();
+//		removeIndices.clear();
+//		System.gc();
+//	}
 	
 	/**	invert a StringRelation so that the columns become the lines, and vice versa 
 	 * @param	data	the StringRelation to invert
@@ -1722,7 +1752,8 @@ public class StringRelation {
 		
 		if (separator == GUESS_SEPARATOR) {
 			input = ((input instanceof BufferedReader) ? input : new BufferedReader(input));
-			separator = guessSeparator(((BufferedReader) input), valueDelimiter, keys, projectionKeys);
+//			separator = guessSeparator(((BufferedReader) input), valueDelimiter, keys, projectionKeys);
+			separator = guessSeparator(((BufferedReader) input), valueDelimiter);
 		}
 		
 		StringVector effectiveKeys = keys;
@@ -3106,7 +3137,8 @@ public class StringRelation {
 //		return fileContent;
 	}
 	
-	private static char guessSeparator(BufferedReader input, char valueDelimiter, StringVector keys, StringVector projectionKeys) throws IOException {
+//	private static char guessSeparator(BufferedReader input, char valueDelimiter, StringVector keys, StringVector projectionKeys) throws IOException {
+	private static char guessSeparator(BufferedReader input, char valueDelimiter) throws IOException {
 		
 		//	get first 8K of input for analysis
 		input.mark(8192);
@@ -3217,6 +3249,20 @@ public class StringRelation {
 	 * @throws IOException
 	 */
 	public static boolean writeCsvData(Writer output, StringRelation data, StringVector keys) throws IOException {
+		return writeCsvData(output, data, DEFAULT_SEPARATOR, DEFAULT_VALUE_DELIMITER, ((keys == null) ? null : keys.toStringArray()));
+	}
+	
+	/**
+	 * Write a StringRelation to a Writer, delimiting values with double quotes
+	 * and separating them with commas. Keys are written as the first line of
+	 * output.
+	 * @param output the Writer to write the data to
+	 * @param data the StringRelation to be stored
+	 * @param keys the keys to use for writing
+	 * @return true if and only if the data is written successfully
+	 * @throws IOException
+	 */
+	public static boolean writeCsvData(Writer output, StringRelation data, String[] keys) throws IOException {
 		return writeCsvData(output, data, DEFAULT_SEPARATOR, DEFAULT_VALUE_DELIMITER, keys);
 	}
 	
@@ -3244,7 +3290,7 @@ public class StringRelation {
 	 * @throws IOException
 	 */
 	public static boolean writeCsvData(Writer output, StringRelation data, char valueDelimiter, boolean writeKeys) throws IOException {
-		return writeCsvData(output, data, DEFAULT_SEPARATOR, valueDelimiter, (writeKeys ? data.getKeys() : null));
+		return writeCsvData(output, data, DEFAULT_SEPARATOR, valueDelimiter, (writeKeys ? data.getKeyArray() : null));
 	}
 	
 	/**
@@ -3258,6 +3304,20 @@ public class StringRelation {
 	 * @throws IOException
 	 */
 	public static boolean writeCsvData(Writer output, StringRelation data, char valueDelimiter, StringVector keys) throws IOException {
+		return writeCsvData(output, data, DEFAULT_SEPARATOR, valueDelimiter, ((keys == null) ? null : keys.toStringArray()));
+	}
+	
+	/**
+	 * Write a StringRelation to a Writer, separating values with commas. Keys
+	 * are written as the first line of output.
+	 * @param output the Writer to write the data to
+	 * @param data the StringRelation to be stored
+	 * @param valueDelimiter the value delimiter character
+	 * @param keys the keys to use for writing
+	 * @return true if and only if the data is written successfully
+	 * @throws IOException
+	 */
+	public static boolean writeCsvData(Writer output, StringRelation data, char valueDelimiter, String[] keys) throws IOException {
 		return writeCsvData(output, data, DEFAULT_SEPARATOR, valueDelimiter, keys);
 	}
 	
@@ -3288,7 +3348,7 @@ public class StringRelation {
 	 * @throws IOException
 	 */
 	public static boolean writeCsvData(Writer output, StringRelation data, char separator, char valueDelimiter, boolean writeKeys) throws IOException {
-		return writeCsvData(output, data, separator, valueDelimiter, (writeKeys ? data.getKeys() : null));
+		return writeCsvData(output, data, separator, valueDelimiter, (writeKeys ? data.getKeyArray() : null));
 	}
 	
 	/**
@@ -3303,14 +3363,93 @@ public class StringRelation {
 	 * @throws IOException
 	 */
 	public static boolean writeCsvData(Writer output, StringRelation data, char separator, char valueDelimiter, StringVector keys) throws IOException {
-		StringVector writingKeys = ((keys == null) ? data.getKeys() : keys);
-		
+		return writeCsvData(output, data, separator, valueDelimiter, ((keys == null) ? null : keys.toStringArray()));
+	}
+//	public static boolean writeCsvData(Writer output, StringRelation data, char separator, char valueDelimiter, StringVector keys) throws IOException {
+//		StringVector writingKeys = ((keys == null) ? data.getKeys() : keys);
+//		
+//		BufferedWriter buf = ((output instanceof BufferedWriter) ? ((BufferedWriter) output) : new BufferedWriter(output));
+//		
+//		//	write keys if required
+//		if (keys != null) {
+//			String keyString = ("" + valueDelimiter + writingKeys.concatStrings("" + valueDelimiter + "" + separator + "" + valueDelimiter) + valueDelimiter);
+//			buf.write(keyString);
+//			buf.newLine();
+//		}
+//		
+//		//	write tupels
+//		for (int t = 0; t < data.size(); t++) {
+//			StringTupel st = data.get(t);
+//			String tupelString = st.toCsvString(separator, valueDelimiter, writingKeys);
+//			int offset = 0;
+//			int length = 0;
+//			char c;
+//			boolean lastWasNewLine = false;
+//			for (int i = 0; i < tupelString.length(); i++) {
+//				c = tupelString.charAt(i);
+//				if ((c == '\n') || (c == '\r')) {
+//					if (lastWasNewLine) offset++;
+//					else {
+//						buf.write(tupelString, offset, length);
+//						offset += length;
+//						length = 0;
+//						buf.newLine();
+//						offset++;
+//						lastWasNewLine = true;
+//					}
+//				}
+//				else {
+//					length ++;
+//					lastWasNewLine = false;
+//				}
+//			}
+//			if (length != 0) {
+//				buf.write(tupelString, offset, length);
+//				buf.newLine();
+//			}
+//		}
+//		if (buf != output)
+//			buf.flush();
+//		return true;
+//	}
+	
+	/**
+	 * Write a StringRelation to a Writer, separating values with a custom
+	 * character. Keys are written as the first line of output.
+	 * @param output the Writer to write the data to
+	 * @param data the StringRelation to be stored
+	 * @param separator the value separator character
+	 * @param valueDelimiter the value delimiter character
+	 * @param keys the keys to use for writing
+	 * @return true if and only if the data is written successfully
+	 * @throws IOException
+	 */
+	public static boolean writeCsvData(Writer output, StringRelation data, char separator, char valueDelimiter, String[] keys) throws IOException {
 		BufferedWriter buf = ((output instanceof BufferedWriter) ? ((BufferedWriter) output) : new BufferedWriter(output));
+		
+		//	make sure we have keys to keep data in order
+		String[] writingKeys = ((keys == null) ? data.getKeyArray() : keys);
 		
 		//	write keys if required
 		if (keys != null) {
-			String keyString = ("" + valueDelimiter + writingKeys.concatStrings("" + valueDelimiter + "" + separator + "" + valueDelimiter) + valueDelimiter);
-			buf.write(keyString);
+//			String keyString = ("" + valueDelimiter + writingKeys.concatStrings("" + valueDelimiter + "" + separator + "" + valueDelimiter) + valueDelimiter);
+//			buf.write(keyString);
+			for (int k = 0; k < keys.length; k++) {
+				if (k != 0)
+					buf.write(separator);
+				if (separator != '\t')
+					buf.write(valueDelimiter);
+				for (int c = 0; c < keys[k].length(); c++) {
+					char ch = keys[k].charAt(c);
+					if ((separator == '\t') && ((ch == '\t') || (ch == '\r') || (ch == '\n')))
+						ch = ' ';
+					else if ((separator != '\t') && (ch == valueDelimiter))
+						buf.write(valueDelimiter);
+					buf.write(ch);
+				}
+				if (separator != '\t')
+					buf.write(valueDelimiter);
+			}
 			buf.newLine();
 		}
 		
@@ -3320,11 +3459,11 @@ public class StringRelation {
 			String tupelString = st.toCsvString(separator, valueDelimiter, writingKeys);
 			int offset = 0;
 			int length = 0;
-			char c;
+			char ch;
 			boolean lastWasNewLine = false;
-			for (int i = 0; i < tupelString.length(); i++) {
-				c = tupelString.charAt(i);
-				if ((c == '\n') || (c == '\r')) {
+			for (int c = 0; c < tupelString.length(); c++) {
+				ch = tupelString.charAt(c);
+				if ((ch == '\n') || (ch == '\r')) {
 					if (lastWasNewLine) offset++;
 					else {
 						buf.write(tupelString, offset, length);
@@ -3336,7 +3475,7 @@ public class StringRelation {
 					}
 				}
 				else {
-					length ++;
+					length++;
 					lastWasNewLine = false;
 				}
 			}

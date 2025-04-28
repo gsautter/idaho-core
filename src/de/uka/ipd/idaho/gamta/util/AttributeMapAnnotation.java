@@ -30,14 +30,15 @@ import de.uka.ipd.idaho.stringUtils.csvHandler.StringTupel;
  * @author sautter
  */
 public class AttributeMapAnnotation extends AbstractAttributed implements QueriableAnnotation {
-	private static QueriableAnnotation[] qaDummy = new QueriableAnnotation[0];
-	private static String[] sDummy = new String[0];
+	private static QueriableAnnotation[] queriableAnnotationDummy = new QueriableAnnotation[0];
+	private static String[] stringDummy = new String[0];
 	
 	private String type;
 	private String id;
 	
 	private CharSequence charData = "DUMMY";
-	private Tokenizer tokenizer = Gamta.INNER_PUNCTUATION_TOKENIZER;
+//	private Tokenizer tokenizer = Gamta.INNER_PUNCTUATION_TOKENIZER;
+	private Tokenizer tokenizer = Gamta.getDefaultTokenizer();
 	private TokenSequence tokens;
 	
 	/** Constructor
@@ -276,7 +277,7 @@ public class AttributeMapAnnotation extends AbstractAttributed implements Queria
 	 * @see de.uka.ipd.idaho.gamta.Annotation#getDocumentPropertyNames()
 	 */
 	public String[] getDocumentPropertyNames() {
-		return sDummy;
+		return stringDummy;
 	}
 	
 	/* (non-Javadoc)
@@ -436,49 +437,49 @@ public class AttributeMapAnnotation extends AbstractAttributed implements Queria
 	 * @see de.uka.ipd.idaho.gamta.QueriableAnnotation#getAnnotations()
 	 */
 	public QueriableAnnotation[] getAnnotations() {
-		return qaDummy;
+		return queriableAnnotationDummy;
 	}
 	
 	/* (non-Javadoc)
 	 * @see de.uka.ipd.idaho.gamta.QueriableAnnotation#getAnnotations(java.lang.String)
 	 */
 	public QueriableAnnotation[] getAnnotations(String type) {
-		return qaDummy;
+		return queriableAnnotationDummy;
 	}
 	
 	/* (non-Javadoc)
 	 * @see de.uka.ipd.idaho.gamta.QueriableAnnotation#getAnnotationsSpanning(int, int)
 	 */
 	public QueriableAnnotation[] getAnnotationsSpanning(int startIndex, int endIndex) {
-		return qaDummy;
+		return queriableAnnotationDummy;
 	}
 	
 	/* (non-Javadoc)
 	 * @see de.uka.ipd.idaho.gamta.QueriableAnnotation#getAnnotationsSpanning(java.lang.String, int, int)
 	 */
 	public QueriableAnnotation[] getAnnotationsSpanning(String type, int startIndex, int endIndex) {
-		return qaDummy;
+		return queriableAnnotationDummy;
 	}
 	
 	/* (non-Javadoc)
 	 * @see de.uka.ipd.idaho.gamta.QueriableAnnotation#getAnnotationsOverlapping(int, int)
 	 */
 	public QueriableAnnotation[] getAnnotationsOverlapping(int startIndex, int endIndex) {
-		return qaDummy;
+		return queriableAnnotationDummy;
 	}
 	
 	/* (non-Javadoc)
 	 * @see de.uka.ipd.idaho.gamta.QueriableAnnotation#getAnnotationsOverlapping(java.lang.String, int, int)
 	 */
 	public QueriableAnnotation[] getAnnotationsOverlapping(String type, int startIndex, int endIndex) {
-		return qaDummy;
+		return queriableAnnotationDummy;
 	}
 	
 	/* (non-Javadoc)
 	 * @see de.uka.ipd.idaho.gamta.QueriableAnnotation#getAnnotationTypes()
 	 */
 	public String[] getAnnotationTypes() {
-		return sDummy;
+		return stringDummy;
 	}
 
 	/* (non-Javadoc)

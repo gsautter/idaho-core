@@ -145,6 +145,205 @@ public class AttributeUtils {
 				target.setAttribute(attributeNames[a], source.getAttribute(attributeNames[a]));
 			}
 	}
+//	
+//	public static class AttributeRestriction {
+//		public final String annotationType;
+//		public final String attributeName;
+//		//	TODO add permissions
+//		public AttributeRestriction(String annotationType, String attributeName) {
+//			this.annotationType = annotationType;
+//			this.attributeName = attributeName;
+//		}
+//	}
+//	
+//	public static abstract class AttributeValueConstraint {
+//		
+//		public static class Restriction {
+//			static final int VISIBLE_FLAG = 1;
+//			static final int REMOVABLE_FLAG = 2;
+//			static final int MODIFIABLE_FLAG = 4;
+//			static final int EDITABLE_FLAG = 8;
+//			
+//			/** restriction type allowing full free modification and removal of attribute values (the default) */
+//			public static final Restriction UNRESTRICTED = new Restriction((VISIBLE_FLAG | REMOVABLE_FLAG | MODIFIABLE_FLAG | EDITABLE_FLAG), 'U', "Unrestricted", "Values can be removed, added, and modified freely");
+//			
+//			/** restriction type allowing full free modification and removal of attribute values, but involve some pattern match */
+//			public static final Restriction MATCHED = new Restriction((VISIBLE_FLAG | REMOVABLE_FLAG | MODIFIABLE_FLAG | EDITABLE_FLAG), 'M', "Matched", "Values can be removed, added, and modified freely, but have to match some pattern");
+//			
+//			/** restriction type allowing modification and removal of attribute values, but restrict values to those in a given list */
+//			public static final Restriction CONTROLLED = new Restriction((VISIBLE_FLAG | REMOVABLE_FLAG | MODIFIABLE_FLAG), 'C', "Controlled", "Values can be removed and freely selectecd from defined list");
+//			
+//			/** restriction type allowing modification and removal of attribute values, but restrict values to ones identifying some other object in the same document */
+//			public static final Restriction REFERENCING = new Restriction((VISIBLE_FLAG | REMOVABLE_FLAG | MODIFIABLE_FLAG), 'R', "Referencing", "Values reference some other object or attribute and have a defined list of valid values per document");
+//			
+//			/** restriction type preventing modification and removal of attribute values, on the grounds of them being referenced by some other attribute values in the same document */
+//			public static final Restriction REFERENCED = new Restriction((VISIBLE_FLAG), 'T', "Referenced", "Values are referenced by values of some other attribute and thus cannot be modified or removed");
+//			public static final Restriction IMPLICIT = new Restriction((VISIBLE_FLAG), 'I', "Implicit", "Values are implicit/inherited/computed instead of being set explicitly and thus cannot be modified or removed");
+//			public static final Restriction PROCESS = new Restriction((VISIBLE_FLAG | REMOVABLE_FLAG), 'P', "Process", "Values contain functional information pertaining to some functional aspect of markup generation and thus can only be removed, but not modified");
+//			public static final Restriction DEBUG = new Restriction((VISIBLE_FLAG), 'D', "Debug", "Values contain tracking information pertaining to details of how the result of some computation emerged and thus cannot be modified or removed");
+//			/*
+//	TODO Establish restriction levels for attribute values:
+//	- unrestricted (code U): the default
+//	- suggestion (code S): with value suggestions, but free for input
+//	  - examples (maybe): types of subSection and subSubSection, type of typeStatus
+//	  - value editable
+//	  - attribute removable
+//	  - border: yellow if selected value not suggested
+//	- pattern match constraint (code M): attributes whose values must match some pattern
+//	  - examples: count in specimenCount, value in date, value in geoCoordinate
+//	- controlled (code C): only specific list provided values allowed
+//	  - examples (maybe) types of subSection and subSubSection, type of typeStatus
+//	  - attribute removable
+//	  - value not editable, only selectable from list
+//	  - color code: light gray
+//	  - border: red if selected value not allowed
+//	- referencing (code R): references some other attribute value in the document
+//	  - examples: citedRefId of bibRefCitation, targetBox of caption, (rows|cols)Continue(In|From) of table, connection attributes of image, captionStartId of figureCitation and tableCitation, fontName and fontCharCodes of ImWord, documentStyleName and documentStyleId of ImDocument, ..., think of more
+//	  - attribute removable
+//	  - value not editable, only selectable from list
+//	  - color code: light gray
+//	  - border: red if selected value not in list
+//	- reference-target (code T): referenced by some other attribute
+//	  - examples: refId of bibRef, startId of caption
+//	  - attribute not removable
+//	  - value not editable, not even selectable
+//	  - color code: gray
+//	- implicit (code I): implicit (computed)
+//	  - examples: pageId and lastPageId of annotations in ImDocumentRoot
+//	  - attribute not removable
+//	  - value not editable, not even selectable
+//	  - color code: gray
+//	- debug tracking (code D): added only by gizmos, and only for tracking purposes
+//	  - examples: _step and _evidence of taxonomicName, _reason of heading
+//	  - attribute not removable
+//	  - value not editable, not even selectable
+//	  - color code: light green
+//	  - text color: dark gray
+//	- functional (code F): added only by gizmos, for any kind of function
+//	  - examples: flags added in feedback dialogs (OCR error on bibRef), error attributes added to subjects in (upcoming) XML QC
+//	  - attribute not removable
+//	  - value not editable, not even selectable
+//	  - color code: light blue
+//	  - text color: dark gray
+//	- hidden (code H): added only by gizmos, for any kind of function, invisible in UI
+//	  - examples: flags added in feedback dialogs (OCR error on bibRef), error attributes added to subjects in (upcoming) XML QC
+//	  - attribute not removable
+//	  - value not editable, not even selectable
+//	  - color code: light blue
+//	  - text color: dark gray
+//			 */
+//			
+//			private byte flags;
+//			public final char code;
+//			public final String label;
+//			public final String descripton;
+//			Restriction(int flags, char code, String label, String descripton) {
+//				this.flags = ((byte) (flags & 0xFF));
+//				this.code = code;
+//				this.label = label;
+//				this.descripton = descripton;
+//			}
+//			public boolean isVisible() {
+//				return ((this.flags & VISIBLE_FLAG) != 0);
+//			}
+//			public boolean isRemovable() {
+//				return ((this.flags & REMOVABLE_FLAG) != 0);
+//			}
+//			public boolean isModifiable() {
+//				return ((this.flags & MODIFIABLE_FLAG) != 0);
+//			}
+//			public boolean isEditable() {
+//				return ((this.flags & EDITABLE_FLAG) != 0);
+//			}
+//		}
+//		
+//		public final String annotationType;
+//		public final String attributeName;
+//		public final Restriction restriction;
+//		//	TODO restriction class
+//		//	TODO add actual values (as abstract getter method)
+//		public AttributeValueConstraint(String annotationType, String attributeName) {
+//			this(annotationType, attributeName, null);
+//		}
+//		public AttributeValueConstraint(String annotationType, String attributeName, Restriction restriction) {
+//			this.annotationType = annotationType;
+//			this.attributeName = attributeName;
+//			this.restriction = ((restriction == null) ? Restriction.UNRESTRICTED : restriction);
+//		}
+//		public abstract Object[] getSuggestedValues(Attributed subject, Attributed doc);
+//		public abstract String[] getValueErrors(Attributed subject, Object value, Attributed doc);
+//		public boolean isValidValue(Attributed subject, Object value, Attributed doc) {
+//			return (this.getValueErrors(subject, value, doc) == null);
+//		}
+//	}
+	
+	/*
+
+TODO make constraints tractable:
+- give them name
+- maybe even preserve stack trace on creation
+==> easier to track where contradicting constraints coming from ...
+==> ... for both attribute names and values
+
+TODO Unify attribute value restrictions and suggestions into attribute value constraints:
+- provide abstract getSuggestedValues(Attributed subject, Attributed doc) ==> Object[] values method
+- provide abstract checkValue(Attributed subject, Object value, Attributed doc) ==> String[] errors method
+- provide isPermittedValue(Attributed subject, Object value, Attributed doc) ==> boolean permitted method, checking errors for null
+- provide UI behavior:
+  - visibility ==> show in overview list at all?
+  - editable (allow value entry) ==> editability of value field
+  - modifiable (allow changing value by either one of entry or selection) ==> selectability from overview list
+  - removability ==> availability/enablement of removal button
+  - explanation of restrictions in UI behavior ==> additional tooltip (most likely to display across top above value overview)
+  ==> provide restriction objects in attribute utils:
+    - boolean getters for properties ...
+    - ... with property data encoded in int flag vector
+    ==> specific constraint subclasses can use constants ...
+    ==> ... with names indicating meaning
+  ==> add (static) "show hidden" config flag to attribute editor widget ...
+  ==> ... and show those attributes in medium gray on light gray (at least by default) if flag set to true
+    ==> set to true in master configuration (just for checking purposes) ...
+    ==> ... or override altogether or help simulate errors, etc.
+      ==> provide respective "Ignore Attribute Restrictions" checkbox in edit menu if in master configuration
+
+TODO Still need to get all attribute names for suggestions, though, in spite of lazily getting existing (and/or configured) attribute values:
+- have dedicated plug-in provide attribute summary for each object type ...
+- ... or integrate said functionality into plug-ins responsible for attribute handling:
+  - GGI attribute tool provider
+  - GGE equivalent (after UI makeover and GG Core split)
+- initialize on opening document, discard on closing document
+- populate lazily
+- use document listener to track type changes, additions, an removals
+- use counting sets to track extant attribute names
+==> also creates central point for providing both attribute name and attribute value suggestions via respective config files
+
+TODO Add enforce annotation type constraints flag to annotation utils:
+- default to true
+- set to false from application cores if started with master configuration
+- allow free entry of annotation types in that case ...
+- ... maybe accompanied by (non-prompt) warning
+==> facilitates all sorts of constraint tests ...
+==> ... without requiring actual faulty gizmo
+
+TODO Add enforce attribute constraints flag to attribute utils:
+- default to true
+- set to false from application cores if started with master configuration
+- allow free entry of annotation types in that case ...
+- ... maybe accompanied by (non-prompt) warning
+==> facilitates all sorts of constraint tests ...
+==> ... without requiring actual faulty gizmo
+
+TODO Add enforce attribute value constraints flag to attribute utils:
+- default to true
+- set to false from application cores if started with master configuration
+- allow free entry of annotation types in that case ...
+- ... maybe accompanied by (non-prompt) warning
+==> facilitates all sorts of constraint tests ...
+==> ... without requiring actual faulty gizmo
+
+Observe all those flags in UI elements observing constraints ...
+... as latter might not even be possible everywhere
+	 */
 	
 	/**
 	 * Test if some Attributed object has at least the attributes of some

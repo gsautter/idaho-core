@@ -62,9 +62,7 @@ public interface ProgressMonitor {
 		public void setStep(String importStep) {
 			System.out.println(importStep);
 		}
-		public void setInfo(String text) {
-			System.out.println(text);
-		}
+		public void setInfo(String text) {}
 	};
 	
 	/**

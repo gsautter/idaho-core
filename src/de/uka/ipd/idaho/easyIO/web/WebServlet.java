@@ -28,12 +28,21 @@
 package de.uka.ipd.idaho.easyIO.web;
 
 import java.io.File;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Date;
+import java.util.Enumeration;
+import java.util.LinkedList;
+import java.util.Locale;
 import java.util.Properties;
+import java.util.TimeZone;
 import java.util.TreeSet;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
 
 import de.uka.ipd.idaho.easyIO.settings.Settings;
 
@@ -295,6 +304,40 @@ public abstract class WebServlet extends HttpServlet implements WebConstants {
 	protected void reInit() throws ServletException {}
 	
 	/**
+	 * Retrieve the external (web facing) context path of a servlet for a given
+	 * request. By default, this method returns the context path of the argument
+	 * request, or the value of the <code>externalContextPath</code> setting, if
+	 * the latter is present. If required, subclasses are welcome to provide
+	 * more sophisticated logic. This method mainly exists to facilitate the
+	 * creation of proper hyperlinks if the servlt is deployed behind a proxy
+	 * that uses rewrite rules to route requests to the servlet or changes the
+	 * request path in other ways.
+	 * @param request the request to get the web facing context path for
+	 * @return the web facing context path for the argument request
+	 */
+	protected String getExternalContextPath(HttpServletRequest request) {
+		String extPath = this.getSetting("externalContextPath");
+		return ((extPath == null) ? request.getContextPath() : extPath);
+	}
+	
+	/**
+	 * Retrieve the external (web facing) servlet path of a servlet for a given
+	 * request. By default, this method returns the servlet path of the argument
+	 * request, or the value of the <code>externalServletPath</code> setting, if
+	 * the latter is present. If required, subclasses are welcome to provide
+	 * more sophisticated logic. This method mainly exists to facilitate the
+	 * creation of proper hyperlinks if the servlt is deployed behind a proxy
+	 * that uses rewrite rules to route requests to the servlet or changes the
+	 * request path in other ways.
+	 * @param request the request to get the web facing servlet path for
+	 * @return the web facing servlet path for the argument request
+	 */
+	protected String getExternalServletPath(HttpServletRequest request) {
+		String extPath = this.getSetting("externalServletPath");
+		return ((extPath == null) ? request.getServletPath() : extPath);
+	}
+	
+	/**
 	 * Retrieve a setting from the servlet configuration. If the setting is not
 	 * present in the particular servlet's configuration file, this method
 	 * retrieves the setting from the webapp-wide configuration available from
@@ -409,4 +452,161 @@ public abstract class WebServlet extends HttpServlet implements WebConstants {
 			file = new File(this.rootFolder, fileName);
 		return (file.exists() ? file : null);
 	}
+	
+	/**
+	 * A parsed MIME type from the 'Accept' header in an HTTP request.
+	 * Instances of this class order by their associated 'q' value and the
+	 * position they were specified in.<br>
+	 * This class is intended to simplify implementing content negotiation in
+	 * client code and subclasses.
+	 *  
+	 * @author sautter
+	 */
+	public static class AcceptMimeType implements Comparable {
+		
+		/** the name of the type, e.g. 'text/xml' */
+		public final String name;
+		
+		/** the position the type was specified in */
+		public final int pos;
+		
+		/** the 'q' value associated with the type */
+		public final float q;
+		
+		/**
+		 * @param name the name of the type
+		 * @param pos the position the type was specified in
+		 */
+		public AcceptMimeType(String name, int pos) {
+			this(name, pos, 1.0f);
+		}
+		
+		/**
+		 * @param name the name of the type
+		 * @param pos the position the type was specified in
+		 * @param q the 'q' value associated with the type
+		 */
+		public AcceptMimeType(String name, int pos, float q) {
+			this.name = name;
+			this.pos = pos;
+			this.q = q;
+		}
+		
+		/* (non-Javadoc)
+		 * @see java.lang.Comparable#compareTo(java.lang.Object)
+		 */
+		public int compareTo(Object obj) {
+			if (this == obj)
+				return 0;
+			else if (obj instanceof AcceptMimeType) {
+				AcceptMimeType amt = ((AcceptMimeType) obj);
+				if (this.q == amt.q)
+					return (this.pos - amt.pos); // ascending order in preference
+				else return Float.compare(amt.q, this.q); // descending order in q value
+			}
+			else return -1;
+		}
+		
+		/**
+		 * Parse an accepted MIME type from a raw header value.
+		 * @param mimeType the header value
+		 * @param pos the position the header was listed in
+		 * @return the parsed MIME type
+		 */
+		public static AcceptMimeType parseAcceptMimeType(String mimeType, int pos) {
+			mimeType = mimeType.replace(" ", "").toLowerCase();
+			if (mimeType.indexOf(";q=") == -1)
+				return new AcceptMimeType(mimeType, pos); // q not specified, default to 1.0
+			String q = mimeType.substring(mimeType.indexOf(";q=") + ";q=".length());
+			mimeType = mimeType.substring(0, mimeType.indexOf(";q="));
+			try {
+				return new AcceptMimeType(mimeType, pos, Float.parseFloat(q));
+			}
+			catch (NumberFormatException nfe) {
+				return new AcceptMimeType(mimeType, pos, 0.01f); // q value failed to parse, default to 0.01
+			}
+		}
+		
+		/**
+		 * Parse the accepted MIME types from an HTTP request. If the argument
+		 * request comes without an 'Accept' header, this method returns null.
+		 * Thus, an array returned from this method always has at least one
+		 * element.
+		 * @param request the request whose 'Accept' header to extract
+		 * @return an array holding the accepted MIME types
+		 */
+		public static AcceptMimeType[] getAcceptMimeTypes(HttpServletRequest request) {
+			ArrayList amtList = null;
+			for (Enumeration ahe = request.getHeaders("Accept"); ahe.hasMoreElements();) {
+				String ahStr = ((String) ahe.nextElement());
+				if (amtList == null)
+					amtList = new ArrayList(8);
+				String[] ahs = ahStr.split("\\s*\\,\\s*");
+				for (int h = 0; h < ahs.length; h++)
+					amtList.add(parseAcceptMimeType(ahs[h], amtList.size()));
+			}
+			if (amtList == null)
+				return null;
+			AcceptMimeType[] amts = ((AcceptMimeType[]) amtList.toArray(new AcceptMimeType[amtList.size()]));
+			Arrays.sort(amts);
+			return amts;
+		}
+	}
+	
+	/**
+	 * Parse an HTTP timestamp into a numerical value.
+	 * @param timestamp the timestamp to parse
+	 * @return the numerical value of the argument timestapm
+	 * @throws ParseException
+	 */
+	public static long parseHttpTimestamp(String timestamp) throws ParseException {
+		SimpleDateFormat pdf = getParseDateFormat();
+		try {
+			pdf.setTimeZone(UTC);
+			Date pts = pdf.parse(timestamp);
+			return pts.getTime();
+		}
+		finally {
+			returnParseDateFormat(pdf);
+		}
+	}
+	private static LinkedList parseDateFormats = new LinkedList();
+	private static TimeZone UTC = TimeZone.getTimeZone("UTC");
+	private static SimpleDateFormat getParseDateFormat() {
+		synchronized (parseDateFormats) {
+			if (parseDateFormats.isEmpty())
+				return new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss Z", Locale.US);
+			else return ((SimpleDateFormat) parseDateFormats.removeFirst());
+		}
+	}
+	private static void returnParseDateFormat(SimpleDateFormat pdf) {
+		synchronized (parseDateFormats) {
+			parseDateFormats.addLast(pdf);
+		}
+	}
+	
+	/**
+	 * Format a UTC timestamp for use in HTP headers.
+	 * @param timestamp the timestamp to format
+	 * @return the formatted timestamp
+	 */
+	public static String formatHttpTimestamp(long timestamp) {
+		return outputDateFormat.format(new Date(timestamp));
+	}
+	private static final SimpleDateFormat outputDateFormat;
+	static {
+		outputDateFormat = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss 'GMT'Z", Locale.US);
+		outputDateFormat.setTimeZone(UTC);
+	}
+//	
+//	//	FOR TEST PURPOSES ONLY !!!
+//	public static void main(String[] args) throws Exception {
+////		String ahStr = "text/html; q=1.0, text/*; q=0.8, image/gif; q=0.6, image/jpeg; q=0.6, image/*; q=0.5, */*; q=0.1"; // from https://en.wikipedia.org/wiki/Content_negotiation
+//		String ahStr = "text/turtle;q=1, application/n-triples;q=.9, application/rdf+xml;q=.8, application/ld+json;q=.7, */*;q=.1 "; // from https://github.com/plazi/treatmentBank/issues/56
+//		String[] ahs = ahStr.split("\\s*\\,\\s*");
+//		for (int h = 0; h < ahs.length; h++) {
+//			AcceptMimeType amt = AcceptMimeType.parseAcceptMimeType(ahs[h], h);
+//			System.out.println(amt.pos + ": " + amt.name + " at " + amt.q);
+//		}
+//	}
 }

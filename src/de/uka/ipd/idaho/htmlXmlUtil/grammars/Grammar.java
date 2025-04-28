@@ -413,7 +413,7 @@ public abstract class Grammar {
 		//	decode hex code
 		if (code.startsWith("&#x")) {
 			if (code.endsWith(";"))
-				code = code.substring(0, (code.length() - 1));
+				code = code.substring(0, (code.length() - ";".length()));
 			try {
 				return ((char) Integer.parseInt(code.substring("&#x".length()), 16));
 			} catch (NumberFormatException nfe) {}
@@ -422,7 +422,7 @@ public abstract class Grammar {
 		//	decode hex code
 		else if (code.startsWith("&x")) {
 			if (code.endsWith(";"))
-				code = code.substring(0, (code.length() - 1));
+				code = code.substring(0, (code.length() - ";".length()));
 			try {
 				return ((char) Integer.parseInt(code.substring("&x".length()), 16));
 			} catch (NumberFormatException nfe) {}
@@ -431,7 +431,7 @@ public abstract class Grammar {
 		//	handle decimal encoding
 		else if (code.startsWith("&#")) {
 			if (code.endsWith(";"))
-				code = code.substring(0, (code.length() - 1));
+				code = code.substring(0, (code.length() - ";".length()));
 			try {
 				return ((char) Integer.parseInt(code.substring("&#".length())));
 			} catch (NumberFormatException nfe) {}

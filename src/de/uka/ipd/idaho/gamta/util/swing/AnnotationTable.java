@@ -665,7 +665,8 @@ public class AnnotationTable extends JPanel {
 		public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int col) {
 			JComponent component = (JComponent) super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, col);
 			if (this.tooltipColumns.contains("" + row))
-				component.setToolTipText(this.produceTooltipText(Gamta.INNER_PUNCTUATION_TOKENIZER.tokenize(value.toString())));
+//				component.setToolTipText(this.produceTooltipText(Gamta.INNER_PUNCTUATION_TOKENIZER.tokenize(value.toString())));
+				component.setToolTipText(this.produceTooltipText(Gamta.getDefaultTokenizer().tokenize(value.toString())));
 			return component;
 		}
 		private String produceTooltipText(TokenSequence tokens) {

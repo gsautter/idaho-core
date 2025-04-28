@@ -51,11 +51,11 @@ import de.uka.ipd.idaho.gamta.TokenSequenceListener;
  * 
  * @author sautter
  */
-public class GenericMutableAnnotationWrapper extends GenericQueriableAnnotationWrapper implements MutableAnnotation {
+public class GenericMutableAnnotationWrapper extends GenericEditableAnnotationWrapper implements MutableAnnotation {
 	
 	/**
 	 * the wrapped annotation (equal to the 'annotationData' and
-	 * 'queriableAnnotationData' fields of super classes, existing to spare
+	 * 'queriableAnnotationData' fields of super classes, existing to save
 	 * class casts)
 	 */
 	protected MutableAnnotation mutableAnnotationData;
@@ -114,18 +114,18 @@ public class GenericMutableAnnotationWrapper extends GenericQueriableAnnotationW
 			annotations[a] = this.wrapMutableAnnotation(annotations[a]);
 		return annotations;
 	}
-	
-	public Annotation removeAnnotation(Annotation annotation) {
-		return this.mutableAnnotationData.removeAnnotation(annotation);
-	}
-	
-	public void addAnnotationListener(AnnotationListener al) {
-		this.mutableAnnotationData.addAnnotationListener(al);
-	}
-	
-	public void removeAnnotationListener(AnnotationListener al) {
-		this.mutableAnnotationData.removeAnnotationListener(al);
-	}
+//	
+//	public Annotation removeAnnotation(Annotation annotation) {
+//		return this.mutableAnnotationData.removeAnnotation(annotation);
+//	}
+//	
+//	public void addAnnotationListener(AnnotationListener al) {
+//		this.mutableAnnotationData.addAnnotationListener(al);
+//	}
+//	
+//	public void removeAnnotationListener(AnnotationListener al) {
+//		this.mutableAnnotationData.removeAnnotationListener(al);
+//	}
 	
 	/** wrap a MutableAnnotation before returning it in order to provide additional functionality through the wrapper class
 	 * Note: This default implementation simply returns the argument MutableAnnotation, sub classes are welcome to overwrite this method as needed.

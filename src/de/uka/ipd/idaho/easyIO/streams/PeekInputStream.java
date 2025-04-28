@@ -174,7 +174,7 @@ public class PeekInputStream extends FilterInputStream {
 	 */
 	public int skipSpace() throws IOException {
 		int skipped = 0;
-		while ((this.peek() < 33) && (this.peek() != -1)) {
+		while ((this.peek() <= 0x0020) && (this.peek() != -1)) {
 			this.read();
 			skipped++;
 		}

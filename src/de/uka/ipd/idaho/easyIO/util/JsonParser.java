@@ -112,12 +112,64 @@ public class JsonParser {
 		 * Receive notification that a null value was read.
 		 */
 		public void nullRead() {}
+		
+		/**
+		 * Indicate the minimum lookahead length (number of upcoming characters
+		 * that can be inspected in a <code>PeekReader</code> without consuming
+		 * them) required by this JSON receiver to handle custom constructs.
+		 * This default implementation simply returns 0. Subclasses are welcome
+		 * to overwrite it as needed.
+		 * @return the minimum lookahead length
+		 */
+		protected int getMinimumLookahead() {
+			return 0;
+		}
+		
+		/**
+		 * Indicate whether or not the next character(s) in a stream of JSON
+		 * characters starts a custom construct understood by this receiver.
+		 * The argument <code>nextChar</code> is the one returned by calling
+		 * <code>peek()</code> on the argument reader, intended for quick
+		 * checks. If this method returns true, the <code>cropCustom()</code>
+		 * method is expected to read and consume the whole custom construct
+		 * to its very last character, leaving the argument reader looking at
+		 * the next valid JSON character in the surrounding context. If an
+		 * implementation of this method requires a further lookahead than 5
+		 * characters (the length of the <code>false</code> constant), the
+		 * calling client code must either hand a respectively parameterized
+		 * receiver must overwrite the <code>getMinimumLookahead()</code> to
+		 * indicate the higher lookahead length. This default implementation
+		 * simply returns false, subclasses are welcome to overwrite it as
+		 * needed.
+		 * @param nextChar the next character to come in the argument reader
+		 * @param pr the reader providing the stream of JSON data
+		 * @return true if the next character(s) start a custom construct
+		 */
+		protected boolean startsCustom(char nextChar, PeekReader pr) throws IOException {
+			return false;
+		}
+		
+		/**
+		 * Read and consume a custom construct understood by this receiver.
+		 * This method must handle at least one character starting from each
+		 * character the <code>startsCustom()</code> method returns true for.
+		 * Custom constructs can occur in any place an array, object, string,
+		 * number, or boolean can appear in, but they cannot take the place of
+		 * object property names, only that of object property values. After
+		 * reading and consuming the custom construct, the argument reader must
+		 * be looking at the next valid JSON character in the surrounding
+		 * context. It is the responsibility of implementations to ensure the
+		 * latter. This default implementation does nothing, subclasses are
+		 * welcome to overwrite it as needed.
+		 * @param pr the reader providing the stream of JSON data
+		 */
+		protected void readCustom(PeekReader pr) throws IOException {}
 	}
 	
 	/**
 	 * Escape a string for JavaScript and JSON use, expecting a single quote
 	 * to go around the escaped string. Use the two-argument version of this
-	 * method to escape a string for other quoters, e.g. double quotes.
+	 * method to escape a string for other quotes, e.g. double quotes.
 	 * @param str the string to escape
 	 * @return the escaped string
 	 */
@@ -128,7 +180,7 @@ public class JsonParser {
 	/**
 	 * Escape a string for JavaScript and JSON use.
 	 * @param str the string to escape
-	 * @param quot the quoter to go around the escaped string
+	 * @param quot the quote character to go around the escaped string
 	 * @return the escaped string
 	 */
 	public static String escape(String str, char quot) {
@@ -353,6 +405,10 @@ public class JsonParser {
 	 * @return the string representation of the argument object 
 	 */
 	public static String toString(Object obj, char quot) {
+		return toString(obj, quot, false);
+	}
+	
+	private static String toString(Object obj, char quot, boolean isElementOrValue) {
 		if (obj instanceof Map)
 			return toString(((Map) obj), quot);
 		else if (obj instanceof List)
@@ -363,6 +419,8 @@ public class JsonParser {
 			return toString((Number) obj);
 		else if (obj instanceof Boolean)
 			return toString((Boolean) obj);
+		else if (isElementOrValue && (obj == null))
+			return "null";
 		else return null;
 	}
 	
@@ -372,7 +430,7 @@ public class JsonParser {
 			Object key = ((String) kit.next());
 			if (!(key instanceof String))
 				continue;
-			String value = toString(object.get(key), quot);
+			String value = toString(object.get(key), quot, true);
 			if (value == null)
 				continue;
 			if (sb.length() > 1)
@@ -387,7 +445,7 @@ public class JsonParser {
 	private static String toString(List array, char quot) {
 		StringBuffer sb = new StringBuffer("[");
 		for (int i = 0; i < array.size(); i++) {
-			String element = toString(array.get(i), quot);
+			String element = toString(array.get(i), quot, true);
 			if (element == null)
 				continue;
 			if (sb.length() > 1)
@@ -575,7 +633,7 @@ public class JsonParser {
 	public static class UnexpectedCharacterException extends IOException {
 		private int position;
 		UnexpectedCharacterException(char ch, int position, String expected) {
-			super("Unexpected character '" + ch + "' at " + position + ", expected " + expected + ".");
+			super("Unexpected character '" + ch + "' (0x" + ((ch < 0x1000) ? "0" : "") + ((ch < 0x0100) ? "0" : "") + Integer.toString(((int) ch), 16).toUpperCase() + ") at " + position + ", expected " + expected + ".");
 			this.position = position;
 		}
 		
@@ -609,9 +667,6 @@ public class JsonParser {
 	 * @throws IOException
 	 */
 	public static Object parseJson(Reader in) throws IOException {
-//		if (in instanceof PeekReader)
-//			return cropNext(((PeekReader) in), false, null);
-//		else return cropNext(new PeekReader(in, 5), false, null);
 		return cropNext(new JsonReader(in), false);
 	}
 	
@@ -625,16 +680,16 @@ public class JsonParser {
 	 * @throws IOException
 	 */
 	public static void streamJson(Reader in, JsonReceiver receiver) throws IOException {
-//		if (in instanceof PeekReader)
-//			cropNext(((PeekReader) in), false, receiver);
-//		else cropNext(new PeekReader(in, 5), false, receiver);
-		streamNext(new JsonReader(in), false, receiver);
+		streamNext(new JsonReader(in, receiver.getMinimumLookahead()), false, receiver);
 	}
 	
 	private static class JsonReader extends PeekReader {
 		int position = 0;
 		JsonReader(Reader in) throws IOException {
 			super(in, "false".length());
+		}
+		JsonReader(Reader in, int minLookahead) throws IOException {
+			super(in, Math.max("false".length(), minLookahead));
 		}
 		public int read() throws IOException {
 			int read = super.read();
@@ -709,6 +764,8 @@ public class JsonParser {
 		}
 		else if (inArrayOrObject && ((jr.peek() == ',') || (jr.peek() == '}') || (jr.peek() == ']')))
 			return;
+		else if (receiver.startsCustom(((char) jr.peek()), jr))
+			receiver.readCustom(jr);
 		else throw new UnexpectedCharacterException(((char) jr.peek()), jr.position, ("\", ', {, [, -, digits, " + (inArrayOrObject ? "comma, }, ], " : "" ) + "'true', 'false', or 'null'"));
 	}
 	
@@ -799,7 +856,7 @@ public class JsonParser {
 		receiver.arrayEnded();
 	}
 	
-	private static String cropString(JsonReader jr, char quot, boolean isValue) throws IOException {
+	private static String cropString(JsonReader jr, char quot, boolean isValues) throws IOException {
 		jr.read(); // consume opening quotes
 		boolean escaped = false;
 		StringBuffer string = new StringBuffer();

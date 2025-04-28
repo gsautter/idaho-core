@@ -40,6 +40,7 @@ import java.util.TreeSet;
 import de.uka.ipd.idaho.gamta.Annotation;
 import de.uka.ipd.idaho.gamta.QueriableAnnotation;
 import de.uka.ipd.idaho.gamta.TokenSequenceUtils;
+import de.uka.ipd.idaho.gamta.util.DocumentErrorProtocol.DocumentError;
 
 /**
  * A document error checker detects (potential) errors of specific categories
@@ -382,6 +383,67 @@ public abstract class DocumentErrorChecker {
 	 * @return the number of detected errors
 	 */
 	public abstract int addDocumentErrors(QueriableAnnotation doc, DocumentErrorProtocol dep, String category, String type);
+	
+	/**
+	 * Metadata object describing details of a type of document errors added to
+	 * an error protocol by a given document error checker, mostly intended for
+	 * overview purposes. In particular, instances of this class bundle the
+	 * argument data the error checker uses in its calls to the
+	 * <code>DocumentErrorProtocol.addError()</code> methods of an argument
+	 * error protocol from the <code>addDocumentErrors()</code> method.
+	 * 
+	 * @author sautter
+	 */
+	public static abstract class DocumentErrorQuickFix {
+		
+		/** the document error addressed by the quick fix action */
+		protected final DocumentError error;
+		
+		/** the name of the quick fix action (for grouping with similar actions for similar errors) */
+		public final String name;
+		
+		/** the label of the quick fix action (e.g. for use as a button text in a UI) */
+		public final String label;
+		
+		/** a description of the quick fix action (e.g. for use as a tooltip text in a UI) */
+		public final String description;
+		
+		/**
+		 * Constructor
+		 * @param error the document error addressed by the quick fix action
+		 * @param name the name of the quick fix action
+		 * @param label the label of the quick fix action
+		 * @param description a description of the quick fix action
+		 */
+		protected DocumentErrorQuickFix(DocumentError error, String name, String label, String description) {
+			this.error = error;
+			this.name = name;
+			this.label = label;
+			this.description = description;
+		}
+		
+		/**
+		 * Execute the (inherently implementation specific) action that fixes
+		 * the addressed error. The returned boolean indicates whether or not
+		 * the implementation actually modified the subject of the addressed
+		 * error (or its parent document), or if the action failed or was
+		 * cancelled by a user.
+		 * @return true if the implementation actually executed an edit
+		 */
+		public abstract boolean fixError();
+	}
+	
+	/**
+	 * Retrieve available quick fix actions for a given document error, making
+	 * likely ways of addressing the error available to client code. This
+	 * default implementation returns null, subclasses are welcome to overwrite
+	 * it as needed.
+	 * @param error the error to get possible quick fix actions for
+	 * @return an array holding the quick fix actions
+	 */
+	public DocumentErrorQuickFix[] getQuickFixes(DocumentError error) {
+		return null;
+	};
 	
 	/**
 	 * Build a label for an annotation that is subject of an error, mainly for

@@ -34,12 +34,11 @@ import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.text.SimpleDateFormat;
-import java.util.Date;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.LinkedList;
+import java.util.LinkedHashSet;
 import java.util.Properties;
 
 import javax.servlet.ServletContext;
@@ -64,8 +63,12 @@ import javax.servlet.http.HttpServletResponse;
  * @author sautter
  */
 public class ResourceServlet extends WebServlet implements WebConstants {
-	
-	private static final SimpleDateFormat lastModifiedDateFormat = new SimpleDateFormat("EE, dd MMM yyyy HH:mm:ss z");
+//	
+//	private static final SimpleDateFormat lastModifiedDateFormat;
+//	static {
+//		lastModifiedDateFormat = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss Z", Locale.US);
+//		lastModifiedDateFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
+//	}
 	
 	private static Properties fileExtensionsToMimeTypesDefault = new Properties();
 	static { // default MIME types, according to Wikipedia (http://en.wikipedia.org/wiki/Internet_media_type)
@@ -133,7 +136,7 @@ public class ResourceServlet extends WebServlet implements WebConstants {
 	 */
 	public static synchronized void registerAccessibleResource(ServletContext sc, String resName) {
 		while (resName.indexOf('/') != -1)
-			resName = resName.substring(resName.indexOf('/') + 1);
+			resName = resName.substring(resName.indexOf('/') + "/".length());
 		getAccessibleResourceSet(sc).add(resName.toLowerCase());
 	}
 	private static synchronized HashSet getAccessibleResourceSet(ServletContext sc) {
@@ -229,12 +232,12 @@ public class ResourceServlet extends WebServlet implements WebConstants {
 		getResourceProviderSet(sc).add(rp);
 		System.out.println("ResourceServlet: " + rp.getClass().getName() + " registered as resource provider");
 	}
-	private static synchronized HashSet getResourceProviderSet(ServletContext sc) {
+	private static synchronized LinkedHashSet getResourceProviderSet(ServletContext sc) {
 		String scPath = sc.getRealPath("./");
 		scPath = (new File(scPath)).getAbsolutePath();
-		HashSet resourceProviders = ((HashSet) resourceProviderSets.get(scPath));
+		LinkedHashSet resourceProviders = ((LinkedHashSet) resourceProviderSets.get(scPath));
 		if (resourceProviders == null) {
-			resourceProviders = new HashSet();
+			resourceProviders = new LinkedHashSet();
 			resourceProviderSets.put(scPath, resourceProviders);
 			System.out.println("ResourceServlet: resource provider set generated for " + scPath);
 		}
@@ -244,7 +247,7 @@ public class ResourceServlet extends WebServlet implements WebConstants {
 	private HashSet accessibleFileExtensions = new HashSet();
 	private HashSet accessibleFileNames = null;
 	
-	private HashSet resourceProviders = null;
+	private LinkedHashSet resourceProviders = null;
 	
 	private Properties fileExtensionsToMimeTypes = new Properties(fileExtensionsToMimeTypesDefault);
 	
@@ -261,7 +264,7 @@ public class ResourceServlet extends WebServlet implements WebConstants {
 		for (int e = 0; e < afes.length; e++) {
 			String afe = afes[e].toLowerCase();
 			if (afe.startsWith("."))
-				afe = afe.substring(1);
+				afe = afe.substring(".".length());
 			this.accessibleFileExtensions.add(afe);
 		}
 		
@@ -295,7 +298,7 @@ public class ResourceServlet extends WebServlet implements WebConstants {
 		//	isolate plain file name without path for filtering
 		String resFileName = resName;
 		while (resFileName.indexOf('/') != -1)
-			resFileName = resFileName.substring(resFileName.indexOf('/') + 1).trim();
+			resFileName = resFileName.substring(resFileName.indexOf('/') + "/".length()).trim();
 		if (resFileName.length() == 0) {
 			response.sendError(HttpServletResponse.SC_NOT_FOUND);
 			return;
@@ -342,12 +345,12 @@ public class ResourceServlet extends WebServlet implements WebConstants {
 		InputStream resIn = new BufferedInputStream(ris);
 		if (mimeType != null)
 			response.setContentType(mimeType);
-		response.setHeader("Last-Modified", lastModifiedDateFormat.format(new Date(ris.lastModified)));
+//		response.setHeader("Last-Modified", lastModifiedDateFormat.format(new Date(ris.lastModified)));
+		response.setHeader("Last-Modified", formatHttpTimestamp(ris.lastModified));
 		OutputStream resOut = response.getOutputStream();
 		byte[] resBuf = new byte[1024];
-		int read;
-		while ((read = resIn.read(resBuf, 0, resBuf.length)) != -1)
-			resOut.write(resBuf, 0, read);
+		for (int r; (r = resIn.read(resBuf, 0, resBuf.length)) != -1;)
+			resOut.write(resBuf, 0, r);
 		resOut.flush();
 		resIn.close();
 	}
@@ -360,9 +363,16 @@ public class ResourceServlet extends WebServlet implements WebConstants {
 			return new ResourceInputStream(resFile);
 		
 		//	try resource providers (copy for thread safety, as we don't want concurrent modification exceptions)
-		LinkedList rpList = new LinkedList(this.resourceProviders);
-		while (rpList.size() != 0) {
-			ResourceProvider rp = ((ResourceProvider) rpList.removeFirst());
+//		LinkedList rpList = new LinkedList(this.resourceProviders);
+//		while (rpList.size() != 0) {
+//			ResourceProvider rp = ((ResourceProvider) rpList.removeFirst());
+//			ResourceInputStream ris = rp.getResource(resName, request);
+//			if (ris != null)
+//				return ris;
+//		}
+		ArrayList rpList = new ArrayList(this.resourceProviders);
+		for (int p = 0; p < rpList.size(); p++) {
+			ResourceProvider rp = ((ResourceProvider) rpList.get(p));
 			ResourceInputStream ris = rp.getResource(resName, request);
 			if (ris != null)
 				return ris;

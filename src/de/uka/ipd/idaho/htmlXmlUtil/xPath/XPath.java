@@ -34,6 +34,7 @@ import de.uka.ipd.idaho.htmlXmlUtil.TreeNode;
 import de.uka.ipd.idaho.htmlXmlUtil.accessories.TreeTools;
 import de.uka.ipd.idaho.htmlXmlUtil.xPath.exceptions.XPathException;
 import de.uka.ipd.idaho.htmlXmlUtil.xPath.types.XPathNodeSet;
+import de.uka.ipd.idaho.htmlXmlUtil.xPath.types.XPathObject;
 import de.uka.ipd.idaho.htmlXmlUtil.xPath.types.XPathString;
 
 /**
@@ -162,5 +163,26 @@ public class XPath {
 	 */
 	public static XPathNodeSet evaluatePath(XPath path, XPathNodeSet startNodes, Properties variableBindings) throws XPathException {
 		return DEFAULT_ENGINE.evaluatePath(path, startNodes, variableBindings);
+	}
+	
+	/**	evaluate an XPath expression on a tree node
+	 * @param	context				the tree node to evaluate the expression on
+	 * @param	expression			a String representing the GPath expression to evaluate
+	 * @param	variableBindings	the variable bindings which are currently valid
+	 * @return the resulting XPathObject
+	 */
+	public static XPathObject evaluateExpression(String expression, TreeNode context, Properties variableBindings) throws XPathException {
+		XPathExpression parsedExpression = XPathParser.parseExpression(expression);
+		return DEFAULT_ENGINE.evaluateExpression(parsedExpression, context, variableBindings);
+	}
+	
+	/**	evaluate an XPath expression on a tree node
+	 * @param	context				the tree node to evaluate the expression on
+	 * @param	expression			the GPath expression to evaluate
+	 * @param	variableBindings	the variable bindings which are currently valid
+	 * @return the resulting XPathObject
+	 */
+	public static XPathObject evaluateExpression(XPathExpression expression, TreeNode context, Properties variableBindings) throws XPathException {
+		return DEFAULT_ENGINE.evaluateExpression(expression, context, variableBindings);
 	}
 }

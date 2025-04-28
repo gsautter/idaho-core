@@ -70,46 +70,80 @@ import de.uka.ipd.idaho.gamta.TokenSequence;
  * @author sautter
  */
 public class AnnotationSelectorPanel extends JPanel {
-	private boolean annotationsSelectable;
-	private AnnotationTablePanel annotationTable;
+	
+	/** annotation flag specifying whether or not an annotation should be rendered in bold */
+	public static final int SHOW_ANNOTATION_IN_BOLD = 0x00000001;
+	
+	/** annotation flag specifying whether or not an annotation should be rendered in italics */
+	public static final int SHOW_ANNOTATION_IN_ITALICS = 0x00000002;
+	
+	/** annotation flag specifying whether or not an annotation should be selected initially (has no effect if the <code>selectable</code> argument is set to false in a constructor) */
+	public static final int SHOW_ANNOTATION_SELECTED = 0x00000100;
+	
+	private boolean annotsSelectable;
+	private AnnotationTablePanel annotTable;
 	private LinkedHashSet accessories;
 	
 	/**	Constructor
-	 * @param	host			the frame this dialog is modal to
-	 * @param	title			the title for the dialog
-	 * @param	annotations		the Annotations to display
+	 * @param annotations the Annotations to display
 	 */
 	public AnnotationSelectorPanel(Annotation[] annotations) {
+		this(annotations, null, annotationTypesGeneric(annotations), true);
+	}
+	
+	/**	Constructor
+	 * @param annotations the Annotations to display
+	 * @param annotationFlags an array providing additional information for displaying the annotations
+	 */
+	public AnnotationSelectorPanel(Annotation[] annotations, int[] annotationFlags) {
 		this(annotations, annotationTypesGeneric(annotations), true);
 	}
+	
+	/**	Constructor
+	 * @param annotations the Annotations to display
+	 * @param selectable show a column of ckeckboxes to allow selecting annotations
+	 */
+	public AnnotationSelectorPanel(Annotation[] annotations, boolean selectable) {
+		this(annotations, null, annotationTypesGeneric(annotations), selectable);
+	}
+	
+	/**	Constructor
+	 * @param annotations the Annotations to display
+	 * @param annotationFlags an array providing additional information for displaying the annotations
+	 * @param selectable show a column of ckeckboxes to allow selecting annotations
+	 */
+	public AnnotationSelectorPanel(Annotation[] annotations, int[] annotationFlags, boolean selectable) {
+		this(annotations, annotationFlags, annotationTypesGeneric(annotations), selectable);
+	}
+	
+	/**	Constructor
+	 * @param annotations the Annotations to display
+	 * @param hideType hide the annotation type column?
+	 * @param selectable show a column of ckeckboxes to allow selecting annotations
+	 */
+	public AnnotationSelectorPanel(Annotation[] annotations, boolean hideType, boolean selectable) {
+		this(annotations, null, hideType, selectable);
+	}
+	
+	/**	Constructor
+	 * @param annotations the Annotations to display
+	 * @param annotationFlags an array providing additional information for displaying the annotations
+	 * @param hideType hide the annotation type column?
+	 * @param selectable show a column of ckeckboxes to allow selecting annotations
+	 */
+	public AnnotationSelectorPanel(Annotation[] annotations, int[] annotationFlags, boolean hideType, boolean selectable) {
+		super(new BorderLayout(), true);
+		this.annotsSelectable = selectable;
+		this.annotTable = new AnnotationTablePanel(annotations, annotationFlags, hideType, selectable);
+		this.add(this.annotTable, BorderLayout.CENTER);
+	}
+	
 	private static boolean annotationTypesGeneric(Annotation[] annotations) {
 		for (int a = 0; a < annotations.length; a++) {
 			if (!Annotation.DEFAULT_ANNOTATION_TYPE.equals(annotations[a].getType()))
 				return false;
 		}
 		return true;
-	}
-	
-	/**	Constructor
-	 * @param	host			the frame this dialog is modal to
-	 * @param	title			the title for the dialog
-	 * @param	annotations		the Annotations to display
-	 */
-	public AnnotationSelectorPanel(Annotation[] annotations, boolean selectable) {
-		this(annotations, annotationTypesGeneric(annotations), selectable);
-	}
-	
-	/**	Constructor
-	 * @param	host			the frame this dialog is modal to
-	 * @param	title			the title for the dialog
-	 * @param	annotations		the Annotations to display
-	 */
-	public AnnotationSelectorPanel(Annotation[] annotations, boolean hideType, boolean selectable) {
-		super(new BorderLayout(), true);
-//		this.annotations = annotations;
-		this.annotationsSelectable = selectable;
-		this.annotationTable = new AnnotationTablePanel(annotations, hideType, selectable);
-		this.add(this.annotationTable, BorderLayout.CENTER);
 	}
 	
 	/**
@@ -123,7 +157,7 @@ public class AnnotationSelectorPanel extends JPanel {
 	 * @return true if the dialog was committed
 	 */
 	public boolean showDialog(Component parent, String title) {
-		return this.showDialog(parent, title, (this.annotationsSelectable ? "Annotate" : "OK"), null);
+		return this.showDialog(parent, title, (this.annotsSelectable ? "Annotate" : "OK"), null);
 	}
 	
 	/**
@@ -141,7 +175,7 @@ public class AnnotationSelectorPanel extends JPanel {
 	 * @return true if the dialog was committed
 	 */
 	public boolean showDialog(Component parent, String title, JComponent customFields) {
-		return this.showDialog(parent, title, (this.annotationsSelectable ? "Annotate" : "OK"), customFields);
+		return this.showDialog(parent, title, (this.annotsSelectable ? "Annotate" : "OK"), customFields);
 	}
 	
 	/**
@@ -188,7 +222,7 @@ public class AnnotationSelectorPanel extends JPanel {
 	private String dialogTitle = null;
 	void updateDialogTitle() {
 		if (this.dialog != null)
-			this.dialog.setTitle(this.dialogTitle + " (" + this.annotationTable.getSelectedAnnotationCount() + " of " + this.annotationTable.getAnnotationCount() + " Annotations Selected)");
+			this.dialog.setTitle(this.dialogTitle + " (" + this.annotTable.getSelectedAnnotationCount() + " of " + this.annotTable.getAnnotationCount() + " Annotations Selected)");
 	}
 	private boolean doShowDialog(Component parent, String title, String buttonText, final JComponent customFields) {
 		try {
@@ -209,7 +243,7 @@ public class AnnotationSelectorPanel extends JPanel {
 		buttonPanel.setLayout(new FlowLayout(FlowLayout.CENTER));
 		
 		//	initialize main buttons
-		if (this.annotationsSelectable) {
+		if (this.annotsSelectable) {
 			JButton commitButton = new JButton(buttonText);
 			commitButton.setBorder(BorderFactory.createRaisedBevelBorder());
 			commitButton.setPreferredSize(new Dimension(100, 21));
@@ -227,7 +261,7 @@ public class AnnotationSelectorPanel extends JPanel {
 			});
 			buttonPanel.add(commitButton);
 		}
-		JButton abortButton = new JButton(this.annotationsSelectable ? "Cancel" : buttonText);
+		JButton abortButton = new JButton(this.annotsSelectable ? "Cancel" : buttonText);
 		abortButton.setBorder(BorderFactory.createRaisedBevelBorder());
 		abortButton.setPreferredSize(new Dimension(100, 21));
 		abortButton.addActionListener(new ActionListener() {
@@ -237,9 +271,9 @@ public class AnnotationSelectorPanel extends JPanel {
 		});
 		buttonPanel.add(abortButton);
 		
-		if (this.annotationsSelectable)
-			dialog.setTitle(title + " (" + this.annotationTable.getSelectedAnnotationCount() + " of " + this.annotationTable.getAnnotationCount() + " Annotations Selected)");
-		else dialog.setTitle(title + " (" + this.annotationTable.getAnnotationCount() + " Annotations)");
+		if (this.annotsSelectable)
+			dialog.setTitle(title + " (" + this.annotTable.getSelectedAnnotationCount() + " of " + this.annotTable.getAnnotationCount() + " Annotations Selected)");
+		else dialog.setTitle(title + " (" + this.annotTable.getAnnotationCount() + " Annotations)");
 		
 		//	put the whole stuff together
 		dialog.getContentPane().setLayout(new BorderLayout());
@@ -319,7 +353,7 @@ public class AnnotationSelectorPanel extends JPanel {
 	 * @return an array holding the selected annotations
 	 */
 	public Annotation[] getSelectedAnnotations() {
-		return this.annotationTable.getSelectedAnnotations();
+		return this.annotTable.getSelectedAnnotations();
 	}
 	
 	/**
@@ -332,23 +366,40 @@ public class AnnotationSelectorPanel extends JPanel {
 	protected void annotationClicked(int rowIndex, int clickCount) {}
 	
 	private class AnnotationTablePanel extends JPanel {
-		private Annotation[] annotations;
+		private Annotation[] annots;
+		private int[] annotFlags;
 		private boolean[] selectors;
 		private int selected;
 		private JTable annotationTable;
-		private AnnotationTablePanel(Annotation[] annotations, boolean hideType, boolean selectable) {
+		private AnnotationTablePanel(Annotation[] annots, int[] annotFlags, boolean hideType, boolean selectable) {
 			super(new BorderLayout(), true);
 			this.setBorder(BorderFactory.createEtchedBorder());
 			
-			this.annotations = annotations;
-			this.selectors = new boolean[this.annotations.length];
-			for (int s = 0; s < this.selectors.length; s++)
-				this.selectors[s] = selectable;
-			this.selected = (selectable ? this.annotations.length : -1);
+			this.annots = annots;
+			if (annotFlags == null) {
+				this.annotFlags = new int[this.annots.length];
+				Arrays.fill(this.annotFlags, (selectable ? SHOW_ANNOTATION_SELECTED : 0));
+			}
+			else this.annotFlags = annotFlags;
+			this.selectors = new boolean[this.annots.length];
+			if (selectable) {
+				this.selected = 0;
+				for (int s = 0; s < this.selectors.length; s++) {
+					if ((this.annotFlags[s] & SHOW_ANNOTATION_SELECTED) != 0) {
+						this.selectors[s] = true;
+						this.selected++;
+					}
+					else this.selectors[s] = false;
+				}
+			}
+			else {
+				Arrays.fill(this.selectors, false);
+				this.selected = -1;
+			}
 			
 			DisplayAnnotationTableModel atm;
 			if (selectable) {
-				atm = new SelectableAnnotationTableModel(this.annotations, hideType, this.selectors) {
+				atm = new SelectableAnnotationTableModel(this.annots, this.annotFlags, hideType, this.selectors) {
 					public void setValueAt(Object newValue, int rowIndex, int columnIndex) {
 						if ((columnIndex == 0) && (selectors[rowIndex] != ((Boolean) newValue).booleanValue())) {
 							if (selectors[rowIndex])
@@ -381,7 +432,7 @@ public class AnnotationSelectorPanel extends JPanel {
 				buttonPanel.add(selectNoneButton);
 				this.add(buttonPanel, BorderLayout.SOUTH);
 			}
-			else atm = new DisplayAnnotationTableModel(this.annotations, hideType);
+			else atm = new DisplayAnnotationTableModel(this.annots, this.annotFlags, hideType);
 			
 			this.annotationTable = new JTable(atm);
 			for (int c = 0; c < this.annotationTable.getColumnCount(); c++) {
@@ -407,7 +458,7 @@ public class AnnotationSelectorPanel extends JPanel {
 		void selectAll() {
 			for (int s = 0; s < this.selectors.length; s++)
 				this.selectors[s] = true;
-			this.selected = this.annotations.length;
+			this.selected = this.annots.length;
 			this.annotationTable.repaint();
 			this.validate();
 			updateDialogTitle();
@@ -421,16 +472,16 @@ public class AnnotationSelectorPanel extends JPanel {
 			updateDialogTitle();
 		}
 		int getAnnotationCount() {
-			return this.annotations.length;
+			return this.annots.length;
 		}
 		int getSelectedAnnotationCount() {
 			return this.selected;
 		}
 		Annotation[] getSelectedAnnotations() {
 			ArrayList annotations = new ArrayList();
-			for (int a = 0; a < this.annotations.length; a++) {
+			for (int a = 0; a < this.annots.length; a++) {
 				if (this.selectors[a])
-					annotations.add(this.annotations[a]);
+					annotations.add(this.annots[a]);
 			}
 			return ((Annotation[]) annotations.toArray(new Annotation[annotations.size()]));
 		}
@@ -439,11 +490,13 @@ public class AnnotationSelectorPanel extends JPanel {
 	private static class DisplayAnnotationTableModel implements TableModel {
 		private static final String[] WITH_TYPE_COLUMN_NAMES = {"Type", "Start", "Size", "Value"};
 		private static final String[] NO_TYPE_COLUMN_NAMES = {"Start", "Size", "Value"};
-		Annotation[] annotations;
+		Annotation[] annots;
+		int[] annotFlags;
 		boolean hideType;
 		String[] columnNames;
-		DisplayAnnotationTableModel(Annotation[] annotations, boolean hideType) {
-			this.annotations = annotations;
+		DisplayAnnotationTableModel(Annotation[] annots, int[] annotFlags, boolean hideType) {
+			this.annots = annots;
+			this.annotFlags = annotFlags;
 			this.hideType = hideType;
 			this.columnNames = (this.hideType ? NO_TYPE_COLUMN_NAMES : WITH_TYPE_COLUMN_NAMES);
 		}
@@ -459,19 +512,30 @@ public class AnnotationSelectorPanel extends JPanel {
 		public Object getValueAt(int rowIndex, int columnIndex) {
 			if (this.hideType)
 				columnIndex++;
-			Annotation annot = this.annotations[rowIndex];
+			String value;
+			Annotation annot = this.annots[rowIndex];
 			if (columnIndex == 0)
-				return annot.getType();
+				value = annot.getType();
 			else if (columnIndex == 1)
-				return ("" + annot.getStartIndex());
+				value = ("" + annot.getStartIndex());
 			else if (columnIndex == 2)
-				return ("" + annot.size());
+				value = ("" + annot.size());
 			else if (columnIndex == 3)
-				return annot.getValue();
+				value = annot.getValue();
 			else return null;
+			boolean isHtml = false;
+			if ((this.annotFlags[rowIndex] & SHOW_ANNOTATION_IN_ITALICS) != 0) {
+				value = ("<I>" + value + "</I>");
+				isHtml = true;
+			}
+			if ((this.annotFlags[rowIndex] & SHOW_ANNOTATION_IN_BOLD) != 0) {
+				value = ("<B>" + value + "</B>");
+				isHtml = true;
+			}
+			return (isHtml ? ("<HTML>" + value + "</HTML>") : value);
 		}
 		public int getRowCount() {
-			return this.annotations.length;
+			return this.annots.length;
 		}
 		public boolean isCellEditable(int rowIndex, int columnIndex) {
 			return false;
@@ -492,8 +556,8 @@ public class AnnotationSelectorPanel extends JPanel {
 	
 	private static class SelectableAnnotationTableModel extends DisplayAnnotationTableModel {
 		private boolean[] selectors;
-		SelectableAnnotationTableModel(Annotation[] annotations, boolean hideType, boolean[] selectors) {
-			super(annotations, hideType);
+		SelectableAnnotationTableModel(Annotation[] annots, int[] annotFlags, boolean hideType, boolean[] selectors) {
+			super(annots, annotFlags, hideType);
 			this.selectors = selectors;
 		}
 		public Class getColumnClass(int columnIndex) {
@@ -544,7 +608,8 @@ public class AnnotationSelectorPanel extends JPanel {
 		public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int col) {
 			JComponent component = (JComponent) super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, col);
 			if (this.isTooltipColumn[col])
-				component.setToolTipText(this.produceTooltipText(Gamta.INNER_PUNCTUATION_TOKENIZER.tokenize(value.toString())));
+//				component.setToolTipText(this.produceTooltipText(Gamta.INNER_PUNCTUATION_TOKENIZER.tokenize(value.toString())));
+				component.setToolTipText(this.produceTooltipText(Gamta.getDefaultTokenizer().tokenize(value.toString())));
 			return component;
 		}
 		private String produceTooltipText(TokenSequence tokens) {

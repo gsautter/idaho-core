@@ -52,7 +52,7 @@ public abstract class AbstractMutableTokenSequence implements MutableTokenSequen
 	protected final MutableCharSequence charData;
 	protected final Tokenizer tokenizer; 
 	
-	private ArrayList listeners = new ArrayList();
+	private ArrayList listeners = null;
 	
 	/** Constructor
 	 * @param	charData	
@@ -66,6 +66,12 @@ public abstract class AbstractMutableTokenSequence implements MutableTokenSequen
 	 * @see de.gamta.MutableTokenSequence#addTokenSequenceListener(de.gamta.TokenSequenceListener)
 	 */
 	public void addTokenSequenceListener(TokenSequenceListener tsl) {
+		if (tsl == null)
+			return;
+		if (this.listeners == null)
+			this.listeners = new ArrayList(2);
+		else if (this.listeners.contains(tsl))
+			return;
 		this.listeners.add(tsl);
 	}
 
@@ -73,7 +79,8 @@ public abstract class AbstractMutableTokenSequence implements MutableTokenSequen
 	 * @see de.gamta.MutableTokenSequence#removeTokenSequenceListener(de.gamta.TokenSequenceListener)
 	 */
 	public void removeTokenSequenceListener(TokenSequenceListener tsl) {
-		this.listeners.remove(tsl);
+		if (this.listeners != null)
+			this.listeners.remove(tsl);
 	}
 	
 	
@@ -91,6 +98,8 @@ public abstract class AbstractMutableTokenSequence implements MutableTokenSequen
 	 * @param	tse		the TokenSequenceEvent holding the details of the cange
 	 */
 	protected void notifyTokenSequenceChanged(TokenSequenceEvent tse) {
+		if (this.listeners == null)
+			return;
 		for (int l = 0; l < this.listeners.size(); l++)
 			((TokenSequenceListener) this.listeners.get(l)).tokenSequenceChanged(tse);
 	}

@@ -197,6 +197,7 @@ public class ParallelJobRunner {
 	
 	private static abstract class ParallelLoop {
 		private Exception loopBodyException = null;
+		private boolean breakLoop = false;
 		
 		/**
 		 * Check if an exception has occurred in one of the parallel executions
@@ -228,6 +229,20 @@ public class ParallelJobRunner {
 		
 		synchronized void setException(Exception e) {
 			this.loopBodyException = e;
+		}
+		
+		/**
+		 * Break loop execution from the loop method, or even externally. This
+		 * acts akin to a <code>break</code> statement in a normal loop. All
+		 * execution threads will finish their current run through the loop
+		 * body and then finish.
+		 */
+		public synchronized void breakLoop() {
+			this.breakLoop = true;
+		}
+		
+		synchronized boolean checkBreakLoop() {
+			return this.breakLoop;
 		}
 	}
 	
@@ -325,6 +340,10 @@ public class ParallelJobRunner {
 				
 				//	check for exception in parallel executions
 				if (this.loop.hasException())
+					return;
+				
+				//	check for cross-thread 'break' call
+				if (this.loop.checkBreakLoop())
 					return;
 				
 				//	get next index
@@ -460,7 +479,7 @@ public class ParallelJobRunner {
 		 * Execute the loop body. Synchronization of data structures shared
 		 * between multiple executions of the code parallelized in this method
 		 * is up to implementations.
-		 * @param index the counter of the for loop
+		 * @param obj the object to handle (from the shared iterator)
 		 * @throws Exception
 		 */
 		public abstract void doIteration(Object obj) throws Exception;
@@ -478,6 +497,10 @@ public class ParallelJobRunner {
 				
 				//	check for exception in parallel executions
 				if (this.loop.hasException())
+					return;
+				
+				//	check for cross-thread 'break' call
+				if (this.loop.checkBreakLoop())
 					return;
 				
 				//	get next object
@@ -555,6 +578,10 @@ public class ParallelJobRunner {
 				
 				//	check for exception in parallel executions
 				if (this.loop.hasException())
+					return;
+				
+				//	check for cross-thread 'break' call
+				if (this.loop.checkBreakLoop())
 					return;
 				
 				//	do the work

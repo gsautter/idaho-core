@@ -34,7 +34,6 @@ import java.io.OutputStream;
 import java.io.Reader;
 import java.io.Writer;
 import java.util.ArrayList;
-import java.util.Vector;
 
 import de.uka.ipd.idaho.htmlXmlUtil.TokenSource.Token;
 import de.uka.ipd.idaho.htmlXmlUtil.exceptions.InvalidNestingException;
@@ -359,7 +358,7 @@ public class Parser {
 		private TreeNode node = rootNode;
 		
 		private StringStack stack = new StringStack();
-		private Vector missingEndTags = new Vector();
+		private ArrayList missingEndTags = new ArrayList();
 		
 		/**
 		 * Consume all remaining tokens, i.e., parse the encapsulated input
@@ -420,7 +419,7 @@ public class Parser {
 					//	end tag matches an open tag
 					else if (this.stack.search(tagType) > -1) {
 						
-						//	rise to matching start tag, close lower tags implicitly and write end tags
+						//	ascend to matching start tag, close lower tags implicitly and write end tags
 						while (!this.stack.empty() && !this.stack.peek().equalsIgnoreCase(tagType)) {
 							this.missingEndTags.add(stack.pop().toLowerCase());
 							TreeNode lastNode = this.node;
@@ -437,7 +436,7 @@ public class Parser {
 						if (!correctErrors && (this.missingEndTags.size() > 0))
 							throw new MissingEndTagException(("<" + this.missingEndTags.get(0) + ">"), ("<" + tagType + ">"), tokenStart);
 						
-						//	rise one tree level and write end tag
+						//	ascend one tree level and write end tag
 						if (!this.stack.empty())
 							this.stack.pop();
 						TreeNode lastNode = this.node;

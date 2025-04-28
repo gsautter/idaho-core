@@ -35,12 +35,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.Writer;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.Locale;
 import java.util.Properties;
-import java.util.TimeZone;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
@@ -134,11 +129,11 @@ public class DownloadProviderServlet extends WebServlet {
 		mimeTypes.setProperty(".xslt", "text/xml");
 		mimeTypes.setProperty(".xsd", "text/xml");
 	}
-	private static final DateFormat MOD_TIME_DATE_FORMAT;
-	static {
-		MOD_TIME_DATE_FORMAT = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss Z", Locale.US);
-		MOD_TIME_DATE_FORMAT.setTimeZone(TimeZone.getTimeZone("UTC"));
-	}
+//	private static final DateFormat MOD_TIME_DATE_FORMAT;
+//	static {
+//		MOD_TIME_DATE_FORMAT = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss Z", Locale.US);
+//		MOD_TIME_DATE_FORMAT.setTimeZone(TimeZone.getTimeZone("UTC"));
+//	}
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
 		
 		//	get requested file
@@ -153,10 +148,12 @@ public class DownloadProviderServlet extends WebServlet {
 		//	check 'If-Modified-Since' header (also HTTP timestamp)
 		String ifModSince = request.getHeader("If-Modified-Since");
 		if (ifModSince != null) try {
-			long minModTime = MOD_TIME_DATE_FORMAT.parse(ifModSince).getTime();
+//			long minModTime = MOD_TIME_DATE_FORMAT.parse(ifModSince).getTime();
+			long minModTime = parseHttpTimestamp(ifModSince);
 			if (sourceFile.lastModified() < (minModTime + 1000 /* account for plain second based Linux file timestamps */)) {
 				response.setHeader("Cache-Control", "no-cache");
-				response.setHeader("Last-Modified", MOD_TIME_DATE_FORMAT.format(new Date(sourceFile.lastModified())));
+//				response.setHeader("Last-Modified", MOD_TIME_DATE_FORMAT.format(new Date(sourceFile.lastModified())));
+				response.setHeader("Last-Modified", formatHttpTimestamp(sourceFile.lastModified()));
 				response.setStatus(HttpServletResponse.SC_NOT_MODIFIED);
 				Writer w = response.getWriter();
 				w.write("");
@@ -170,7 +167,8 @@ public class DownloadProviderServlet extends WebServlet {
 		}
 		
 		//	set remaining headers
-		response.setHeader("Last-Modified", MOD_TIME_DATE_FORMAT.format(new Date(sourceFile.lastModified())));
+//		response.setHeader("Last-Modified", MOD_TIME_DATE_FORMAT.format(new Date(sourceFile.lastModified())));
+		response.setHeader("Last-Modified", formatHttpTimestamp(sourceFile.lastModified()));
 		response.setContentType(this.getMimeType(sourceFile));
 		response.setContentLength((int) sourceFile.length());
 		

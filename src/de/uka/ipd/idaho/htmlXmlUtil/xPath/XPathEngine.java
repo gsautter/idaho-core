@@ -321,6 +321,19 @@ public class XPathEngine {
 		return resultNodeSet;
 	}
 	
+	/**
+	 * Evaluate an XPath expression on a document.
+	 * @param context the document to evaluate the expression on
+	 * @param expression the GPath expression to evaluate
+	 * @param variableBindings the variable bindings which are currently valid
+	 * @return the resulting GPathObject
+	 */
+	public XPathObject evaluateExpression(XPathExpression expression, TreeNode context, Properties variableBindings) throws XPathException {
+		if (variableBindings == null)
+			variableBindings = new Properties();
+		return this.evaluateExpression(expression, context, 1, 1, variableBindings);
+	}
+	
 	/**	evaluate an XPath expression
 	 * @param	expression			the XPath expression to evaluate
 	 * @param	contextNode			the context node
@@ -361,7 +374,8 @@ public class XPathEngine {
 				return (expression.isNegative ? new XPathNumber(-xpo.asNumber().value) : xpo);
 			
 			if ((expression.predicates != null) && (expression.predicates.length != 0)) {
-				if (!(xpo instanceof XPathNodeSet)) throw new InvalidArgumentsException("Predicates are applicable only for NodeSets.");
+				if (!(xpo instanceof XPathNodeSet))
+					throw new InvalidArgumentsException("Predicates are applicable only for NodeSets.");
 				XPathNodeSet nodeSet = ((XPathNodeSet) xpo);
 				for (int p = 0; p < expression.predicates.length; p++)
 					nodeSet = this.applyPredicate(expression.predicates[p], nodeSet, variableBindings);
@@ -369,7 +383,8 @@ public class XPathEngine {
 			}
 			
 			if ((expression.pathExpression != null) && (expression.pathExpression.steps != null) && (expression.pathExpression.steps.length != 0)) {
-				if (!(xpo instanceof XPathNodeSet)) throw new InvalidArgumentsException("Path expressions are applicable only for NodeSets.");
+				if (!(xpo instanceof XPathNodeSet))
+					throw new InvalidArgumentsException("Path expressions are applicable only for NodeSets.");
 				XPathNodeSet nodeSet = ((XPathNodeSet) xpo);
 				return this.evaluatePath(expression.pathExpression, nodeSet, variableBindings);
 			}
@@ -671,37 +686,45 @@ public class XPathEngine {
 		} catch (Exception e) {}
 		
 		if ("boolean".equalsIgnoreCase(functionName)) {
-			if (args.length != 1) throw new InvalidArgumentsException("The function 'boolean' requires 1 argument(s) of type(s) XPathObject.");
+			if (args.length != 1)
+				throw new InvalidArgumentsException("The function 'boolean' requires 1 argument(s) of type(s) XPathObject.");
 			return args[0].asBoolean();
 		}
 		else if ("contains".equalsIgnoreCase(functionName)) {
-			if (args.length != 2) throw new InvalidArgumentsException("The function 'contains' requires 2 argument(s) of type(s) XPathString.");
+			if (args.length != 2)
+				throw new InvalidArgumentsException("The function 'contains' requires 2 argument(s) of type(s) XPathString.");
 			return new XPathBoolean(args[0].asString().value.indexOf(args[1].asString().value) != -1);
 		}
 		else if ("false".equalsIgnoreCase(functionName)) {
-			if (args.length != 0) throw new InvalidArgumentsException("The function 'false' requires 0 argument(s).");
+			if (args.length != 0)
+				throw new InvalidArgumentsException("The function 'false' requires 0 argument(s).");
 			return new XPathBoolean(false);
 		}
 		else if ("lang".equalsIgnoreCase(functionName)) {
-			if ((args.length != 1) || !(args[0] instanceof XPathString)) throw new InvalidArgumentsException("The function 'boolean' requires 1 argument(s) of type(s) XPathString.");
+			if ((args.length != 1) || !(args[0] instanceof XPathString))
+				throw new InvalidArgumentsException("The function 'boolean' requires 1 argument(s) of type(s) XPathString.");
 			return new XPathBoolean(true);
 		}
 		else if ("not".equalsIgnoreCase(functionName))
 			return new XPathBoolean(!args[0].asBoolean().value);
 			
 		else if ("starts-with".equalsIgnoreCase(functionName)) {
-			if (args.length != 2) throw new InvalidArgumentsException("The function 'starts-with' requires 2 argument(s) of type(s) XPathString.");
+			if (args.length != 2)
+				throw new InvalidArgumentsException("The function 'starts-with' requires 2 argument(s) of type(s) XPathString.");
 			return new XPathBoolean(args[0].asString().value.startsWith(args[1].asString().value));
 		}
 		else if ("true".equalsIgnoreCase(functionName)) {
-			if (args.length != 0) throw new InvalidArgumentsException("The function 'true' requires 0 argument(s).");
+			if (args.length != 0)
+				throw new InvalidArgumentsException("The function 'true' requires 0 argument(s).");
 			return new XPathBoolean(true);
 		}
 		else if ("id".equalsIgnoreCase(functionName)) {
-			if (args.length != 1) throw new InvalidArgumentsException("The function 'id' requires 1 argument(s) of type(s) XPathObject.");
+			if (args.length != 1)
+				throw new InvalidArgumentsException("The function 'id' requires 1 argument(s) of type(s) XPathObject.");
 			
 			TreeNode root = contextNode;
-			while (root.getParent() != null) root = root.getParent();
+			while (root.getParent() != null)
+				root = root.getParent();
 			
 			XPathNodeSet nodeSet = new XPathNodeSet();
 			ArrayList ids = new ArrayList();
@@ -725,19 +748,23 @@ public class XPathEngine {
 			return nodeSet;
 		}
 		else if ("ceiling".equalsIgnoreCase(functionName)) {
-			if (args.length != 1) throw new InvalidArgumentsException("The function 'ceiling' requires 1 argument(s) of type(s) XPathNumber.");
+			if (args.length != 1)
+				throw new InvalidArgumentsException("The function 'ceiling' requires 1 argument(s) of type(s) XPathNumber.");
 			return new XPathNumber(Math.ceil(args[0].asNumber().value));
 		}
 		else if ("count".equalsIgnoreCase(functionName)) {
-			if ((args.length == 1) && (args[0] instanceof XPathNodeSet)) return new XPathNumber(((XPathNodeSet) args[0]).size());
+			if ((args.length == 1) && (args[0] instanceof XPathNodeSet))
+				return new XPathNumber(((XPathNodeSet) args[0]).size());
 			throw new InvalidArgumentsException("The function 'count' requires 1 argument(s) of type(s) XPathNodeSet.");
 		}
 		else if ("floor".equalsIgnoreCase(functionName)) {
-			if (args.length != 1) throw new InvalidArgumentsException("The function 'floor' requires 1 argument(s) of type(s) XPathNumber.");
+			if (args.length != 1)
+				throw new InvalidArgumentsException("The function 'floor' requires 1 argument(s) of type(s) XPathNumber.");
 			return new XPathNumber(Math.floor(args[0].asNumber().value));
 		}
 		else if ("last".equalsIgnoreCase(functionName)) {
-			if (args.length != 0) throw new InvalidArgumentsException("The function 'last' requires 0 argument(s).");
+			if (args.length != 0)
+				throw new InvalidArgumentsException("The function 'last' requires 0 argument(s).");
 			return new XPathNumber(contextSize);
 		}
 		else if ("number".equalsIgnoreCase(functionName)) {
@@ -750,11 +777,13 @@ public class XPathEngine {
 			throw new InvalidArgumentsException("The function 'number' requires 0 argument(s) or 1 argument(s) of type(s) XPathObject.");
 		}
 		else if ("position".equalsIgnoreCase(functionName)) {
-			if (args.length != 0) throw new InvalidArgumentsException("The function 'position' requires 0 argument(s).");
+			if (args.length != 0)
+				throw new InvalidArgumentsException("The function 'position' requires 0 argument(s).");
 			return new XPathNumber(contextPosition);
 		}
 		else if ("round".equalsIgnoreCase(functionName)) {
-			if (args.length != 1) throw new InvalidArgumentsException("The function 'round' requires 1 argument(s) of type(s) XPathNumber.");
+			if (args.length != 1)
+				throw new InvalidArgumentsException("The function 'round' requires 1 argument(s) of type(s) XPathNumber.");
 			return new XPathNumber(Math.round(args[0].asNumber().value));
 		}
 		else if ("string-length".equalsIgnoreCase(functionName)) {
@@ -763,11 +792,13 @@ public class XPathEngine {
 				nodeSet.add(contextNode);
 				return new XPathNumber(nodeSet.asString().value.length());
 			}
-			else if (args.length == 1) return new XPathNumber(args[0].asString().value.length());
+			else if (args.length == 1)
+				return new XPathNumber(args[0].asString().value.length());
 			throw new InvalidArgumentsException("The function 'string-length' requires 0 argument(s) or 1 argument(s) of type(s) XPathString.");
 		}
 		else if ("sum".equalsIgnoreCase(functionName)) {
-			if ((args.length != 1) || !(args[0] instanceof XPathNodeSet)) throw new InvalidArgumentsException("The function 'sum' requires 1 argument(s) of type(s) XPathNodeSet.");
+			if ((args.length != 1) || !(args[0] instanceof XPathNodeSet))
+				throw new InvalidArgumentsException("The function 'sum' requires 1 argument(s) of type(s) XPathNodeSet.");
 			
 			XPathNodeSet nodeSet = ((XPathNodeSet) args[0]);
 			double sum = 0;
@@ -781,7 +812,8 @@ public class XPathEngine {
 			return new XPathNumber(sum);
 		}
 		else if ("concat".equalsIgnoreCase(functionName)) {
-			if (args.length < 2) throw new InvalidArgumentsException("The function 'concat' requires 2 or more argument(s) of type(s) XPathString.");
+			if (args.length < 2)
+				throw new InvalidArgumentsException("The function 'concat' requires 2 or more argument(s) of type(s) XPathString.");
 			
 			StringBuffer assembler = new StringBuffer("");
 			for (int a = 0; a < args.length; a++)
@@ -789,7 +821,8 @@ public class XPathEngine {
 			return new XPathString(assembler.toString());
 		}
 		else if ("local-name".equalsIgnoreCase(functionName)) {
-			if (args.length == 0) return new XPathString(contextNode.getNodeType());
+			if (args.length == 0)
+				return new XPathString(contextNode.getNodeType());
 			else if ((args.length == 1) && (args[0] instanceof XPathNodeSet)) {
 				XPathNodeSet gpas = ((XPathNodeSet) args[0]);
 				return new XPathString(gpas.isEmpty() ? "" : gpas.getFirst().getNodeType());
@@ -797,7 +830,8 @@ public class XPathEngine {
 			throw new InvalidArgumentsException("The function 'local-name' requires 0 argument(s) or 1 argument(s) of type(s) XPathNodeSet.");
 		}
 		else if ("name".equalsIgnoreCase(functionName)) {
-			if (args.length == 0) return new XPathString(contextNode.getNodeType());
+			if (args.length == 0)
+				return new XPathString(contextNode.getNodeType());
 			else if ((args.length == 1) && (args[0] instanceof XPathNodeSet)) {
 				XPathNodeSet gpas = ((XPathNodeSet) args[0]);
 				return new XPathString(gpas.isEmpty() ? "" : gpas.getFirst().getNodeType());
@@ -846,42 +880,55 @@ public class XPathEngine {
 			throw new InvalidArgumentsException("The function 'string' requires 0 argument(s) or 1 argument(s) of type(s) XPathObject.");
 		}
 		else if ("substring".equalsIgnoreCase(functionName)) {
-			if ((args.length != 2) && (args.length != 3)) throw new InvalidArgumentsException("The function 'substring' requires 2 or 3 argument(s) of type(s) XPathString, XPathNumber" + ((args.length > 3) ? ", XPathNumber" : "") + ".");
-			if (!(args[1] instanceof XPathNumber)) throw new InvalidArgumentsException("The function 'substring' requires 2 or 3 argument(s) of type(s) XPathString, XPathNumber" + ((args.length == 3) ? ", XPathNumber" : "") + ".");
-			if ((args.length == 3) && !(args[2] instanceof XPathNumber)) throw new InvalidArgumentsException("The function 'substring' requires 2 or 3 argument(s) of type(s) XPathString, XPathNumber" + ((args.length == 3) ? ", XPathNumber" : "") + ".");
+			if ((args.length != 2) && (args.length != 3))
+				throw new InvalidArgumentsException("The function 'substring' requires 2 or 3 argument(s) of type(s) XPathString, XPathNumber" + ((args.length > 3) ? ", XPathNumber" : "") + ".");
+			if (!(args[1] instanceof XPathNumber))
+				throw new InvalidArgumentsException("The function 'substring' requires 2 or 3 argument(s) of type(s) XPathString, XPathNumber" + ((args.length == 3) ? ", XPathNumber" : "") + ".");
+			if ((args.length == 3) && !(args[2] instanceof XPathNumber))
+				throw new InvalidArgumentsException("The function 'substring' requires 2 or 3 argument(s) of type(s) XPathString, XPathNumber" + ((args.length == 3) ? ", XPathNumber" : "") + ".");
 			
 			int s = 0;
 			int l = args[0].asString().value.length();
 			try {
 				s = ((int) args[1].asNumber().value);
-				if (s < 0) s = 0;
-				if (s > l) return new XPathString("");
+				if (s < 0)
+					s = 0;
+				if (s > l)
+					return new XPathString("");
 			} catch (Exception e) {}
 			if (args.length == 3) try {
 				l = ((int) args[2].asNumber().value);
-				if (l < 1) return new XPathString("");
+				if (l < 1)
+					return new XPathString("");
 			} catch (Exception e) {}
-			if ((s + l) > args[0].asString().value.length()) l = args[0].asString().value.length() - s;
+			if ((s + l) > args[0].asString().value.length())
+				l = args[0].asString().value.length() - s;
 			return new XPathString(args[0].asString().value.substring(s, (s + l)));
 		}
 		else if ("substring-after".equalsIgnoreCase(functionName)) {
-			if (args.length != 2) throw new InvalidArgumentsException("The function 'substring-after' requires 2 argument(s) of type(s) XPathString.");
+			if (args.length != 2)
+				throw new InvalidArgumentsException("The function 'substring-after' requires 2 argument(s) of type(s) XPathString.");
 			
 			int s = args[0].asString().value.indexOf(args[1].asString().value);
-			if (s == -1) return new XPathString("");
+			if (s == -1)
+				return new XPathString("");
 			s += args[1].asString().value.length();
-			if (s >= args[0].asString().value.length()) return new XPathString("");
+			if (s >= args[0].asString().value.length())
+				return new XPathString("");
 			return new XPathString(args[0].asString().value.substring(s));
 		}
 		else if ("substring-before".equalsIgnoreCase(functionName)) {
-			if (args.length != 2) throw new InvalidArgumentsException("The function 'substring-before' requires 2 argument(s) of type(s) XPathString.");
+			if (args.length != 2)
+				throw new InvalidArgumentsException("The function 'substring-before' requires 2 argument(s) of type(s) XPathString.");
 			
 			int l = args[0].asString().value.indexOf(args[1].asString().value);
-			if (l == -1) return new XPathString("");
+			if (l == -1)
+				return new XPathString("");
 			return new XPathString(args[0].asString().value.substring(0, l));
 		}
 		else if ("translate".equalsIgnoreCase(functionName)) {
-			if (args.length != 3) throw new InvalidArgumentsException("The function 'translate' requires 3 argument(s) of type(s) XPathString.");
+			if (args.length != 3)
+				throw new InvalidArgumentsException("The function 'translate' requires 3 argument(s) of type(s) XPathString.");
 			
 			String originals = args[1].asString().value;
 			String translations = args[2].asString().value;
@@ -902,7 +949,8 @@ public class XPathEngine {
 			return new XPathString(assembler.toString());
 		}
 		
-		if (this.isDefaultEngine) throw new UndefinedFunctionException("The function '" + functionName + "' is not defined.");
+		if (this.isDefaultEngine)
+			throw new UndefinedFunctionException("The function '" + functionName + "' is not defined.");
 		
 		return XPath.DEFAULT_ENGINE.executeFunction(functionName, contextNode, contextPosition, contextSize, args);
 	}

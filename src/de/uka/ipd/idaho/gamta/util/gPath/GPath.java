@@ -248,7 +248,7 @@ public class GPath implements GPathConstants {
 		}
 		if (assembler.length() != 0) lines.addElement(assembler.toString());
 		
-		//	concat short lines
+		//	concatenate short lines
 		String line;
 		String n1Line;
 		String n2Line;

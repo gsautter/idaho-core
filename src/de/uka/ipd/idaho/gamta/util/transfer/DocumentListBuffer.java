@@ -91,8 +91,8 @@ public class DocumentListBuffer extends StringRelation implements LiteratureCons
 		this.listFieldNames = data.listFieldNames;
 		this.data = data;
 		
-		while (data.hasNextDocument()) {
-			DocumentListElement dle = data.getNextDocument();
+		while (this.data.hasNextDocument()) {
+			DocumentListElement dle = this.data.getNextDocument();
 			StringTupel st = new StringTupel(this.listFieldNames.length);
 			for (int f = 0; f < this.listFieldNames.length; f++) {
 				Object value = dle.getAttribute(this.listFieldNames[f]);
@@ -104,26 +104,26 @@ public class DocumentListBuffer extends StringRelation implements LiteratureCons
 			if (pm == null)
 				continue;
 			pm.setInfo("" + this.size() + " documents read.");
-			int docCount = data.getDocumentCount();
+			int docCount = this.data.getDocumentCount();
 			if (docCount > 0)
 				pm.setProgress((this.size() * 100) / docCount);
 		}
 		
 		for (int f = 0; f < this.listFieldNames.length; f++) {
-			AttributeSummary listFieldValues = data.getListFieldValues(this.listFieldNames[f]);
+			AttributeSummary listFieldValues = this.data.getListFieldValues(this.listFieldNames[f]);
 			if (listFieldValues != null)
 				this.listFieldValues.put(this.listFieldNames[f], listFieldValues);
 		}
 		if (this.listFieldValues.isEmpty()) {
 			for (int f = 0; f < this.listFieldNames.length; f++) {
-				if (data.hasNoSummary(this.listFieldNames[f]))
+				if (this.data.hasNoSummary(this.listFieldNames[f]))
 					continue;
 				this.listFieldValues.put(this.listFieldNames[f], new AttributeSummary());
 			}
 			for (int d = 0; d < this.size(); d++) {
 				StringTupel docData = this.get(d);
 				for (int f = 0; f < this.listFieldNames.length; f++) {
-					if (data.hasNoSummary(this.listFieldNames[f]))
+					if (this.data.hasNoSummary(this.listFieldNames[f]))
 						continue;
 					String fieldValue = docData.getValue(this.listFieldNames[f]);
 					if ((fieldValue == null) || (fieldValue.length() == 0))
@@ -132,7 +132,7 @@ public class DocumentListBuffer extends StringRelation implements LiteratureCons
 				}
 			}
 			for (int f = 0; f < this.listFieldNames.length; f++) {
-				if (data.hasNoSummary(this.listFieldNames[f]))
+				if (this.data.hasNoSummary(this.listFieldNames[f]))
 					continue;
 				if (this.getListFieldValues(this.listFieldNames[f]).size() == 0)
 					this.listFieldValues.remove(this.listFieldNames[f]);

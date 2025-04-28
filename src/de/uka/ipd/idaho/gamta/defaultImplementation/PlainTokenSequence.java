@@ -29,28 +29,24 @@ package de.uka.ipd.idaho.gamta.defaultImplementation;
 
 
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
 
-import de.uka.ipd.idaho.gamta.Attributed;
 import de.uka.ipd.idaho.gamta.Token;
 import de.uka.ipd.idaho.gamta.TokenSequence;
 import de.uka.ipd.idaho.gamta.Tokenizer;
 
 /**
- * Implementation of a basic (immutable) gamta token sequence.
+ * Implementation of a basic (immutable) GAMTA token sequence.
  * 
  * @author sautter
  */
 public class PlainTokenSequence implements TokenSequence {
-	
 	private CharSequence charData;
 	private Tokenizer tokenizer;
 	private ArrayList tokenOverlay = new ArrayList();
 	
 	/** Constructor
-	 * @param	charData	the gamta char sequence this token sequence is an overlay for
-	 * @param	tokenizer	the Tokenizer used to decompose the char sequence into tokens
+	 * @param charData the GAMTA char sequence this token sequence is an overlay for
+	 * @param tokenizer the Tokenizer used to decompose the char sequence into tokens
 	 */
 	public PlainTokenSequence(CharSequence charData, Tokenizer tokenizer) {
 		this.charData = charData;
@@ -186,7 +182,8 @@ public class PlainTokenSequence implements TokenSequence {
 	 * @see de.gamta.TokenSequence#getLeadingWhitespace()
 	 */
 	public String getLeadingWhitespace() {
-		if (this.size() == 0) return this.charData.toString();
+		if (this.size() == 0)
+			return this.charData.toString();
 		return this.charData.subSequence(0, this.firstToken().getStartOffset()).toString();
 	}
 	
@@ -194,9 +191,11 @@ public class PlainTokenSequence implements TokenSequence {
 	 * @see de.gamta.TokenSequence#getWhitespaceAfter(int)
 	 */
 	public String getWhitespaceAfter(int index) {
-		if (this.size() == 0) return this.charData.toString();
-		else if (index == (this.size() - 1)) this.charData.subSequence(this.lastToken().getEndOffset(), this.charData.length()).toString();
-		return this.charData.subSequence(this.tokenAt(index).getEndOffset(), this.tokenAt(index + 1).getStartOffset()).toString();
+		if (this.size() == 0)
+			return this.charData.toString();
+		else if (index == (this.size() - 1))
+			return this.charData.subSequence(this.lastToken().getEndOffset(), this.charData.length()).toString();
+		else return this.charData.subSequence(this.tokenAt(index).getEndOffset(), this.tokenAt(index + 1).getStartOffset()).toString();
 	}
 	
 	/* (non-Javadoc)

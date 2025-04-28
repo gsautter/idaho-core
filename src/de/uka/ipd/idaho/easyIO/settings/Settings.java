@@ -144,7 +144,7 @@ public class Settings {
 
 	/**
 	 * the characters to escape in a setting's value in the text representation,
-	 * namely '"' and '/'
+	 * namely '"' and '\'
 	 */
 	public static final char[] TO_ESCAPE = { ESCAPER, SETTING_VALUE_DELIMITER };
 	
